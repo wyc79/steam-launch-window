@@ -51,13 +51,14 @@ continues where it stopped.
 
 ### Follower refresh tiers
 
-Fetching followers costs one request per game, so games are refreshed by how
-soon they launch. A game is refreshed:
+Wishlist rank is the main hype signal. Followers are a second one, and they
+cost one request per game on a host that rate-limits hard, so only about
+11,000 games are tracked: games on the Top Wishlisted list, plus games with a
+day or month release date ending within 26 weeks. A tracked game is refreshed:
 
-- daily if its release date range overlaps the next 8 weeks, or it has many followers
-- every 3 days if it overlaps weeks 8 to 26
-- weekly if it is further out
-- monthly if it has no date ("Coming soon", "To be announced")
+- daily if its date range ends within 8 weeks (or already passed), or it has 10,000+ followers
+- every 3 days if its range ends within weeks 8 to 26
+- weekly otherwise (wishlisted games that are further out or undated)
 
 ## Run it yourself
 

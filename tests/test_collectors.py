@@ -10,34 +10,48 @@ NOW = datetime(2026, 10, 11, 12, tzinfo=timezone.utc)
 POLICY = cf.Policy()
 
 
-def snap(appid, d="", end="", rank=""):
-    return {"appid": str(appid), "date": d, "date_end": end, "wishlist_rank": str(rank)}
+def snap(appid, d="", end="", rank="", precision=None):
+    if precision is None:
+        precision = "day" if d and d == end else ("unknown" if not d else "month")
+    return {"appid": str(appid), "date": d, "date_end": end, "wishlist_rank": str(rank), "precision": precision}
 
 
 # -- followers ---------------------------------------------------------------
 
-def test_tier_by_date_range():
+def test_tier_by_when_the_whole_range_ends():
     assert cf.tier_for(snap(1, "2026-10-20", "2026-10-20"), None, TODAY, POLICY) == 0
-    assert cf.tier_for(snap(1, "2026-10-01", "2026-12-31"), None, TODAY, POLICY) == 0  # Q4 overlaps now
+    assert cf.tier_for(snap(1, "2026-11-01", "2026-11-30"), None, TODAY, POLICY) == 0  # November ends by week 8
+    assert cf.tier_for(snap(1, "2027-01-01", "2027-01-31"), None, TODAY, POLICY) == 1
     assert cf.tier_for(snap(1, "2027-01-15", "2027-01-15"), None, TODAY, POLICY) == 1
-    assert cf.tier_for(snap(1, "2027-06-01", "2027-06-30"), None, TODAY, POLICY) == 2
-    assert cf.tier_for(snap(1), None, TODAY, POLICY) == 3
+
+
+def test_untracked_games():
+    assert cf.tier_for(snap(1), None, TODAY, POLICY) is None                                      # TBA
+    assert cf.tier_for(snap(1, "2027-06-01", "2027-06-30"), None, TODAY, POLICY) is None          # past week 26
+    assert cf.tier_for(snap(1, "2026-10-01", "2026-12-31", precision="quarter"), None, TODAY, POLICY) is None
+    assert cf.tier_for(snap(1, "2026-01-01", "2026-12-31", precision="year"), None, TODAY, POLICY) is None
+
+
+def test_ranked_games_are_always_tracked():
+    assert cf.tier_for(snap(1, rank=40), None, TODAY, POLICY) == 2
+    assert cf.tier_for(snap(1, "2026-01-01", "2026-12-31", rank=40, precision="year"), None, TODAY, POLICY) == 2
+    assert cf.tier_for(snap(1, "2026-10-20", "2026-10-20", rank=40), None, TODAY, POLICY) == 0
 
 
 def test_tier_high_followers_and_overdue_dates_are_daily():
-    assert cf.tier_for(snap(1), POLICY.high_followers, TODAY, POLICY) == 0
+    assert cf.tier_for(snap(1, rank=40), POLICY.high_followers, TODAY, POLICY) == 0
     assert cf.tier_for(snap(1, "2026-09-01", "2026-09-01"), None, TODAY, POLICY) == 0
 
 
-def test_plan_skips_fresh_and_orders_by_tier_then_staleness():
-    snapshot = [snap(1), snap(2, "2026-10-20", "2026-10-20"), snap(3, "2026-10-20", "2026-10-20"),
-                snap(4, "2026-10-20", "2026-10-20")]
+def test_plan_skips_fresh_and_untracked_and_orders_by_tier_then_staleness():
+    snapshot = [snap(1, rank=7), snap(2, "2026-10-20", "2026-10-20"), snap(3, "2026-10-20", "2026-10-20"),
+                snap(4, "2026-10-20", "2026-10-20"), snap(5)]
     latest = {
         2: {"followers": "5", "fetched_at": "2026-10-10T08:00:00+00:00"},  # 28h old, due daily
         3: {"followers": "5", "fetched_at": "2026-10-11T06:00:00+00:00"},  # 6h old, fresh
-        1: {"followers": "5", "fetched_at": "2026-09-01T00:00:00+00:00"},  # undated, 40 days, due
+        1: {"followers": "5", "fetched_at": "2026-10-01T00:00:00+00:00"},  # ranked TBA, 10 days, due weekly
     }
-    assert cf.plan(snapshot, latest, NOW, POLICY) == [(0, 4), (0, 2), (3, 1)]
+    assert cf.plan(snapshot, latest, NOW, POLICY) == [(0, 4), (0, 2), (2, 1)]
 
 
 def test_plan_slack_lets_a_slightly_early_daily_run_refresh():

@@ -1,9 +1,16 @@
 """Follower counts for upcoming games, refreshed on a tiered schedule.
 
-Each game gets a refresh interval from its tier (see `tier_for`). A run
-fetches every game that is due, most urgent tier first, until the time
-budget runs out. Games never fetched are always due, so the first run on
-an empty data dir is the full scrape. Progress is saved every
+steamcommunity.com rate-limits hard (see docs/endpoints.md), so only games
+that matter for the heatmap or have hype are tracked:
+- games on Steam's Top Wishlisted list, and
+- games with a day or month release date ending within --far-weeks.
+
+Each tracked game gets a refresh interval from its tier (see `tier_for`).
+Wishlist rank is the main hype signal; followers are a secondary one.
+
+A run fetches every game that is due, most urgent tier first, until the
+time budget runs out. Games never fetched are always due, so the first
+run on an empty data dir is the full scrape. Progress is saved every
 --checkpoint fetches, so a killed run loses little and the next run
 picks up where it stopped.
 
@@ -29,26 +36,28 @@ log = logging.getLogger("collect_followers")
 
 @dataclass(frozen=True)
 class Policy:
-    near_weeks: int = 8          # tier 0 if the date range overlaps the next N weeks
-    far_weeks: int = 26          # tier 1 if it overlaps weeks near..far
+    near_weeks: int = 8           # tier 0 if the whole date range ends within N weeks
+    far_weeks: int = 26           # tier 1 if it ends within weeks near..far
     high_followers: int = 10_000  # tier 0 regardless of date
-    intervals_days: tuple = (1, 3, 7, 30)  # tiers 0..3: near/high, mid, far, undated
+    intervals_days: tuple = (1, 3, 7)  # tiers 0..2
 
 
-TIER_NAMES = ("near or high followers", "mid range", "far", "undated")
+TIER_NAMES = ("daily", "every 3 days", "weekly")
+PRECISE = {"day", "month"}
 
 
-def tier_for(row: dict, followers: int | None, today: date, policy: Policy) -> int:
+def tier_for(row: dict, followers: int | None, today: date, policy: Policy) -> int | None:
+    """Refresh tier for one snapshot row, or None if the game is not tracked."""
+    ranked = bool(row.get("wishlist_rank"))
+    end = date.fromisoformat(row["date_end"]) if row.get("precision") in PRECISE else None
+    in_window = end is not None and end <= today + timedelta(weeks=policy.far_weeks)
+    if not (ranked or in_window):
+        return None
     if followers is not None and followers >= policy.high_followers:
         return 0
-    if not row.get("date"):
-        return 3
-    start, end = date.fromisoformat(row["date"]), date.fromisoformat(row["date_end"])
-    if end < today:  # date passed but still listed as coming soon: watch closely
-        return 0
-    if start <= today + timedelta(weeks=policy.near_weeks):
-        return 0
-    if start <= today + timedelta(weeks=policy.far_weeks):
+    if end is not None and end <= today + timedelta(weeks=policy.near_weeks):
+        return 0  # launching soon, or the date passed and it is still "coming soon"
+    if in_window:
         return 1
     return 2
 
@@ -62,6 +71,8 @@ def plan(snapshot: list[dict], latest: dict[int, dict], now: datetime, policy: P
         prev = latest.get(appid)
         followers = int(prev["followers"]) if prev and prev["followers"] else None
         tier = tier_for(row, followers, today, policy)
+        if tier is None:
+            continue
         if prev:
             age = now - datetime.fromisoformat(prev["fetched_at"])
             # 2 hours of slack so a daily job that starts a bit early still refreshes
@@ -108,7 +119,7 @@ def main(argv=None) -> int:
     latest = {int(r["appid"]): r for r in storage.read_csv(args.data_dir / "followers" / "latest.csv")}
     now = datetime.now(timezone.utc)
     todo = plan(snapshot, latest, now, policy)
-    by_tier = [sum(1 for t, _ in todo if t == i) for i in range(4)]
+    by_tier = [sum(1 for t, _ in todo if t == i) for i in range(len(TIER_NAMES))]
     log.info("snapshot %s: %d games, %d due %s", snap_path.name, len(snapshot), len(todo),
              dict(zip(TIER_NAMES, by_tier)))
     if args.dry_run:

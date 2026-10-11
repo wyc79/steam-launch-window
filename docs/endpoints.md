@@ -17,7 +17,7 @@ anything here, and update this file when behavior changes.
 | Wishlist rank | store search `filter=popularwishlist` | no | works, top ~5,300 only |
 | App details | `IStoreBrowseService/GetItems` (bulk), `appdetails` (single) | no | works |
 | User tags | `GetItems` (with weights), SteamSpy (vote counts, released only) | no | works |
-| Followers | community `memberslistxml` `memberCount` | no | works, 1 request per app |
+| Followers | community `memberslistxml` `memberCount` | no | works, 1 request per app, strict rate limit |
 | First-30-day reviews | `appreviews` with a date range | no | works, checked exactly |
 | Tag names | `IStoreService/GetTagList` | no | works |
 | PICS / appinfo | `steam` Python lib, anonymous login | no | works locally, not tested in Actions |
@@ -196,8 +196,15 @@ No key needed.
   store only the count.
 - Works for unreleased games (Light No Fire: 248,708; a small new game: 2).
 - `Cache-Control: max-age=300`.
-- Cost: one request per app. About 17,000 dated upcoming games at 1 request
-  per second is about 5 hours, too long for one daily Actions job.
+- Cost: one request per app.
+- **Rate limit (found 2026-10-10):** after about 10 requests spread over the
+  Phase 0 checks, the first request of a 1/s run got 429, and so did every
+  request after it, including the plain hub page (`/app/<id>`). The block
+  was still on 31 minutes later. A cached copy can still return 200, which
+  hides the block. Requests made while blocked seem to extend it, so stop
+  completely on 429 and wait. The safe rate is still being measured.
+- Because of this, followers are only tracked for about 11,000 games
+  (see the README), not all 60,000.
 - Not yet spot-checked against SteamDB. Do this by hand for a few games.
 
 ## 7. Reviews
