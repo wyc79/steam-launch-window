@@ -27,7 +27,7 @@ results are in [docs/endpoints.md](docs/endpoints.md).
 | Hype: follower count | the game's community hub member count |
 | Past launches since 2022 | `IStoreQueryService/Query` with a release date filter |
 | Reviews in the first 30 days | `appreviews` with a date range |
-| Steam sales, fests, big releases | [data/events.yaml](data/events.yaml), kept by hand |
+| Steam sales, fests, major releases, holidays | [data/events.yaml](data/events.yaml), kept by hand, checked by `python -m pipeline.events` |
 
 ## How it runs
 

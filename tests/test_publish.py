@@ -8,10 +8,27 @@ pq = pytest.importorskip("pyarrow.parquet")
 from pipeline import publish_dataset as pub  # noqa: E402
 
 EVENTS = """events:
+- name: Some Game
+  type: major_release
+  start: 2026-03-05
+  end: 2026-03-05
+  on_steam_at_launch: true
+  release_kind: full
+  steam_appid: 123
+  free_to_play: true
+  confidence: high
+  source: https://example.com
 - name: Steam Summer Sale 2026
   type: seasonal_sale
   start: 2026-06-25
   end: 2026-07-09
+  confidence: high
+  source: https://example.com
+- name: Steam Racing Fest 2026
+  type: themed_fest
+  start: 2026-07-13
+  end: 2026-07-20
+  tags: [Racing, Driving]
   confidence: high
   source: https://example.com
 """
@@ -70,3 +87,25 @@ def test_upload_needs_token(data, tmp_path, monkeypatch):
     with pytest.raises(SystemExit, match="HF_TOKEN"):
         pub.main(["--data-dir", str(d), "--events", str(events), "--out", str(tmp_path / "o"),
                   "--repo-id", "someone/steam-launch-data"])
+
+
+def test_events_table_keeps_types(data, tmp_path):
+    _, events = data
+    df = pub.events_table(events)
+    assert str(df["steam_appid"].dtype) == "Int64" and df["steam_appid"].iloc[0] == 123
+    assert str(df["on_steam_at_launch"].dtype) == "boolean" and bool(df["on_steam_at_launch"].iloc[0])
+    assert df["tags"].iloc[2] == "Racing|Driving"
+    assert pd.isna(df["tags"].iloc[1])
+    assert pd.isna(df["free_to_play"].iloc[1])  # not a release
+    sale = df.iloc[1]
+    assert sale["starts_at"] == pd.Timestamp("2026-06-25 17:00", tz="UTC")  # 10:00 PDT
+    assert sale["ends_at"] == pd.Timestamp("2026-07-09 17:00", tz="UTC")
+    game = df.iloc[0]
+    assert game["starts_at"] == pd.Timestamp("2026-03-05 08:00", tz="UTC")  # midnight PST
+    assert game["ends_at"] == pd.Timestamp("2026-03-06 08:00", tz="UTC")
+
+
+def test_paid_releases_get_explicit_false(tmp_path):
+    path = tmp_path / "e.yaml"
+    path.write_text(EVENTS.replace("  free_to_play: true" + chr(10), ""))
+    assert pub.events_table(path)["free_to_play"].iloc[0] == False  # noqa: E712 - pandas boolean
