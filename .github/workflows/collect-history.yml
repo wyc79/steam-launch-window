@@ -45,5 +45,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install .
-      - run: python -m pipeline.collect_history --budget-minutes "${{ inputs.budget_minutes || '300' }}"
-      - run: scripts/commit_data.sh "history $(date -u +%F)"
+      - run: python -m pipeline.collect_history --store-interval 2 --budget-minutes "${{ inputs.budget_minutes || '300' }}"
+      - name: Commit history
+        if: always()  # keep progress saved before a failure or timeout
+        run: scripts/commit_data.sh "history $(date -u +%F)"

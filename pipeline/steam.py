@@ -31,6 +31,11 @@ class IncompleteListing(Exception):
     """A paged listing returned fewer unique items than it said it had."""
 
 
+class Unavailable(Exception):
+    """Steam answered, but has no data for this app (removed, hidden, region-locked).
+    Retrying will not help, so callers record it instead of trying forever."""
+
+
 def _input_json(payload: dict) -> dict:
     return {"input_json": json.dumps(payload, separators=(",", ":"))}
 
@@ -53,7 +58,8 @@ def store_query(client: Client, filters: dict, data_request: dict, *,
             "data_request": data_request,
         }
         res = client.get_json(f"{API}/IStoreQueryService/Query/v1/", _input_json(payload),
-                              cache_ttl=cache_ttl)["response"]
+                              cache_ttl=cache_ttl,
+                              cache_if=lambda d: "metadata" in d.get("response", {}))["response"]
         total = res.get("metadata", {}).get("total_matching_records", 0)
         page = res.get("store_items") or []
         for it in page:
@@ -84,6 +90,7 @@ def get_items(client: Client, appids: list[int], data_request: dict, *,
 
 
 _SEARCH_ROW = re.compile(r'data-ds-appid="(\d+)"')
+_SEARCH_ROW_ANY = re.compile(r'data-ds-appid="[^"]*"')  # bundles too, for counting rows
 
 
 def parse_search_appids(results_html: str) -> list[int]:
@@ -103,16 +110,16 @@ def wishlist_ranking(client: Client, *, cache_ttl: float | None = None) -> list[
         res = client.get_json(f"{STORE}/search/results/", {
             "query": "", "start": start, "count": SEARCH_PAGE, "filter": "popularwishlist",
             "infinite": 1, "cc": "us", "l": "english",
-        }, cache_ttl=cache_ttl)
+        }, cache_ttl=cache_ttl, cache_if=lambda d: d.get("success") == 1 and d.get("results_html"))
         total = res.get("total_count", 0)
-        page = parse_search_appids(res.get("results_html", ""))
-        if not page:
+        rows = _SEARCH_ROW_ANY.findall(res.get("results_html", ""))
+        if not rows:
             break
-        for a in page:
+        for a in parse_search_appids(res.get("results_html", "")):
             if a not in seen:
                 seen.add(a)
                 ranked.append(a)
-        start += SEARCH_PAGE
+        start += len(rows)  # Steam does not always return exactly `count` rows
     if total and len(ranked) < 0.99 * total:
         raise IncompleteListing(f"wishlist ranking got {len(ranked)} of {total}")
     return ranked
@@ -153,7 +160,7 @@ def review_counts(client: Client, appid: int, start_ts: int, end_ts: int) -> dic
         "start_date": start_ts, "end_date": end_ts, "date_range_type": "include",
     })
     if res.get("success") != 1:
-        raise ValueError(f"appreviews failed for {appid}: {res}")
+        raise Unavailable(f"appreviews has no data for {appid}: {res}")
     q = res["query_summary"]
     return {"total": q.get("total_reviews", 0), "positive": q.get("total_positive", 0),
             "negative": q.get("total_negative", 0)}

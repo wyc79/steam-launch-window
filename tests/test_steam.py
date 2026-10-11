@@ -78,7 +78,7 @@ class FakeClient:
         self.pages = pages
         self.calls = []
 
-    def get_json(self, url, params=None, cache_ttl=None):
+    def get_json(self, url, params=None, cache_ttl=None, cache_if=None):
         q = json.loads(params["input_json"])["query"]
         self.calls.append(q)
         return {"response": self.pages[q["start"]]}
@@ -102,3 +102,32 @@ def test_store_query_raises_when_items_go_missing(monkeypatch):
     client = FakeClient({0: page([1, 2], 6), 2: page([1, 2], 6), 4: page([1, 2], 6)})
     with pytest.raises(steam.IncompleteListing):
         steam.store_query(client, {}, {})
+
+
+class SearchClient:
+    """Fake store search: serves `total` appids, but only `per_page` rows per call."""
+
+    def __init__(self, total, per_page):
+        self.total, self.per_page, self.starts = total, per_page, []
+
+    def get_json(self, url, params=None, cache_ttl=None, cache_if=None):
+        start = params["start"]
+        self.starts.append(start)
+        ids = range(start + 1, min(start + self.per_page, self.total) + 1)
+        html = "".join(f'<a data-ds-appid="{i}">' for i in ids)
+        return {"success": 1, "total_count": self.total, "results_html": html}
+
+
+def test_wishlist_ranking_advances_by_rows_returned():
+    client = SearchClient(total=130, per_page=25)  # Steam sometimes returns fewer than asked
+    assert steam.wishlist_ranking(client) == list(range(1, 131))
+    assert client.starts[:3] == [0, 25, 50]
+
+
+def test_review_counts_raises_unavailable_on_failure():
+    class C:
+        def get_json(self, url, params=None):
+            return {"success": 2}
+
+    with pytest.raises(steam.Unavailable):
+        steam.review_counts(C(), 1, 0, 1)

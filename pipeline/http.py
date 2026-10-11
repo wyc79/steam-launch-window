@@ -33,6 +33,15 @@ class HTTPStatusError(Exception):
         self.url = url
 
 
+class RateLimited(HTTPStatusError):
+    """A 429 we should not retry: the host blocks for a long time, or asked
+    us to wait longer than we are willing to. Callers should stop the run."""
+
+    def __init__(self, url: str, retry_after: float | None = None):
+        super().__init__(429, url)
+        self.retry_after = retry_after
+
+
 def _public_params(params: dict | None) -> dict:
     return {k: v for k, v in (params or {}).items() if k not in SECRET_PARAMS}
 
@@ -48,6 +57,7 @@ class Client:
         *,
         min_interval: float = 1.0,
         host_intervals: dict[str, float] | None = None,
+        stop_on_429_hosts: set[str] | frozenset[str] = frozenset(),
         max_retries: int = 5,
         backoff_base: float = 2.0,
         backoff_cap: float = 300.0,
@@ -61,6 +71,7 @@ class Client:
     ):
         self.min_interval = min_interval
         self.host_intervals = host_intervals or {}
+        self.stop_on_429_hosts = set(stop_on_429_hosts)
         self.max_retries = max_retries
         self.backoff_base = backoff_base
         self.backoff_cap = backoff_cap
@@ -82,8 +93,17 @@ class Client:
             self._cache_write(url, params, body)
         return body
 
-    def get_json(self, url: str, params: dict | None = None, *, cache_ttl: float | None = None):
-        return json.loads(self.get_text(url, params, cache_ttl=cache_ttl))
+    def get_json(self, url: str, params: dict | None = None, *, cache_ttl: float | None = None,
+                 cache_if=None):
+        """Parsed JSON. Only bodies that parse (and pass `cache_if`, if given)
+        are cached, so a bad 200 reply is not replayed for the whole TTL."""
+        if cache_ttl and (hit := self._cache_read(url, params, cache_ttl)) is not None:
+            return json.loads(hit)
+        body = self._fetch(url, params)
+        data = json.loads(body)
+        if cache_ttl and (cache_if is None or cache_if(data)):
+            self._cache_write(url, params, body)
+        return data
 
     # -- internals --------------------------------------------------------
 
@@ -117,13 +137,18 @@ class Client:
 
             if 200 <= r.status_code < 300:
                 return r.text
+            retry_after = r.headers.get("Retry-After")
+            retry_after = float(retry_after) if retry_after and retry_after.isdigit() else None
+            if r.status_code == 429 and (
+                    host in self.stop_on_429_hosts
+                    or (retry_after is not None and retry_after > self.backoff_cap)):
+                raise RateLimited(_describe(url, params), retry_after)
             if r.status_code not in RETRY_STATUSES or attempt == self.max_retries:
                 raise HTTPStatusError(r.status_code, _describe(url, params))
 
             delay = self._backoff(attempt)
-            retry_after = r.headers.get("Retry-After")
-            if retry_after and retry_after.isdigit():
-                delay = min(self.backoff_cap, max(delay, float(retry_after)))
+            if retry_after is not None:
+                delay = max(delay, retry_after)
             log.warning("HTTP %s on %s, retry in %.0fs", r.status_code, _describe(url, params), delay)
             self._sleep(delay)
         raise AssertionError("unreachable")

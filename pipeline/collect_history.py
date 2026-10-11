@@ -17,6 +17,8 @@ Steps:
    before its "launch", so it is relabeled ea_exit.
 
 Output: history/games.csv under --data-dir, one row per game.
+reviews_30d_source is api, zero_total (no reviews at all, no call made), or
+unavailable (Steam has no review data for the app; not retried).
 
 Launch date and Early Access:
 - Query files Early Access games that left EA under their 1.0 date.
@@ -37,7 +39,8 @@ import logging
 from datetime import date, datetime, time, timedelta
 
 from . import steam, storage
-from .common import Budget, base_parser, setup
+from .common import Budget, base_parser, run_pass, setup
+from .http import HTTPStatusError, RateLimited
 
 FIELDS = [
     "appid", "name", "launch_date", "launch_ts", "steam_release_ts", "launch_type",
@@ -135,12 +138,19 @@ def merge(old: dict | None, new: dict) -> dict:
 
 
 def needs_reviews(row: dict, cutoff_ts: int) -> bool:
-    return row["reviews_30d"] == "" and int(row["launch_ts"]) + WINDOW <= cutoff_ts
+    return row["reviews_30d_source"] == "" and int(row["launch_ts"]) + WINDOW <= cutoff_ts
 
 
 def needs_prior_check(row: dict, min_reviews: int) -> bool:
-    return (row["launch_type"] == "full" and row.get("reviews_before_launch", "") == ""
+    return (row["launch_type"] == "full" and not row.get("prior_check_fetched")
             and int(row["reviews_total_now"] or 0) >= min_reviews)
+
+
+def is_gone(e: Exception) -> bool:
+    """Errors that will repeat on every retry: Steam has no data for this app."""
+    if isinstance(e, steam.Unavailable):
+        return True
+    return isinstance(e, HTTPStatusError) and not isinstance(e, RateLimited) and 400 <= e.status < 500
 
 
 def main(argv=None) -> int:
@@ -162,6 +172,8 @@ def main(argv=None) -> int:
     existing = {int(r["appid"]): r for r in storage.read_csv(path)}
 
     if args.skip_listing:
+        if not existing:
+            raise SystemExit(f"--skip-listing needs {path}, which is missing or empty")
         rows = existing
     else:
         items: dict[int, dict] = {}
@@ -197,13 +209,26 @@ def main(argv=None) -> int:
                        reviews_30d_fetched=stamp)
             return False
         start = int(row["launch_ts"])
-        counts = steam.review_counts(client, row["appid"], start, start + WINDOW)
+        try:
+            counts = steam.review_counts(client, row["appid"], start, start + WINDOW)
+        except Exception as e:
+            if not is_gone(e):
+                raise
+            log.info("no review data for %s (%s); marked unavailable", row["appid"], e)
+            row.update(reviews_30d_source="unavailable", reviews_30d_fetched=stamp)
+            return True
         row.update(reviews_30d=counts["total"], reviews_30d_positive=counts["positive"],
                    reviews_30d_source="api", reviews_30d_fetched=stamp)
         return True
 
     def prior(row):
-        counts = steam.review_counts(client, row["appid"], 1, int(row["launch_ts"]) - PRIOR_GAP)
+        try:
+            counts = steam.review_counts(client, row["appid"], 1, int(row["launch_ts"]) - PRIOR_GAP)
+        except Exception as e:
+            if not is_gone(e):
+                raise
+            row.update(prior_check_fetched=stamp)  # reviews_before_launch stays unknown
+            return True
         row.update(reviews_before_launch=counts["total"], prior_check_fetched=stamp)
         apply_prior_check(row)
         return True
@@ -216,7 +241,9 @@ def main(argv=None) -> int:
         for label, fetch, needed in passes:
             todo = sorted((r for r in rows.values() if needed(r)), key=lambda r: -int(r["launch_ts"]))
             log.info("%s: %d games", label, len(todo))
-            if not run_pass(todo, fetch, label, budget, save, args):
+            if not run_pass(todo, fetch, label, budget, save, checkpoint=args.checkpoint,
+                            max_consecutive_errors=args.max_consecutive_errors,
+                            key=lambda r: r["appid"]):
                 break
     except KeyboardInterrupt:
         log.info("interrupted, saving progress")
@@ -226,32 +253,6 @@ def main(argv=None) -> int:
     relabeled = sum(1 for r in rows.values() if str(r.get("reviews_before_launch") or "0") != "0")
     log.info("done: still to do %s; %d hidden Early Access games found so far", left, relabeled)
     return 3 if args.fail_if_incomplete and any(left.values()) else 0
-
-
-def run_pass(todo, fetch, label, budget, save, args) -> bool:
-    """Fetch for each row until done or the budget runs out. False if stopped early."""
-    fetched = errors = consecutive = 0
-    for row in todo:
-        if budget.expired():
-            log.info("budget used up")
-            return False
-        try:
-            made_request = fetch(row)
-            consecutive = 0
-        except Exception as e:  # noqa: BLE001 - leave it for the next run
-            errors += 1
-            consecutive += 1
-            log.warning("%s for %s failed: %s", label, row["appid"], e)
-            if consecutive >= args.max_consecutive_errors:
-                log.error("%d errors in a row, stopping", consecutive)
-                return False
-            continue
-        if made_request:
-            fetched += 1
-            if fetched % args.checkpoint == 0:
-                save()
-                log.info("%s: %d/%d fetched, %d errors", label, fetched, len(todo), errors)
-    return True
 
 
 if __name__ == "__main__":

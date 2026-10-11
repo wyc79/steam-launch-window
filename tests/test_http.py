@@ -1,7 +1,7 @@
 import pytest
 import requests
 
-from pipeline.http import Client, HTTPStatusError
+from pipeline.http import Client, HTTPStatusError, RateLimited
 
 
 class FakeResponse:
@@ -136,3 +136,35 @@ def test_cache_key_ignores_api_key_value(tmp_path):
     for f in tmp_path.rglob("*"):
         if f.is_file():
             assert "A" not in f.read_text().split('"body"')[0].replace("a.test", "")
+
+
+def test_429_from_a_stop_host_raises_at_once():
+    c, session, _ = make([FakeResponse(429)], min_interval=0, stop_on_429_hosts={"a.test"})
+    with pytest.raises(RateLimited):
+        c.get_text("https://a.test/")
+    assert len(session.calls) == 1
+
+
+def test_retry_after_longer_than_cap_is_not_retried_early():
+    c, session, ft = make([FakeResponse(429, headers={"Retry-After": "3600"})], min_interval=0, backoff_cap=300)
+    with pytest.raises(RateLimited) as e:
+        c.get_text("https://a.test/")
+    assert e.value.retry_after == 3600
+    assert len(session.calls) == 1
+
+
+def test_get_json_does_not_cache_bad_bodies(tmp_path):
+    c, session, _ = make([FakeResponse(text="<html>oops</html>"), FakeResponse(text='{"ok": 1}')], cache_dir=tmp_path)
+    with pytest.raises(ValueError):
+        c.get_json("https://a.test/", cache_ttl=60)
+    assert c.get_json("https://a.test/", cache_ttl=60) == {"ok": 1}
+    assert len(session.calls) == 2
+
+
+def test_get_json_cache_if_rejects_semantic_failures(tmp_path):
+    c, session, _ = make([FakeResponse(text='{"success": 2}'), FakeResponse(text='{"success": 1}')], cache_dir=tmp_path)
+    ok = lambda d: d["success"] == 1  # noqa: E731
+    assert c.get_json("https://a.test/", cache_ttl=60, cache_if=ok) == {"success": 2}
+    assert c.get_json("https://a.test/", cache_ttl=60, cache_if=ok) == {"success": 1}
+    assert c.get_json("https://a.test/", cache_ttl=60, cache_if=ok) == {"success": 1}  # now cached
+    assert len(session.calls) == 2
