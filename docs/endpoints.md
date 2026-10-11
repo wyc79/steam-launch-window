@@ -111,6 +111,10 @@ github.com/SteamDatabase/Protobufs (`webui/service_storequery.proto`).
 - `filter=popularcomingsoon`: 62,717 items. Roughly date order with a small
   popularity boost. It is **not** a clean popularity rank.
 - `sort_by=Released_DESC&category1=998`: all released games (123,660), newest first.
+- Rate limit: from a home IP, 1 request per second ran without errors. From a
+  GitHub Actions runner (2026-10-11), the wishlist crawl at 1 per second got
+  429 four times around page 30, then recovered after backoff. The daily job
+  now spaces store search requests 2 seconds apart.
 
 ## 3. Wishlist rank (main pre-launch hype proxy)
 
