@@ -1,0 +1,58 @@
+name: publish dataset
+
+# Weekly: publish the data branch as Parquet on Hugging Face.
+#
+# Off by default. Needs:
+#   secret   HF_TOKEN          Hugging Face token with write access to the dataset
+#   variable HF_DATASET_REPO   e.g. <user>/steam-launch-data
+#   variable PUBLISH_DATASET=on  to let the schedule upload
+# A manual run is a dry run unless "upload" is ticked: it builds the files and
+# attaches them to the run so they can be checked first.
+
+on:
+  schedule:
+    - cron: "0 12 * * 1"  # Mondays, after the weekly history run
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "Upload to Hugging Face (otherwise build only)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: data-branch
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || vars.PUBLISH_DATASET == 'on'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: data
+          path: _data
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install ".[publish]"
+
+      - name: Build (dry run)
+        if: github.event_name == 'workflow_dispatch' && !inputs.upload
+        run: python -m pipeline.publish_dataset --dry-run
+      - name: Attach the built files to this run
+        if: github.event_name == 'workflow_dispatch' && !inputs.upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: dataset-preview
+          path: .cache/dataset
+          include-hidden-files: true
+
+      - name: Build and upload
+        if: github.event_name == 'schedule' || inputs.upload
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_DATASET_REPO: ${{ vars.HF_DATASET_REPO }}
+        run: python -m pipeline.publish_dataset
