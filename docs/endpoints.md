@@ -215,10 +215,17 @@ No key needed.
   request after it, including the plain hub page (`/app/<id>`). The block
   was still on 31 minutes later. A cached copy can still return 200, which
   hides the block. Requests made while blocked seem to extend it, so stop
-  completely on 429 and wait. The safe rate is still being measured.
+  completely on 429 and wait.
+- **Second test (19:54, after about 2 hours of no requests):** at 1 request
+  per 5 s, 60 requests succeeded, then the 61st got 429 (5 minutes in). So the
+  site allows about 60 requests in a short window. The sustainable rate is
+  still being measured; the collector stops on the first 429.
 - Because of this, followers are only tracked for about 11,000 games
   (see the README), not all 60,000.
-- Not yet spot-checked against SteamDB. Do this by hand for a few games.
+- **Checked against SteamDB by hand (2026-10-10, 5 games, 2,900 to 114,000
+  followers):** all within 0.1% to 1.1%, ours always slightly higher (SteamDB's
+  numbers are a bit older, and upcoming games keep gaining followers). So
+  `memberCount` is the number SteamDB shows as Followers.
 
 ## 7. Reviews
 
