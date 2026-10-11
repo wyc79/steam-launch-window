@@ -26,6 +26,21 @@ otherwise inflate English-language niches).
 
 Check: rerun the main numbers with top 5 and top 20 and report whether conclusions change.
 
+**Free or paid:** a game is free if Steam marks it free (`is_free`) or "Free to
+Play" is among its top 10 tags (the tag catches free-to-play games that have
+not set the flag yet). Everything else is "paid or not yet priced".
+
+| Group | Upcoming | Past launches (2022 on) |
+|---|---|---|
+| marked free | about 4,400 (7%) | 12,649 (15%) |
+| paid price shown | a few hundred (under 1%) | |
+| no price yet | about 55,000 (92%) | |
+
+Free games declare it early, while paid games set their price at launch, so
+"no price yet" upcoming games are treated as paid. Once a few weeks of
+snapshots exist, we check this: of the games that launch, how many were
+correctly not marked free beforehand. The accuracy goes on the Methods page.
+
 ## 2. Competition ahead (26-week heatmap)
 
 Weeks run Monday to Sunday, Pacific time, starting with the current week.
@@ -43,10 +58,14 @@ For each week and tag:
 Exact and spread are always shown separately, because a "2027" game spread
 over 52 weeks is very different from 52 games with real dates.
 
-**Price cannot filter this view.** Only about 6% of upcoming games have a
-price, and most of those are free. Paid games almost always set their price at
-launch. So the forward heatmap cannot be split by price tier; price only
-enters through the history model.
+**Free games are a separate layer.** They compete for front-page space and
+players' time, but not for purchases. Each week shows the paid count (paid or
+not yet priced) as the main number and the free count next to it. A "my game
+is free-to-play" switch swaps the two, so free games become the main count.
+
+**Price tiers cannot filter this view.** Fewer than 1% of upcoming games show
+a paid price, because paid games set it at launch. So the forward heatmap
+cannot be split by price tier; price only enters through the history model.
 
 Left out:
 - Games whose date passed more than 30 days ago but are still "coming soon"
@@ -84,7 +103,7 @@ Games launched from 2022-01-01 until 31 days ago, from `history/games.csv`.
 |---|---|
 | `full` and `early_access` launches | in the model, with an Early Access indicator |
 | `ea_exit` (left Early Access, earlier audience) | **left out**: their launch is not a first launch |
-| free-to-play | **left out** of the main model (reviews come from a different kind of audience); a separate model only if there are enough games |
+| free games | **their own model** (12,649 games is plenty). Reviews mean something different for them (many players, low review rate, no purchase), so mixing them with paid games would blur both |
 | `unavailable` review data | left out, and counted in the report |
 
 ### Outcome
@@ -97,12 +116,18 @@ Cheaper games sell more copies, so reviews partly measure cheapness. A second
 outcome, `reviews_30d x price` (a revenue proxy), answers "which week earns the
 most". Both are fitted and reported; if they disagree, the page says so.
 
+For the free-game model, only `reviews_30d` is used (price and revenue are zero).
+
 39% of launches get zero reviews and a few get tens of thousands, so the model
 is for counts:
 
 - **Main:** negative binomial regression (log link).
 - **Check:** hurdle model (one part for "any reviews at all", one part for
-  "how many, given some"). If the two disagree, report both.
+  "how many, given some"). If the two disagree, report both. This matters most
+  for free games, where many launches are tiny hobby projects with no reviews.
+
+Both models use the same predictors, minus the price ones for free games.
+The site shows a free-to-play developer the free-game results.
 
 ### Predictors
 
@@ -163,11 +188,13 @@ Small JSON files, rebuilt by Actions:
 
 ```
 site/data/tags.json                 tag id, name, games upcoming, games in history
-site/data/upcoming/<tagid>.json     26 weeks x {exact, spread, hype, no_hype} + top games per week
-site/data/history/<tagid>.json      panel numbers from section 4
+site/data/upcoming/<tagid>.json     26 weeks x {paid, free} x {exact, spread, hype, no_hype}
+                                    + top games per week
+site/data/history/<tagid>.json      panel numbers from section 4, for paid and free games
 site/data/pairs/<a>-<b>.json        same, for tag pairs with at least 200 past launches
 site/data/events.json               events.yaml as JSON
 site/data/model.json                effect sizes with intervals, sample sizes, caveats
+                                    (paid model and free model)
 ```
 
 Three or more tags are combined in the browser from the per-tag files (as an
@@ -185,13 +212,12 @@ spreading, niche matching and event overlap logic. No Steam requests.
 
 1. **Niche = top 10 tags?** Or a weight threshold (tags with at least half the
    votes of the game's top tag)?
-2. **Free-to-play:** leave it out of the main model, as proposed?
-3. **Tag pairs:** precompute only pairs with 200+ past launches (a few hundred
+2. **Tag pairs:** precompute only pairs with 200+ past launches (a few hundred
    files), or let the browser combine single tags for everything?
-4. **Year-precision games** ("2027"): include in the spread count, or only
+3. **Year-precision games** ("2027"): include in the spread count, or only
    show them as a separate "sometime this year" number? They are 5,858 games,
    more than all exact dates combined.
-5. **Reviews by language (sample):** counting reviews by language costs one
+4. **Reviews by language (sample):** counting reviews by language costs one
    request per language per game. Worth doing for a 1,000-game sample, to check
    that Chinese localization really shifts who reviews? About 10,000 requests.
 
@@ -204,5 +230,7 @@ spreading, niche matching and event overlap logic. No Steam requests.
 - Followers are only tracked for ~11,000 upcoming games; wishlist rank only
   covers the top ~5,300.
 - Upcoming games almost never have a price, so price only enters through history.
+- "Not marked free" before launch is assumed to mean paid; how often that is
+  right is only known after a few weeks of snapshots.
 - About 3% of games list "extra" languages that Steam numbers separately; they
   are kept as `extraN` because their names are not verified.
