@@ -45,6 +45,19 @@ jobs (about a day each at 1 request per second). They run outside Actions,
 on a local machine or an always-on server ([scripts/server](scripts/server/README.md)).
 Actions only do the small daily and weekly increments.
 
+Scheduled jobs are off until switched on with repository variables
+(Settings > Secrets and variables > Actions > Variables), so a fresh fork
+does not start scraping:
+
+| Variable | Turns on |
+|---|---|
+| `COLLECT_DAILY=on` | the daily snapshot |
+| `COLLECT_FOLLOWERS=on` | the follower step inside the daily job |
+| `COLLECT_HISTORY=on` | the weekly history job |
+| `ENDPOINT_CHECK=on` | the weekly endpoint smoke test |
+
+Each workflow can also be run by hand from the Actions tab.
+
 All scripts wait at least 1 second between requests to the same host, retry
 with backoff on errors, and save progress as they go. Run one again and it
 continues where it stopped.

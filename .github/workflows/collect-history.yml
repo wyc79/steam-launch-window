@@ -1,13 +1,22 @@
 name: collect history
 
-# Weekly: relist games released since 2022 and fill first-30-day review
-# counts for games whose window has closed since the last run.
-# The backfill was done locally; this job only does increments.
+# Weekly: relist games released since 2022, fill first-30-day review counts
+# for games whose window closed since the last run, and check new launches
+# for hidden Early Access. The backfill is done outside Actions; this job
+# only does increments.
+#
+# Off by default. Set the repository variable COLLECT_HISTORY=on to let the
+# schedule run it. Do not turn it on (or run it by hand) until the backfill's
+# games.csv is on the data branch, or it will redo the backfill here.
 
 on:
   schedule:
     - cron: "0 6 * * 1"  # Mondays
   workflow_dispatch:
+    inputs:
+      budget_minutes:
+        description: "Time budget"
+        default: "300"
 
 permissions:
   contents: write
@@ -18,6 +27,7 @@ concurrency:
 
 jobs:
   collect:
+    if: github.event_name == 'workflow_dispatch' || vars.COLLECT_HISTORY == 'on'
     runs-on: ubuntu-latest
     timeout-minutes: 330
     steps:
@@ -26,10 +36,14 @@ jobs:
         with:
           ref: data
           path: _data
+      - name: Refuse to start without the backfill
+        run: |
+          test -f _data/history/games.csv || {
+            echo "history/games.csv is not on the data branch yet; finish the backfill first"; exit 1; }
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
       - run: pip install .
-      - run: python -m pipeline.collect_history --budget-minutes 300
+      - run: python -m pipeline.collect_history --budget-minutes "${{ inputs.budget_minutes || '300' }}"
       - run: scripts/commit_data.sh "history $(date -u +%F)"

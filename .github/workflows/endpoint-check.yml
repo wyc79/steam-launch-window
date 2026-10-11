@@ -1,6 +1,8 @@
 name: endpoint check
 
 # Weekly smoke test: do the Steam endpoints still look the way we expect?
+# About 10 requests. Off by default: set the repository variable
+# ENDPOINT_CHECK=on to let the schedule run it.
 
 on:
   schedule:
@@ -9,6 +11,7 @@ on:
 
 jobs:
   live:
+    if: github.event_name == 'workflow_dispatch' || vars.ENDPOINT_CHECK == 'on'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
