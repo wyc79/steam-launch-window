@@ -59,6 +59,11 @@ does not start scraping:
 
 Each workflow can also be run by hand from the Actions tab.
 
+One workflow runs without a switch because it makes no requests: `events check`
+validates `data/events.yaml` every Monday and fails (so GitHub emails you) when
+an estimated event, such as a holiday whose official dates are not out yet,
+starts within 90 days.
+
 All scripts wait at least 1 second between requests to the same host (2 s
 for the store site on GitHub's servers, 5 s for the community site), retry
 with backoff on errors, and save progress as they go. Run one again and it
