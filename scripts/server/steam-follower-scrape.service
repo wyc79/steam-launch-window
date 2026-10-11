@@ -1,0 +1,16 @@
+# systemd user service: the first full follower scrape. Restarts after a
+# crash or reboot. Install steps are in scripts/server/README.md.
+[Unit]
+Description=steam-launch-window follower scrape
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/steam-launch-window/scripts/server/run_follower_scrape.sh
+Environment=COMMUNITY_INTERVAL=5
+Restart=on-failure
+RestartSec=600
+
+[Install]
+WantedBy=default.target
