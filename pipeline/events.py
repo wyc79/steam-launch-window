@@ -2,6 +2,8 @@
 
     python -m pipeline.events                     check the file
     python -m pipeline.events --check-steam _data also compare release dates with Steam's own
+    python -m pipeline.events --due-within 90     fail if an estimated (low confidence) event
+                                                  starts within 90 days: time to replace it
 
 The file's rules are documented at its top. In short:
 - Dates are Pacific calendar dates.
@@ -159,16 +161,28 @@ def check_against_steam(events: list[dict], data_dir: Path) -> list[str]:
     return problems
 
 
+def due_estimates(events: list[dict], today: date, days: int) -> list[str]:
+    """Low-confidence events that start within `days` days and still need real dates."""
+    horizon = today + timedelta(days=days)
+    return [f"{e['name']!r} starts {e['start']} and is still an estimate: {e.get('note', '')}"
+            for e in events if e.get("confidence") == "low" and today <= e["start"] <= horizon]
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--file", type=Path, default=PATH)
     p.add_argument("--check-steam", type=Path, metavar="DATA_DIR",
                    help="also compare release dates with Steam's data in DATA_DIR (e.g. _data)")
+    p.add_argument("--due-within", type=int, metavar="DAYS",
+                   help="also fail if a low-confidence event starts within DAYS days")
+    p.add_argument("--today", type=date.fromisoformat, default=None, help="override today's date")
     args = p.parse_args(argv)
     events = load(args.file)
     problems = validate(events)
     if args.check_steam:
         problems += check_against_steam(events, args.check_steam)
+    if args.due_within is not None:
+        problems += due_estimates(events, args.today or date.today(), args.due_within)
     for line in problems:
         print(line)
     print(f"{len(events)} events, {len(problems)} problems")

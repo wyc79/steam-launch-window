@@ -89,3 +89,19 @@ def test_check_against_steam(tmp_path):
     known_wrong = release(name="Black Ops 7", steam_appid=3606480)
     problems = ev.check_against_steam([release(), exit_, future_exit, known_wrong], tmp_path)
     assert problems == ["'Some Game': events.yaml says 2026-03-05, Steam says 2026-03-04 (app 123)"]
+
+
+def test_due_estimates():
+    est = {**sale(type="regional_holiday", region="CN", confidence="low"),
+           "name": "China Spring Festival holiday 2027", "start": date(2027, 2, 5), "end": date(2027, 2, 11)}
+    firm = {**est, "name": "firm", "confidence": "high"}
+    assert ev.due_estimates([est, firm], date(2026, 10, 10), 90) == []          # 118 days away
+    due = ev.due_estimates([est, firm], date(2026, 11, 10), 90)                  # 87 days away
+    assert len(due) == 1 and "China Spring Festival holiday 2027" in due[0]
+    assert ev.due_estimates([est], date(2027, 3, 1), 90) == []                   # already past
+
+
+def test_cli_due_within_fails_when_an_estimate_is_close(capsys):
+    assert ev.main(["--due-within", "90", "--today", "2026-11-10"]) == 1
+    assert "still an estimate" in capsys.readouterr().out
+    assert ev.main(["--due-within", "90", "--today", "2026-10-10"]) == 0

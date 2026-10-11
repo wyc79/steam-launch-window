@@ -1,0 +1,25 @@
+name: events check
+
+# Validates data/events.yaml and fails when an estimated (low confidence)
+# event starts within 90 days, so GitHub emails a reminder to replace it
+# with the official dates. No requests to Steam, so it runs by default.
+
+on:
+  schedule:
+    - cron: "0 15 * * 1"  # Mondays
+  push:
+    branches: [main]
+    paths: ["data/events.yaml", "pipeline/events.py"]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install .
+      - run: python -m pipeline.events --due-within 90
