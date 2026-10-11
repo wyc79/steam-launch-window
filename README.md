@@ -55,6 +55,7 @@ does not start scraping:
 | `COLLECT_FOLLOWERS=on` | the follower step inside the daily job |
 | `COLLECT_HISTORY=on` | the weekly history job |
 | `ENDPOINT_CHECK=on` | the weekly endpoint smoke test |
+| `PUBLISH_DATASET=on` | the weekly upload to Hugging Face (also needs the `HF_TOKEN` secret and `HF_DATASET_REPO` variable) |
 
 Each workflow can also be run by hand from the Actions tab.
 
@@ -91,6 +92,12 @@ python -m pipeline.collect_history --since 2026-01-01 --budget-minutes 30
 ```
 
 Outputs go to `_data/` (in CI this is the `data` branch).
+
+## Public dataset
+
+Once switched on, a weekly job publishes the `data` branch as Parquet files on
+Hugging Face (`pipeline/publish_dataset.py`), with a dataset card that repeats
+the caveats below. Daily snapshots are grouped into one file per month.
 
 ## Data layout (`data` branch)
 
