@@ -110,6 +110,8 @@ def main(argv=None) -> int:
     p.add_argument("--max-consecutive-errors", type=int, default=25)
     p.add_argument("--high-followers", type=int, default=Policy.high_followers)
     p.add_argument("--dry-run", action="store_true", help="print the plan and exit")
+    p.add_argument("--fail-if-incomplete", action="store_true",
+                   help="exit with code 3 if games are still due (for a retry loop)")
     args = p.parse_args(argv)
     client, today = setup(args)
     policy = Policy(high_followers=args.high_followers)
@@ -152,7 +154,7 @@ def main(argv=None) -> int:
         checkpoint()
     still_due = len(plan(snapshot, latest, now, policy))
     log.info("done: %d still due", still_due)
-    return 0
+    return 3 if args.fail_if_incomplete and still_due else 0
 
 
 if __name__ == "__main__":
