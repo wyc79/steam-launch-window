@@ -1,0 +1,23 @@
+[project]
+name = "steam-launch-window"
+version = "0.1.0"
+description = "Pick a Steam launch window: upcoming competition by tag, Steam events, and how similar launches did."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31",
+    "pyyaml>=6.0",
+    "tzdata>=2024.1",  # zoneinfo has no tz database on Windows without this
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools]
+packages = ["pipeline"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: hits real Steam endpoints (run with -m live)"]
+addopts = "-m 'not live'"
