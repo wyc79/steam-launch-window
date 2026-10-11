@@ -233,6 +233,35 @@ def _names(entries) -> str:
     return "|".join(e.get("name", "") for e in entries or [])
 
 
+# Steam's ELanguage numbers. Checked against the store's language list for
+# Boltgun 2 and Hades (codes 0-8, 10, 12, 19, 22); the rest follow Steam's enum.
+LANGUAGES = {
+    0: "english", 1: "german", 2: "french", 3: "italian", 4: "korean", 5: "spanish",
+    6: "schinese", 7: "tchinese", 8: "russian", 9: "thai", 10: "japanese", 11: "portuguese",
+    12: "polish", 13: "danish", 14: "dutch", 15: "finnish", 16: "norwegian", 17: "swedish",
+    18: "hungarian", 19: "czech", 20: "romanian", 21: "turkish", 22: "brazilian",
+    23: "bulgarian", 24: "greek", 25: "arabic", 26: "ukrainian", 27: "latam",
+    28: "vietnamese", 29: "indonesian",
+}
+
+
+def _language_name(entry: dict) -> str:
+    code = entry["elanguage"]
+    if code == -1:  # one of Steam's extra languages, numbered separately; names not verified
+        return f"extra{entry.get('eadditionallanguage')}"
+    return LANGUAGES.get(code, f"lang{code}")
+
+
+def language_fields(item: dict) -> dict:
+    """Supported languages (interface or subtitles) and full-audio languages, pipe-joined."""
+    langs = [l for l in item.get("supported_languages") or [] if l.get("supported")]
+    name = _language_name
+    return {
+        "languages": "|".join(name(l) for l in langs),
+        "audio_languages": "|".join(name(l) for l in langs if l.get("full_audio")),
+    }
+
+
 def meta_fields(item: dict) -> dict:
     """Slow-changing descriptive fields for one store item."""
     basic = item.get("basic_info") or {}
@@ -246,6 +275,7 @@ def meta_fields(item: dict) -> dict:
         "tags": "|".join(f"{t['tagid']}:{t.get('weight', 0)}" for t in tags),
         "demo_appids": "|".join(str(d) for d in demos),
         "is_free": int(bool(item.get("is_free"))),
+        **language_fields(item),
     }
 
 

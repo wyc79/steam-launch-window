@@ -1,0 +1,208 @@
+# Phase 2 plan: analysis
+
+Status: draft for review. Nothing here is built yet.
+
+Phase 2 turns the collected data into two things the website shows:
+
+1. **Competition ahead:** for a tag (or tag pair), how crowded each of the next
+   26 weeks is.
+2. **What history says:** how past launches in that niche did, depending on
+   competition and Steam events around launch.
+
+## 1. Who counts as "in a niche"
+
+A game is in tag T if T is among its **top 10 tags** by vote weight. Steam
+shows a game's top tags first, and players vote them, so the top 10 describe
+what the game is. Lower tags are often noise ("Singleplayer", "Great Soundtrack").
+
+For a tag pair (A and B), the game needs both in its top 10.
+
+**Language:** a game only competes with games that share a major language with
+it. The user picks the languages their game supports (default: English), and
+only games supporting at least one of them are counted. Of upcoming games, 96%
+support English, 46% are English-only, 33% support Simplified Chinese, and
+2.6% support Simplified Chinese but not English (a separate market that would
+otherwise inflate English-language niches).
+
+Check: rerun the main numbers with top 5 and top 20 and report whether conclusions change.
+
+## 2. Competition ahead (26-week heatmap)
+
+Weeks run Monday to Sunday, Pacific time, starting with the current week.
+
+For each week and tag:
+
+| Number | How |
+|---|---|
+| **Exact** | games with a day-precision date in that week |
+| **Spread** | games with a month, quarter or year date, spread evenly over the days of their range (a "November" game adds 7/30 to each full November week) |
+| **Total** | exact + spread |
+| **Hype-weighted** | the same, but each game counts by its follower count (see below) |
+| **No hype data** | how much of the total comes from games with no follower count and no wishlist rank |
+
+Exact and spread are always shown separately, because a "2027" game spread
+over 52 weeks is very different from 52 games with real dates.
+
+**Price cannot filter this view.** Only about 6% of upcoming games have a
+price, and most of those are free. Paid games almost always set their price at
+launch. So the forward heatmap cannot be split by price tier; price only
+enters through the history model.
+
+Left out:
+- Games whose date passed more than 30 days ago but are still "coming soon"
+  (Steam has some from 2009). These are stale pages, not competition.
+- DLC, demos, software (already left out by the collector).
+
+### Hype weight
+
+Followers are the only hype number that exists for many games, but only for
+the ~11,000 tracked games.
+
+- Tracked game: weight = followers.
+- Ranked but not yet fetched: estimate followers from wishlist rank, using a
+  curve fitted on games that have both.
+- Neither: no weight. These show up in "No hype data" instead of being guessed.
+
+Followers are heavily skewed (a few games have 100,000+). The page will show
+hype-weighted numbers on a log-like color scale, and list the big names in
+each week so one giant does not hide the rest.
+
+### Later, once snapshots pile up
+
+Daily snapshots let us measure how often dates slip: what share of
+"November" games really launch in November, and how often exact dates move.
+After about 2 months of snapshots, spread weights can use these rates
+instead of "evenly over the range". Not in the first version.
+
+## 3. What history says (the model)
+
+### Data
+
+Games launched from 2022-01-01 until 31 days ago, from `history/games.csv`.
+
+| Group | Treatment |
+|---|---|
+| `full` and `early_access` launches | in the model, with an Early Access indicator |
+| `ea_exit` (left Early Access, earlier audience) | **left out**: their launch is not a first launch |
+| free-to-play | **left out** of the main model (reviews come from a different kind of audience); a separate model only if there are enough games |
+| `unavailable` review data | left out, and counted in the report |
+
+### Outcome
+
+`reviews_30d`: Steam-purchase reviews written in the first 30 days. A proxy for
+sales (the common rule of thumb is one review per 30 to 60 sales, but it varies
+by genre and price, so we only claim "more reviews", not "more sales").
+
+Cheaper games sell more copies, so reviews partly measure cheapness. A second
+outcome, `reviews_30d x price` (a revenue proxy), answers "which week earns the
+most". Both are fitted and reported; if they disagree, the page says so.
+
+39% of launches get zero reviews and a few get tens of thousands, so the model
+is for counts:
+
+- **Main:** negative binomial regression (log link).
+- **Check:** hurdle model (one part for "any reviews at all", one part for
+  "how many, given some"). If the two disagree, report both.
+
+### Predictors
+
+| Variable | Definition |
+|---|---|
+| **Niche competition** | number of other launches in the same week whose top-10 tags overlap the game's (tag-weight cosine similarity at least 0.3) and that share a major language with it; also tried as "in the same primary tag" |
+| **Big competitor nearby** | an on-Steam AAA release from `events.yaml` within 3 days of launch |
+| **Seasonal sale** | launch date falls inside a seasonal sale; separately, launch in the 7 days before one |
+| **Next Fest** | launch during Next Fest; separately, the game had a demo in the last Next Fest before launch (from demo date) |
+| **Themed fest** | launch during a themed fest |
+| **Genre** | indicators for the 30 most common tags |
+| **Time** | launch year and month (fixed effects), day of week |
+| **Price** | log of US price; under $5 indicator |
+| **Price vs niche** | log(price / median price of the game's niche), so a $25 game in an $8 niche differs from one in a $30 niche |
+| **Same-tier competition** | as niche competition, but only launches in the same price tier (under $10, $10 to $25, over $25); kept instead of plain competition if it predicts held-out launches better. History only, since upcoming games rarely have prices |
+| **Languages** | supports Simplified Chinese, Japanese, Russian, Korean, Brazilian Portuguese, German, French, Spanish (indicators); number of languages; English audio |
+| **Regional holidays** | launch during Lunar New Year week, China's Golden Week, Japan's Golden Week, US Thanksgiving to Cyber Monday, Christmas to New Year (from `events.yaml`); the Chinese and Japanese holidays also as interactions with the matching language |
+| **Launch hour** | hour of release in Pacific time (10 am Pacific is 1 am in China); in bands |
+| **Early Access** | launch_type = early_access |
+| **Demo** | had a demo before launch |
+| **Publisher reach** | publisher's number of earlier releases in the data; part of a franchise |
+
+### The big caveat: hype we cannot see
+
+The biggest driver of launch reviews is pre-launch hype (wishlists), and we do
+not have it for past launches. Wishlist rank and followers only exist from
+now on. Hype also drives date choice: big games pick their weeks, and small
+games avoid them. So the competition effect is **observational and confounded**.
+
+What we do about it:
+- Control for what we can see: price, publisher reach, franchise, Early Access, demo.
+- Report the results again for "small games only" (under $20, no franchise,
+  publisher with at most 2 earlier releases), where strategic date choice is weaker.
+- Use robust standard errors clustered by launch week.
+- Word every result as "launches in busier weeks got X% fewer reviews on
+  average, after adjusting for ...", never "busy weeks cause X% fewer reviews".
+- Once a year of snapshots exists, refit with pre-launch followers as a control.
+
+### What gets reported
+
+- Effects as rate ratios with 95% intervals ("one more same-niche launch that
+  week goes with 2% fewer reviews, 95% CI 1% to 3%").
+- Model fit against a baseline with only genre, year and price, on 2026 launches
+  held out from fitting.
+- A short Methods section in plain language (it becomes the Phase 3 Methods page).
+
+## 4. Historical panel per niche
+
+For each tag (and common tag pair), split past launches into three groups by
+niche competition in their launch week (quiet, normal, busy, by tercile), and
+show median, 75th and 90th percentile of 30-day reviews in each group.
+
+Hide a group with fewer than 30 games; hide the tag if any group is hidden.
+
+## 5. Outputs for the website
+
+Small JSON files, rebuilt by Actions:
+
+```
+site/data/tags.json                 tag id, name, games upcoming, games in history
+site/data/upcoming/<tagid>.json     26 weeks x {exact, spread, hype, no_hype} + top games per week
+site/data/history/<tagid>.json      panel numbers from section 4
+site/data/pairs/<a>-<b>.json        same, for tag pairs with at least 200 past launches
+site/data/events.json               events.yaml as JSON
+site/data/model.json                effect sizes with intervals, sample sizes, caveats
+```
+
+Three or more tags are combined in the browser from the per-tag files (as an
+approximation, labeled as such).
+
+Refresh: upcoming files daily after the snapshot (cheap, no Steam requests);
+history files and model weekly.
+
+## 6. Tools
+
+Python with pandas and statsmodels, in `analysis/`. Tests for the week
+spreading, niche matching and event overlap logic. No Steam requests.
+
+## 7. Questions for you
+
+1. **Niche = top 10 tags?** Or a weight threshold (tags with at least half the
+   votes of the game's top tag)?
+2. **Free-to-play:** leave it out of the main model, as proposed?
+3. **Tag pairs:** precompute only pairs with 200+ past launches (a few hundred
+   files), or let the browser combine single tags for everything?
+4. **Year-precision games** ("2027"): include in the spread count, or only
+   show them as a separate "sometime this year" number? They are 5,858 games,
+   more than all exact dates combined.
+5. **Reviews by language (sample):** counting reviews by language costs one
+   request per language per game. Worth doing for a 1,000-game sample, to check
+   that Chinese localization really shifts who reviews? About 10,000 requests.
+
+## Known data limits that feed into this
+
+- History shows today's price, demo and Early Access state, not launch-day state.
+- Hidden Early Access is only checked for games with 50+ reviews (~1.5%
+  slip through below that).
+- Delisted games are missing, so older years look a bit better than they were.
+- Followers are only tracked for ~11,000 upcoming games; wishlist rank only
+  covers the top ~5,300.
+- Upcoming games almost never have a price, so price only enters through history.
+- About 3% of games list "extra" languages that Steam numbers separately; they
+  are kept as `extraN` because their names are not verified.

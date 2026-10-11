@@ -6,6 +6,7 @@
 #   next_fest      Steam Next Fest (demo festival)
 #   themed_fest    Valve-run themed fests (third-party events are left out)
 #   aaa_release    big releases; on_steam_at_launch says if PC players could buy it on Steam that day
+#   regional_holiday  holidays that shift player attention in one region (region: CN, JP, US, global)
 # start, end: calendar dates in Pacific time, both inclusive. Steam events start at 10:00 Pacific.
 # confidence: high = official Steam source or several reliable sources agree;
 #             medium = one reliable source; low = not confirmed, see note.
@@ -45,6 +46,15 @@ events:
   confidence: high
   source: https://www.gematsu.com/2021/05/pokemon-legends-arceus-launches-january-28-2022
   note: Switch exclusive
+- name: Lunar New Year 2022
+  type: regional_holiday
+  region: CN
+  start: 2022-01-31
+  end: 2022-02-07
+  confidence: high
+  source: https://www.hko.gov.hk/en/gts/time/conversion1_text.htm
+  note: New Year's Eve to day 6. China's official holiday dates vary by year; this fixed window is used
+    for every year.
 - name: Dying Light 2 Stay Human
   type: aaa_release
   start: 2022-02-04
@@ -157,6 +167,14 @@ events:
   on_steam_at_launch: true
   confidence: high
   source: https://www.gematsu.com/2022/01/lego-star-wars-the-skywalker-saga-launches-april-5
+- name: Japan Golden Week 2022
+  type: regional_holiday
+  region: JP
+  start: 2022-04-29
+  end: 2022-05-05
+  confidence: high
+  source: https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html
+  note: National holidays Apr 29 and May 3-5; the days between are usually taken off too.
 - name: Steam Going Rogue Fest 2022
   type: themed_fest
   start: 2022-05-02
@@ -249,6 +267,14 @@ events:
   confidence: high
   source: https://www.pcgamer.com/fifa-23-release-date/
   note: Ultimate Edition early access from Sep 27
+- name: China National Day Golden Week 2022
+  type: regional_holiday
+  region: CN
+  start: 2022-10-01
+  end: 2022-10-07
+  confidence: high
+  source: https://www.timeanddate.com/holidays/china/national-day
+  note: Oct 1-7 is the usual official week; make-up workdays around it vary by year.
 - name: Steam Next Fest October 2022
   type: next_fest
   start: 2022-10-03
@@ -334,6 +360,14 @@ events:
   source: https://store.steampowered.com/news/app/593110/view/3475118496195190446
   note: Steam post (Nov 22 2022) says until November 29 at 10am PT; dates pre-announced in Steamworks
     post https://store.steampowered.com/news/group/4145017/view/3282583269823858400
+- name: US Thanksgiving to Cyber Monday 2022
+  type: regional_holiday
+  region: US
+  start: 2022-11-24
+  end: 2022-11-28
+  confidence: high
+  source: https://www.law.cornell.edu/uscode/text/5/6103
+  note: Thanksgiving is the fourth Thursday of November (5 U.S.C. 6103); window runs to Cyber Monday.
 - name: 'Warhammer 40,000: Darktide'
   type: aaa_release
   start: 2022-11-30
@@ -372,6 +406,23 @@ events:
   source: https://store.steampowered.com/news/app/593110/view/6332655088363338634
   note: Steam post (Dec 22 2022) says until January 5th at 10am PST; Steamworks post of 2022-09-27 lists
     Dec 22nd to Jan 5th
+- name: Christmas to New Year 2022
+  type: regional_holiday
+  region: global
+  start: 2022-12-24
+  end: 2023-01-01
+  confidence: high
+  source: https://www.law.cornell.edu/uscode/text/5/6103
+  note: Western holiday period; overlaps the Steam Winter Sale most years.
+- name: Lunar New Year 2023
+  type: regional_holiday
+  region: CN
+  start: 2023-01-21
+  end: 2023-01-28
+  confidence: high
+  source: https://www.hko.gov.hk/en/gts/time/conversion1_text.htm
+  note: New Year's Eve to day 6. China's official holiday dates vary by year; this fixed window is used
+    for every year.
 - name: Steam Base Builder Fest 2023
   type: themed_fest
   start: 2023-01-23
@@ -449,6 +500,14 @@ events:
   on_steam_at_launch: true
   confidence: high
   source: https://www.ea.com/games/starwars/jedi/news/star-wars-jedi-survivor-now-arrives-april-28
+- name: Japan Golden Week 2023
+  type: regional_holiday
+  region: JP
+  start: 2023-04-29
+  end: 2023-05-05
+  confidence: high
+  source: https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html
+  note: National holidays Apr 29 and May 3-5; the days between are usually taken off too.
 - name: Redfall
   type: aaa_release
   start: 2023-05-02
@@ -602,6 +661,14 @@ events:
   confidence: high
   source: https://www.gematsu.com/2023/07/ea-sports-fc-24-launches-september-29
   note: Ultimate Edition early access from Sep 22
+- name: China National Day Golden Week 2023
+  type: regional_holiday
+  region: CN
+  start: 2023-10-01
+  end: 2023-10-07
+  confidence: high
+  source: https://www.timeanddate.com/holidays/china/national-day
+  note: Oct 1-7 is the usual official week; make-up workdays around it vary by year.
 - name: Assassin's Creed Mirage
   type: aaa_release
   start: 2023-10-05
@@ -681,6 +748,14 @@ events:
   source: https://store.steampowered.com/news/app/593110/view/3823053915973576611
   note: Steam post (Nov 21 2023) says until November 28th at 10am PST; Steamworks 2023 schedule lists
     November 21 - 28
+- name: US Thanksgiving to Cyber Monday 2023
+  type: regional_holiday
+  region: US
+  start: 2023-11-23
+  end: 2023-11-27
+  confidence: high
+  source: https://www.law.cornell.edu/uscode/text/5/6103
+  note: Thanksgiving is the fourth Thursday of November (5 U.S.C. 6103); window runs to Cyber Monday.
 - name: Steam VR Fest 2023
   type: themed_fest
   start: 2023-12-04
@@ -712,6 +787,14 @@ events:
   source: https://store.steampowered.com/news/app/593110/view/3877100446784190796
   note: Steam post (Dec 21 2023) says through January 4th at 10am Pacific; Steamworks 2023 schedule lists
     December 21 - January 4, 2024
+- name: Christmas to New Year 2023
+  type: regional_holiday
+  region: global
+  start: 2023-12-24
+  end: 2024-01-01
+  confidence: high
+  source: https://www.law.cornell.edu/uscode/text/5/6103
+  note: Western holiday period; overlaps the Steam Winter Sale most years.
 - name: Steam Capitalism and Economy Fest 2024
   type: themed_fest
   start: 2024-01-08
@@ -780,6 +863,15 @@ events:
   confidence: high
   source: https://www.gematsu.com/2023/09/helldivers-ii-delayed-to-february-8-2024
   note: PS5 and PC (Steam); 12M sold by May 2024
+- name: Lunar New Year 2024
+  type: regional_holiday
+  region: CN
+  start: 2024-02-09
+  end: 2024-02-16
+  confidence: high
+  source: https://www.hko.gov.hk/en/gts/time/conversion1_text.htm
+  note: New Year's Eve to day 6. China's official holiday dates vary by year; this fixed window is used
+    for every year.
 - name: Steam Remote Play Together Fest 2024
   type: themed_fest
   start: 2024-02-12
@@ -846,6 +938,14 @@ events:
   confidence: high
   source: https://blog.playstation.com/2024/01/31/stellar-blade-arrives-only-on-ps5-april-26/
   note: PS5 exclusive; PC (Steam) 2025-06-11
+- name: Japan Golden Week 2024
+  type: regional_holiday
+  region: JP
+  start: 2024-04-29
+  end: 2024-05-05
+  confidence: high
+  source: https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html
+  note: National holidays Apr 29 and May 3-5; the days between are usually taken off too.
 - name: Steam Farming Fest 2024
   type: themed_fest
   start: 2024-04-29
@@ -1001,6 +1101,14 @@ events:
   confidence: high
   source: https://store.steampowered.com/news/app/593110/view/4696781406113751120
   note: Steam news post says now through October 7th at 10am PT
+- name: China National Day Golden Week 2024
+  type: regional_holiday
+  region: CN
+  start: 2024-10-01
+  end: 2024-10-07
+  confidence: high
+  source: https://www.timeanddate.com/holidays/china/national-day
+  note: Oct 1-7 is the usual official week; make-up workdays around it vary by year.
 - name: Silent Hill 2 (remake)
   type: aaa_release
   start: 2024-10-08
@@ -1077,6 +1185,14 @@ events:
   source: https://store.steampowered.com/news/app/593110/view/4464851103138185582
   note: Steam post (Nov 27 2024) says through December 4th at 10am PST; Steamworks 2024 schedule lists
     November 27 - December 4
+- name: US Thanksgiving to Cyber Monday 2024
+  type: regional_holiday
+  region: US
+  start: 2024-11-28
+  end: 2024-12-02
+  confidence: high
+  source: https://www.law.cornell.edu/uscode/text/5/6103
+  note: Thanksgiving is the fourth Thursday of November (5 U.S.C. 6103); window runs to Cyber Monday.
 - name: Marvel Rivals
   type: aaa_release
   start: 2024-12-06
@@ -1109,6 +1225,14 @@ events:
   source: https://store.steampowered.com/news/group/4145017/view/3970553774441642998
   note: Steamworks 2024 schedule lists December 19 - January 2; Steam post of Dec 19 2024 (https://store.steampowered.com/news/app/593110/view/520825178851115844)
     says runs through January 2 (2025!) at 10am PST
+- name: Christmas to New Year 2024
+  type: regional_holiday
+  region: global
+  start: 2024-12-24
+  end: 2025-01-01
+  confidence: high
+  source: https://www.law.cornell.edu/uscode/text/5/6103
+  note: Western holiday period; overlaps the Steam Winter Sale most years.
 - name: Steam Real-Time Strategy Fest 2025
   type: themed_fest
   start: 2025-01-20
@@ -1116,6 +1240,15 @@ events:
   confidence: high
   source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
   note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Lunar New Year 2025
+  type: regional_holiday
+  region: CN
+  start: 2025-01-28
+  end: 2025-02-04
+  confidence: high
+  source: https://www.hko.gov.hk/en/gts/time/conversion1_text.htm
+  note: New Year's Eve to day 6. China's official holiday dates vary by year; this fixed window is used
+    for every year.
 - name: Steam Idler Fest 2025
   type: themed_fest
   start: 2025-02-03
@@ -1254,6 +1387,14 @@ events:
   confidence: high
   source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
   note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Japan Golden Week 2025
+  type: regional_holiday
+  region: JP
+  start: 2025-04-29
+  end: 2025-05-05
+  confidence: high
+  source: https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html
+  note: National holidays Apr 29 and May 3-5; the days between are usually taken off too.
 - name: Steam Creature Collector Fest 2025
   type: themed_fest
   start: 2025-05-12
@@ -1446,6 +1587,14 @@ events:
   source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
   note: Moved from the usual late-November slot to late September / early October. Dates from the official
     Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: China National Day Golden Week 2025
+  type: regional_holiday
+  region: CN
+  start: 2025-10-01
+  end: 2025-10-07
+  confidence: high
+  source: https://www.timeanddate.com/holidays/china/national-day
+  note: Oct 1-7 is the usual official week; make-up workdays around it vary by year.
 - name: Ghost of Yotei
   type: aaa_release
   start: 2025-10-02
@@ -1524,6 +1673,14 @@ events:
   confidence: high
   source: https://gameinformer.com/2025
   note: Free-to-play wuxia open world; global PC (Steam) and PS5 launch same day as Black Ops 7.
+- name: US Thanksgiving to Cyber Monday 2025
+  type: regional_holiday
+  region: US
+  start: 2025-11-27
+  end: 2025-12-01
+  confidence: high
+  source: https://www.law.cornell.edu/uscode/text/5/6103
+  note: Thanksgiving is the fourth Thursday of November (5 U.S.C. 6103); window runs to Cyber Monday.
 - name: Steam Sports Fest 2025
   type: themed_fest
   start: 2025-12-08
@@ -1538,6 +1695,14 @@ events:
   confidence: high
   source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
   note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Christmas to New Year 2025
+  type: regional_holiday
+  region: global
+  start: 2025-12-24
+  end: 2026-01-01
+  confidence: high
+  source: https://www.law.cornell.edu/uscode/text/5/6103
+  note: Western holiday period; overlaps the Steam Winter Sale most years.
 - name: Steam Detective Fest 2026
   type: themed_fest
   start: 2026-01-12
@@ -1575,6 +1740,15 @@ events:
   source: https://web.archive.org/web/20260109010625/https://partner.steamgames.com/doc/marketing/upcoming_events
   note: Listed as "PvP Fest" in 2025 versions of the page. Dates from the official Steamworks Upcoming
     Events page (Wayback Machine snapshot).
+- name: Lunar New Year 2026
+  type: regional_holiday
+  region: CN
+  start: 2026-02-16
+  end: 2026-02-23
+  confidence: high
+  source: https://www.hko.gov.hk/en/gts/time/conversion1_text.htm
+  note: New Year's Eve to day 6. China's official holiday dates vary by year; this fixed window is used
+    for every year.
 - name: Steam Horse Fest 2026
   type: themed_fest
   start: 2026-02-19
@@ -1682,6 +1856,14 @@ events:
   confidence: high
   source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
   note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Japan Golden Week 2026
+  type: regional_holiday
+  region: JP
+  start: 2026-04-29
+  end: 2026-05-05
+  confidence: high
+  source: https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html
+  note: National holidays Apr 29 and May 3-5; the days between are usually taken off too.
 - name: Saros
   type: aaa_release
   start: 2026-04-30
@@ -1871,6 +2053,14 @@ events:
   confidence: high
   source: https://gameinformer.com/2026
   note: Annual football release; PC plus all consoles same day.
+- name: China National Day Golden Week 2026
+  type: regional_holiday
+  region: CN
+  start: 2026-10-01
+  end: 2026-10-07
+  confidence: high
+  source: https://www.timeanddate.com/holidays/china/national-day
+  note: Oct 1-7 is the usual official week; make-up workdays around it vary by year.
 - name: Steam Autumn Sale 2026
   type: seasonal_sale
   start: 2026-10-01
@@ -1961,6 +2151,14 @@ events:
   source: https://www.gamespot.com/articles/gta-6-still-on-track-for-november-release/1100-6537831/
   note: PS5/Xbox only; no PC date announced. Delayed from Fall 2025 to 2026-05-26, then to 2026-11-19;
     Take-Two reaffirmed in Aug 2026.
+- name: US Thanksgiving to Cyber Monday 2026
+  type: regional_holiday
+  region: US
+  start: 2026-11-26
+  end: 2026-11-30
+  confidence: high
+  source: https://www.law.cornell.edu/uscode/text/5/6103
+  note: Thanksgiving is the fourth Thursday of November (5 U.S.C. 6103); window runs to Cyber Monday.
 - name: Steam Winter Sale 2026
   type: seasonal_sale
   start: 2026-12-17
@@ -1969,6 +2167,14 @@ events:
   source: https://partner.steamgames.com/doc/marketing/upcoming_events
   note: Upcoming; officially announced on the Steamworks Upcoming Events page. Dates from the official
     Steamworks Upcoming Events page (live, checked 2026-10-10).
+- name: Christmas to New Year 2026
+  type: regional_holiday
+  region: global
+  start: 2026-12-24
+  end: 2027-01-01
+  confidence: high
+  source: https://www.law.cornell.edu/uscode/text/5/6103
+  note: Western holiday period; overlaps the Steam Winter Sale most years.
 - name: Steam Desktop Companion Fest 2027
   type: themed_fest
   start: 2027-01-14
@@ -2025,6 +2231,15 @@ events:
   source: https://partner.steamgames.com/doc/marketing/upcoming_events
   note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
     checked 2026-10-10).
+- name: Lunar New Year 2027
+  type: regional_holiday
+  region: CN
+  start: 2027-02-05
+  end: 2027-02-12
+  confidence: high
+  source: https://www.hko.gov.hk/en/gts/time/conversion1_text.htm
+  note: New Year's Eve to day 6. China's official holiday dates vary by year; this fixed window is used
+    for every year.
 - name: Steam Couch Co-Op Fest 2027
   type: themed_fest
   start: 2027-02-08
@@ -2146,6 +2361,14 @@ events:
   source: https://partner.steamgames.com/doc/marketing/upcoming_events
   note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
     checked 2026-10-10).
+- name: Japan Golden Week 2027
+  type: regional_holiday
+  region: JP
+  start: 2027-04-29
+  end: 2027-05-05
+  confidence: high
+  source: https://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html
+  note: National holidays Apr 29 and May 3-5; the days between are usually taken off too.
 - name: Steam Real-Time Strategy Fest 2027
   type: themed_fest
   start: 2027-05-10
@@ -2178,3 +2401,27 @@ events:
   source: https://partner.steamgames.com/doc/marketing/upcoming_events
   note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
     checked 2026-10-10).
+- name: China National Day Golden Week 2027
+  type: regional_holiday
+  region: CN
+  start: 2027-10-01
+  end: 2027-10-07
+  confidence: high
+  source: https://www.timeanddate.com/holidays/china/national-day
+  note: Oct 1-7 is the usual official week; make-up workdays around it vary by year.
+- name: US Thanksgiving to Cyber Monday 2027
+  type: regional_holiday
+  region: US
+  start: 2027-11-25
+  end: 2027-11-29
+  confidence: high
+  source: https://www.law.cornell.edu/uscode/text/5/6103
+  note: Thanksgiving is the fourth Thursday of November (5 U.S.C. 6103); window runs to Cyber Monday.
+- name: Christmas to New Year 2027
+  type: regional_holiday
+  region: global
+  start: 2027-12-24
+  end: 2028-01-01
+  confidence: high
+  source: https://www.law.cornell.edu/uscode/text/5/6103
+  note: Western holiday period; overlaps the Steam Winter Sale most years.
