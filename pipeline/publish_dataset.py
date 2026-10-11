@@ -204,7 +204,7 @@ def main(argv=None) -> int:
     p.add_argument("--out", type=Path, default=Path(".cache/dataset"))
     p.add_argument("--repo-id", default=os.environ.get("HF_DATASET_REPO", ""),
                    help="Hugging Face dataset, e.g. user/steam-launch-data")
-    p.add_argument("--license", default="cc-by-4.0")
+    p.add_argument("--license", default="mit", help="must match the license set on Hugging Face")
     p.add_argument("--dry-run", action="store_true", help="build the folder but do not upload")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
