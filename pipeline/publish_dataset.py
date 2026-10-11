@@ -5,18 +5,28 @@ Builds a folder like this from --data-dir, then uploads it:
   history/games.parquet                 one row per launch since 2022
   upcoming/apps.parquet                 names, tags, languages of every upcoming game seen
   upcoming/snapshots/YYYY-MM.parquet    every daily snapshot of that month (snapshot_date column)
+  upcoming/release_changes.parquet      derived: each first sighting, change of the release date
+                                        text or range, and exit from the coming-soon list
+  upcoming/runs.parquet                 one row per daily collection run
   followers/latest.parquet              newest follower count per game
   followers/snapshots/YYYY-MM.parquet   every follower count fetched that month
   tags.parquet, events.parquet
+  manifest.json                         rows and columns of every file, checked before upload
   README.md                             dataset card
 
 Needs the `publish` extra (pandas, pyarrow, huggingface_hub). Uploading needs
 HF_TOKEN in the environment and --repo-id; --dry-run only builds the folder.
+
+Before uploading, the new manifest is compared with the published one: a
+missing file, a dropped column, or a file with 5% fewer rows stops the upload.
+The upload names the revision it started from, so a concurrent change makes it
+fail instead of being overwritten. The dataset must already exist.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import os
 import shutil
@@ -27,7 +37,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
-from . import collect_followers, collect_history, collect_upcoming
+from . import collect_followers, collect_history, collect_upcoming, storage
 from . import events as event_data
 
 log = logging.getLogger("publish_dataset")
@@ -36,11 +46,16 @@ INT_COLUMNS = {
     "appid", "tagid", "release_ts", "date_ok", "early_access", "wishlist_rank", "price_cents",
     "is_free", "followers", "launch_ts", "steam_release_ts", "early_access_now",
     "demo_release_ts", "demo_before_launch", "reviews_total_now", "reviews_30d",
-    "reviews_30d_positive", "reviews_before_launch", "steam_appid",
+    "reviews_30d_positive", "reviews_before_launch", "steam_appid", "reviews_1d", "reviews_7d",
+    "games", "dated", "ranked", "ranked_not_listed", "date_mismatch", "requests", "seconds", "ranking_ok",
 }
 BOOL_COLUMNS = {"on_steam_at_launch", "free_to_play"}
-DATE_COLUMNS = {"date", "date_end", "launch_date", "first_seen", "snapshot_date",
-                "reviews_30d_fetched", "prior_check_fetched", "start", "end"}
+DATE_COLUMNS = {"date", "date_end", "launch_date", "first_seen", "last_seen", "snapshot_date",
+                "reviews_30d_fetched", "prior_check_fetched", "reviews_early_fetched",
+                "first_listed", "last_listed", "prev_date", "prev_date_end", "start", "end"}
+MARKER = ".publish-dataset-build"  # marks a folder this script built, so it may delete it
+SHRINK_LIMIT = 0.95
+RELEASE_FIELDS = ["raw", "precision", "date", "date_end"]
 
 
 def typed(df: pd.DataFrame, columns: list[str] | None = None) -> pd.DataFrame:
@@ -97,15 +112,80 @@ def monthly(src_dir: Path, out_dir: Path, columns: list[str]) -> dict[str, int]:
     return counts
 
 
+def release_changes(src_dir: Path) -> pd.DataFrame:
+    """One row per game each time its release date text or range changes, plus its
+    first day in the snapshots and the day it left the coming-soon list.
+    Days with no snapshot file are simply skipped."""
+    prev: dict[str, dict] = {}
+    rows = []
+    for f in sorted(src_dir.glob("*.csv.gz")):
+        day = f.name[:10]
+        today = {}
+        for r in storage.read_csv(f):
+            today[r["appid"]] = cur = {k: r.get(k, "") for k in RELEASE_FIELDS}
+            old = prev.get(r["appid"])
+            if old is None:
+                rows.append({"appid": r["appid"], "snapshot_date": day, "change": "first_seen", **cur})
+            elif old != cur:
+                rows.append({"appid": r["appid"], "snapshot_date": day, "change": "changed", **cur,
+                             **{f"prev_{k}": v for k, v in old.items()}})
+        for appid, old in prev.items():
+            if appid not in today:
+                rows.append({"appid": appid, "snapshot_date": day, "change": "left_list",
+                             **{f"prev_{k}": v for k, v in old.items()}})
+        prev = today
+    columns = ["appid", "snapshot_date", "change", *RELEASE_FIELDS, *(f"prev_{k}" for k in RELEASE_FIELDS)]
+    df = pd.DataFrame(rows, columns=columns)
+    df = df.sort_values(["snapshot_date", "appid"], key=lambda c: c.astype(int) if c.name == "appid" else c)
+    return typed(df.fillna("").replace("", pd.NA).reset_index(drop=True))
+
+
+def data_date(data_dir: Path) -> str:
+    """Date of the newest daily snapshot: the card shows it, so rebuilding the same data gives the same card."""
+    days = sorted(f.name[:10] for f in (data_dir / "upcoming" / "snapshots").glob("*.csv.gz"))
+    return days[-1] if days else "-"
+
+
+def manifest(out: Path) -> dict:
+    import pyarrow.parquet as pq
+
+    result = {}
+    for f in sorted(out.rglob("*.parquet")):
+        meta = pq.read_metadata(f)
+        result[f.relative_to(out).as_posix()] = {"rows": meta.num_rows, "columns": meta.schema.to_arrow_schema().names}
+    return result
+
+
+def check_manifest(new: dict, old: dict | None) -> list[str]:
+    """Reasons not to upload `new` over the published `old` (None for a first upload)."""
+    problems = []
+    for name, was in (old or {}).items():
+        now = new.get(name)
+        if now is None:
+            problems.append(f"{name}: missing from the new build")
+            continue
+        dropped = sorted(set(was["columns"]) - set(now["columns"]))
+        if dropped:
+            problems.append(f"{name}: dropped columns {dropped}")
+        if now["rows"] < SHRINK_LIMIT * was["rows"]:
+            problems.append(f"{name}: shrank from {was['rows']} to {now['rows']} rows")
+    return problems
+
+
 def build(data_dir: Path, events_path: Path, out: Path, license_id: str) -> dict:
-    if out.exists():
+    if out.exists() and any(out.iterdir()):
+        if not (out / MARKER).exists():
+            raise SystemExit(f"{out} is not a dataset build (no {MARKER}); refusing to delete it")
         shutil.rmtree(out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / MARKER).write_text("built by pipeline.publish_dataset; safe to delete")
     stats = {}
     simple = {
         "history/games.parquet": (data_dir / "history" / "games.csv", collect_history.FIELDS),
         "upcoming/apps.parquet": (data_dir / "upcoming" / "apps.csv", collect_upcoming.APP_FIELDS),
         "followers/latest.parquet": (data_dir / "followers" / "latest.csv", collect_followers.FIELDS),
         "tags.parquet": (data_dir / "tags.csv", ["tagid", "name"]),
+        "upcoming/runs.parquet": (data_dir / "upcoming" / "runs.csv", collect_upcoming.RUN_FIELDS),
     }
     for dest, (src, columns) in simple.items():
         if src.exists():
@@ -115,8 +195,13 @@ def build(data_dir: Path, events_path: Path, out: Path, license_id: str) -> dict
         months = monthly(data_dir / name / "snapshots", out / name / "snapshots", columns)
         if months:
             stats[f"{name}/snapshots"] = months
+    snaps = data_dir / "upcoming" / "snapshots"
+    if any(snaps.glob("*.csv.gz")):
+        stats["upcoming/release_changes.parquet"] = write(release_changes(snaps),
+                                                         out / "upcoming" / "release_changes.parquet")
     stats["events.parquet"] = write(events_table(events_path), out / "events.parquet")
-    (out / "README.md").write_text(card(stats, license_id), encoding="utf-8")
+    (out / "manifest.json").write_text(json.dumps(manifest(out), indent=1, sort_keys=True), encoding="utf-8")
+    (out / "README.md").write_text(card(stats, license_id, data_date(data_dir)), encoding="utf-8")
     return stats
 
 
@@ -142,15 +227,17 @@ def events_table(path: Path) -> pd.DataFrame:
     return typed(df)
 
 
-def card(stats: dict, license_id: str) -> str:
+def card(stats: dict, license_id: str, updated: str) -> str:
     # (config name, files, key in stats); configs with no data yet are left out
     configs = [
         ("history", "history/games.parquet", "history/games.parquet"),
         ("upcoming_snapshots", "upcoming/snapshots/*.parquet", "upcoming/snapshots"),
         ("upcoming_apps", "upcoming/apps.parquet", "upcoming/apps.parquet"),
+        ("release_changes", "upcoming/release_changes.parquet", "upcoming/release_changes.parquet"),
         ("followers", "followers/snapshots/*.parquet", "followers/snapshots"),
         ("events", "events.parquet", "events.parquet"),
         ("tags", "tags.parquet", "tags.parquet"),
+        ("runs", "upcoming/runs.parquet", "upcoming/runs.parquet"),
     ]
     present = [(name, files) for name, files, key in configs if key in stats]
     meta = {
@@ -165,7 +252,6 @@ def card(stats: dict, license_id: str) -> str:
         return sum(v.values()) if isinstance(v, dict) else (v or 0)
 
     snap_months = sorted(stats.get("upcoming/snapshots", {}))
-    updated = datetime.now(timezone.utc).date().isoformat()
     return f"""---
 {yaml.safe_dump(meta, sort_keys=False).strip()}
 ---
@@ -182,47 +268,81 @@ No personal data: no Steam IDs, usernames or review texts, only counts.
 
 ## What is here
 
-| Config | Rows | What |
-|---|---|---|
-| `history` | {rows("history/games.parquet"):,} | games launched on Steam since 2022: launch date and type, price, tags, languages, demo, reviews in the first 30 days |
-| `upcoming_snapshots` | {rows("upcoming/snapshots"):,} | one row per coming-soon game per day ({snap_months[0] if snap_months else "-"} to {snap_months[-1] if snap_months else "-"}): release date and its precision, Early Access, wishlist rank, price if set |
-| `upcoming_apps` | {rows("upcoming/apps.parquet"):,} | name, developers, publishers, tags with vote weights, languages, demo |
-| `followers` | {rows("followers/snapshots"):,} | community hub follower counts for tracked upcoming games, with fetch time |
-| `events` | {rows("events.parquet"):,} | Steam sales, Next Fests, themed fests, major releases, regional holidays, each with a source; `starts_at`/`ends_at` (UTC) give the exact window: Steam events run from 10:00 Pacific on `start` to 10:00 Pacific on `end` |
-| `tags` | {rows("tags.parquet"):,} | Steam tag id to name |
+| Config | Kind | Rows | What |
+|---|---|---|---|
+| `history` | today's view | {rows("history/games.parquet"):,} | games launched on Steam since 2022: launch date and type, price, tags, languages, demo, reviews in the first day, week and 30 days |
+| `upcoming_snapshots` | raw, daily | {rows("upcoming/snapshots"):,} | one row per coming-soon game per day ({snap_months[0] if snap_months else "-"} to {snap_months[-1] if snap_months else "-"}): release date and its precision, Early Access, wishlist rank, price if set |
+| `upcoming_apps` | latest | {rows("upcoming/apps.parquet"):,} | name, developers, publishers, tags with vote weights, languages, demo; `last_seen` is the last day the game was coming soon |
+| `release_changes` | derived | {rows("upcoming/release_changes.parquet"):,} | each game's first day in the snapshots, every change of its release date text or range, and the day it left the coming-soon list |
+| `followers` | raw | {rows("followers/snapshots"):,} | Steam community hub follower counts, with fetch time |
+| `events` | curated | {rows("events.parquet"):,} | Steam sales, Next Fests, themed fests, major releases, regional holidays, each with a source; `starts_at`/`ends_at` (UTC) give the exact window: Steam events run from 10:00 Pacific on `start` to 10:00 Pacific on `end` |
+| `tags` | latest | {rows("tags.parquet"):,} | Steam tag id to name |
+| `runs` | log | {rows("upcoming/runs.parquet"):,} | one row per daily collection: games, requests, whether the wishlist crawl worked |
 
 ```python
 from datasets import load_dataset
 history = load_dataset("<this repo>", "history")
 ```
 
+## When each value was observed
+
+- **Observed at the time:** `upcoming_snapshots` (one row per day, `snapshot_date` in UTC),
+  `followers` (`fetched_at`), `runs`. Use these for "what was known before launch".
+- **Frozen before launch:** a launched game's `upcoming_apps` row stops updating
+  when it leaves the coming-soon list, so its tags, publisher, demo and languages
+  are pre-launch values when `last_seen` is before the launch date.
+- **Today's view:** `history`. Price, demo, Early Access status and tags are as
+  they are now, and tags keep being voted after launch. Review counts cover a
+  fixed window after launch but only reviews that still exist.
+  `first_listed`/`last_listed` say when a game was first and last seen in
+  Steam's list of released games; rows of games that disappear are kept.
+
 ## Things to know before using it
 
 - **Dates** are Pacific time. Fuzzy release dates ("Q3 2027") have a
   `precision` and a `date` to `date_end` range.
-- **Reviews** are Steam-purchase reviews (key activations excluded), counted for
-  the 30 days after launch, as they exist today (deleted reviews are gone).
-- **History is today's view of the past.** Price, demo and Early Access
-  status are as they are now. Delisted games are missing.
+- **Reviews** are Steam-purchase reviews (key activations excluded). Delisted
+  games that left before collection started are missing.
 - **`launch_type`**: `full`, `early_access`, or `ea_exit` (a 1.0 launch of a
   game that was already on sale in Early Access; treat these apart).
 - **Wishlist rank** only covers Steam's top ~5,300 wishlisted games.
-  **Followers** are only tracked for about 11,000 upcoming games.
 - **Upcoming prices** are almost always missing: paid games set them at launch.
+- **Missing days:** `runs` shows which days were collected.
+
+## Data rights
+
+The MIT license covers this compilation and the code that builds it. The
+underlying facts (release dates, tags, review counts) come from Steam, owned by
+Valve Corporation, which has not licensed or endorsed this dataset. Game names
+are trademarks of their owners. If you reuse the data, follow Valve's terms for
+Steam data as well.
 
 Full methods: [README](https://github.com/wyc79/steam-launch-window#readme) and
 [endpoint notes](https://github.com/wyc79/steam-launch-window/blob/main/docs/endpoints.md).
 """
 
 
-def upload(out: Path, repo_id: str, token: str) -> None:
+def upload(out: Path, repo_id: str, token: str, api=None) -> None:
     from huggingface_hub import HfApi
+    from huggingface_hub.errors import EntryNotFoundError, RepositoryNotFoundError
 
-    api = HfApi(token=token)
-    api.create_repo(repo_id, repo_type="dataset", exist_ok=True)
+    api = api or HfApi(token=token)
+    try:
+        head = api.repo_info(repo_id, repo_type="dataset").sha
+    except RepositoryNotFoundError:
+        raise SystemExit(f"dataset {repo_id} not found: create it on Hugging Face first") from None
+    try:
+        old = json.loads(Path(api.hf_hub_download(repo_id, "manifest.json", repo_type="dataset",
+                                                  revision=head)).read_text(encoding="utf-8"))
+    except EntryNotFoundError:
+        old = None
+    new = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
+    problems = check_manifest(new, old)
+    if problems:
+        raise SystemExit("not uploading:\n  " + "\n  ".join(problems))
     stamp = datetime.now(timezone.utc).date().isoformat()
-    api.upload_folder(folder_path=str(out), repo_id=repo_id, repo_type="dataset",
-                      commit_message=f"Weekly update {stamp}")
+    api.upload_folder(folder_path=str(out), repo_id=repo_id, repo_type="dataset", parent_commit=head,
+                      ignore_patterns=[MARKER], commit_message=f"Weekly update {stamp}")
 
 
 def main(argv=None) -> int:
