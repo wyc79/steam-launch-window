@@ -16,9 +16,18 @@ Steps:
    keep their timestamps. Any such review means the game was on sale
    before its "launch", so it is relabeled ea_exit.
 
+5. First-day and first-week review counts (reviews_1d, reviews_7d) for games
+   launched on or after --early-since, once their first week has closed.
+   Games with no reviews in their first 30 days get 0 without a request.
+
 Output: history/games.csv under --data-dir, one row per game.
 reviews_30d_source is api, zero_total (no reviews at all, no call made), or
-unavailable (Steam has no review data for the app; not retried).
+unavailable (Steam has no review data for the app; retried after 90 days).
+
+Rows are never dropped. A game that is no longer listed (delisted, or missed
+by one listing) keeps its row; last_listed says when it was last seen, and
+first_listed when it first appeared (rows older than these columns get the
+date of the first run that added them).
 
 Launch date and Early Access:
 - Query files Early Access games that left EA under their 1.0 date.
@@ -49,14 +58,18 @@ FIELDS = [
     "demo_before_launch",
     "reviews_total_now", "reviews_30d", "reviews_30d_positive", "reviews_30d_source",
     "reviews_30d_fetched", "reviews_before_launch", "prior_check_fetched",
+    "reviews_1d", "reviews_7d", "reviews_early_fetched", "first_listed", "last_listed",
 ]
 COUNT_FIELDS = ("reviews_30d", "reviews_30d_positive", "reviews_30d_source", "reviews_30d_fetched",
-                "reviews_before_launch", "prior_check_fetched")
+                "reviews_before_launch", "prior_check_fetched",
+                "reviews_1d", "reviews_7d", "reviews_early_fetched")
 PRIOR_GAP = 7 * 86400  # reviews this long before launch mean the game was already on sale
 DATA_REQUEST = {"include_release": True, "include_tag_count": 20, "include_basic_info": True,
                 "include_supported_languages": True,
                 "include_reviews": True}
 WINDOW = 30 * 86400
+EARLY_WINDOWS = {"reviews_1d": 86400, "reviews_7d": 7 * 86400}
+UNAVAILABLE_RETRY_DAYS = 90
 LISTING_TTL = 6 * 86400  # month listings are refetched about weekly
 
 log = logging.getLogger("collect_history")
@@ -134,15 +147,28 @@ def apply_prior_check(row: dict) -> dict:
     return row
 
 
-def merge(old: dict | None, new: dict) -> dict:
+def merge(old: dict | None, new: dict, today: str = "") -> dict:
     """Keep the review counts from a previous run unless the launch date moved."""
+    listed = {"first_listed": (old or {}).get("first_listed") or today, "last_listed": today}
     if old and str(old.get("launch_ts")) == str(new["launch_ts"]):
-        return apply_prior_check({**new, **{k: old.get(k, "") for k in COUNT_FIELDS}})
-    return {**new, **{k: "" for k in COUNT_FIELDS}}
+        return apply_prior_check({**new, **{k: old.get(k, "") for k in COUNT_FIELDS}, **listed})
+    return {**new, **{k: "" for k in COUNT_FIELDS}, **listed}
 
 
-def needs_reviews(row: dict, cutoff_ts: int) -> bool:
-    return row["reviews_30d_source"] == "" and int(row["launch_ts"]) + WINDOW <= cutoff_ts
+def needs_reviews(row: dict, cutoff_ts: int, today: date | None = None) -> bool:
+    if int(row["launch_ts"]) + WINDOW > cutoff_ts:
+        return False
+    source = row.get("reviews_30d_source", "")
+    if source == "":
+        return True
+    fetched = row.get("reviews_30d_fetched")
+    return (source == "unavailable" and today is not None and bool(fetched)
+            and (today - date.fromisoformat(fetched)).days >= UNAVAILABLE_RETRY_DAYS)
+
+
+def needs_early(row: dict, cutoff_ts: int, since_ts: int) -> bool:
+    launch = int(row["launch_ts"])
+    return not row.get("reviews_early_fetched") and launch >= since_ts and launch + EARLY_WINDOWS["reviews_7d"] <= cutoff_ts
 
 
 def needs_prior_check(row: dict, min_reviews: int) -> bool:
@@ -167,6 +193,8 @@ def main(argv=None) -> int:
                    help="reuse history/games.csv as is and only fill review counts")
     p.add_argument("--prior-min-reviews", type=int, default=50,
                    help="only check full launches with at least this many reviews for hidden Early Access")
+    p.add_argument("--early-since", type=date.fromisoformat, default=date(2026, 10, 1),
+                   help="first-day and first-week review counts for games launched on or after this date")
     p.add_argument("--fail-if-incomplete", action="store_true",
                    help="exit with code 3 if games still need a count (for a retry loop)")
     args = p.parse_args(argv)
@@ -195,10 +223,12 @@ def main(argv=None) -> int:
         for appid, it in items.items():
             row = game_row(it, demo_release)
             if row and row["launch_ts"] >= since_ts:
-                rows[appid] = merge(existing.get(appid), row)
-        dropped = len(set(existing) - set(rows))
-        log.info("history: %d games (%d demos looked up, %d rows dropped since last run)",
-                 len(rows), len(demo_release), dropped)
+                rows[appid] = merge(existing.get(appid), row, today.isoformat())
+        unlisted = set(existing) - set(rows)
+        for appid in unlisted:  # keep, with its old last_listed, so collected counts are not lost
+            rows[appid] = existing[appid]
+        log.info("history: %d games (%d demos looked up, %d no longer listed but kept)",
+                 len(rows), len(demo_release), len(unlisted))
         storage.write_csv(path, [rows[a] for a in sorted(rows)], FIELDS)
 
     cutoff_ts = pacific_ts(today)
@@ -225,6 +255,23 @@ def main(argv=None) -> int:
                    reviews_30d_source="api", reviews_30d_fetched=stamp)
         return True
 
+    def early(row):
+        if int(row["reviews_total_now"] or 0) == 0 or (
+                row.get("reviews_30d_source") in ("api", "zero_total") and str(row.get("reviews_30d")) == "0"):
+            row.update(reviews_1d=0, reviews_7d=0, reviews_early_fetched=stamp)
+            return False
+        start = int(row["launch_ts"])
+        try:
+            got = {field: steam.review_counts(client, row["appid"], start, start + span)["total"]
+                   for field, span in EARLY_WINDOWS.items()}
+        except Exception as e:
+            if not is_gone(e):
+                raise
+            row.update(reviews_early_fetched=stamp)  # counts stay unknown
+            return True
+        row.update(**got, reviews_early_fetched=stamp)
+        return True
+
     def prior(row):
         try:
             counts = steam.review_counts(client, row["appid"], 1, int(row["launch_ts"]) - PRIOR_GAP)
@@ -238,7 +285,9 @@ def main(argv=None) -> int:
         return True
 
     passes = [
-        ("30-day review count", thirty_day, lambda r: needs_reviews(r, cutoff_ts)),
+        ("30-day review count", thirty_day, lambda r: needs_reviews(r, cutoff_ts, today)),
+        ("first-day and first-week review counts", early,
+         lambda r: needs_early(r, cutoff_ts, pacific_ts(args.early_since))),
         ("hidden Early Access check", prior, lambda r: needs_prior_check(r, args.prior_min_reviews)),
     ]
     try:
