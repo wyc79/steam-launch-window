@@ -12,9 +12,12 @@ if git diff --cached --quiet; then
   exit 0
 fi
 git commit -q -m "$1"
-for attempt in 1 2 3; do
+for attempt in 1 2 3 4; do
   if git push -q origin HEAD:data; then
     exit 0
+  fi
+  if [ "$attempt" -eq 4 ]; then
+    break
   fi
   echo "push failed (attempt $attempt), rebasing on the remote data branch"
   git pull -q --rebase origin data

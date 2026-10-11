@@ -49,12 +49,14 @@ jobs:
       - run: pip install .
 
       - name: Upcoming snapshot
-        run: python -m pipeline.collect_upcoming
-      - run: scripts/commit_data.sh "upcoming snapshot $(date -u +%F)"
+        run: python -m pipeline.collect_upcoming --store-interval 2
+      - name: Commit snapshot
+        if: always()  # keep whatever was saved, even if the collector failed
+        run: scripts/commit_data.sh "upcoming snapshot $(date -u +%F)"
 
       - name: Follower counts
         if: inputs.followers || (github.event_name == 'schedule' && vars.COLLECT_FOLLOWERS == 'on')
         run: python -m pipeline.collect_followers --budget-minutes "${{ inputs.follower_budget_minutes || '200' }}"
       - name: Commit follower counts
-        if: inputs.followers || (github.event_name == 'schedule' && vars.COLLECT_FOLLOWERS == 'on')
+        if: always() && (inputs.followers || (github.event_name == 'schedule' && vars.COLLECT_FOLLOWERS == 'on'))
         run: scripts/commit_data.sh "followers $(date -u +%F)"

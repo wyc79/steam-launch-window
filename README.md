@@ -58,9 +58,11 @@ does not start scraping:
 
 Each workflow can also be run by hand from the Actions tab.
 
-All scripts wait at least 1 second between requests to the same host, retry
+All scripts wait at least 1 second between requests to the same host (2 s
+for the store site on GitHub's servers, 5 s for the community site), retry
 with backoff on errors, and save progress as they go. Run one again and it
-continues where it stopped.
+continues where it stopped. A 429 from the community site stops the run at
+once, because retrying while blocked makes the block last longer.
 
 ### Follower refresh tiers
 

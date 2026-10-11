@@ -22,13 +22,13 @@ Outputs (under --data-dir):
 from __future__ import annotations
 
 import logging
-import time
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
+from datetime import time as dt_time
 from pathlib import Path
 
 from . import steam, storage
-from .common import Budget, base_parser, setup
+from .common import Budget, base_parser, run_pass, setup
 
 FIELDS = ["appid", "followers", "fetched_at"]
 log = logging.getLogger("collect_followers")
@@ -111,13 +111,15 @@ def main(argv=None) -> int:
     p.add_argument("--high-followers", type=int, default=Policy.high_followers)
     p.add_argument("--dry-run", action="store_true", help="print the plan and exit")
     args = p.parse_args(argv)
-    client, _ = setup(args)
+    client, today = setup(args)
     policy = Policy(high_followers=args.high_followers)
 
     snap_path = latest_snapshot_path(args.data_dir)
     snapshot = storage.read_csv(snap_path)
     latest = {int(r["appid"]): r for r in storage.read_csv(args.data_dir / "followers" / "latest.csv")}
     now = datetime.now(timezone.utc)
+    if args.today:  # replay a past day: plan as of its noon UTC
+        now = datetime.combine(args.today, dt_time(12), tzinfo=timezone.utc)
     todo = plan(snapshot, latest, now, policy)
     by_tier = [sum(1 for t, _ in todo if t == i) for i in range(len(TIER_NAMES))]
     log.info("snapshot %s: %d games, %d due %s", snap_path.name, len(snapshot), len(todo),
@@ -125,41 +127,31 @@ def main(argv=None) -> int:
     if args.dry_run:
         return 0
 
-    budget = Budget(args.budget_minutes)
     fetched_by_day: dict[str, list[dict]] = {}
-    done = errors = consecutive = 0
-    t0 = time.monotonic()
+
+    def fetch(job):
+        _, appid = job
+        count = steam.follower_count(client, appid)
+        stamp = datetime.now(timezone.utc).replace(microsecond=0)
+        row = {"appid": appid, "followers": "" if count is None else count, "fetched_at": stamp.isoformat()}
+        latest[appid] = row
+        fetched_by_day.setdefault(stamp.date().isoformat(), []).append(row)
+        return True
+
+    def checkpoint():
+        save(args.data_dir, latest, fetched_by_day)
+        fetched_by_day.clear()
+
     try:
-        for tier, appid in todo:
-            if budget.expired():
-                log.info("budget used up")
-                break
-            try:
-                count = steam.follower_count(client, appid)
-                consecutive = 0
-            except Exception as e:  # noqa: BLE001 - skip this game, it stays due
-                errors += 1
-                consecutive += 1
-                log.warning("followers for %s failed: %s", appid, e)
-                if consecutive >= args.max_consecutive_errors:
-                    log.error("%d errors in a row, stopping (blocked or endpoint changed?)", consecutive)
-                    break
-                continue
-            stamp = datetime.now(timezone.utc).replace(microsecond=0)
-            row = {"appid": appid, "followers": "" if count is None else count, "fetched_at": stamp.isoformat()}
-            latest[appid] = row
-            fetched_by_day.setdefault(stamp.date().isoformat(), []).append(row)
-            done += 1
-            if done % args.checkpoint == 0:
-                save(args.data_dir, latest, fetched_by_day)
-                fetched_by_day = {}
-                rate = done / (time.monotonic() - t0)
-                log.info("%d/%d fetched (%.2f/s, tier %d), %d errors", done, len(todo), rate, tier, errors)
+        run_pass(todo, fetch, "followers", Budget(args.budget_minutes), checkpoint,
+                 checkpoint=args.checkpoint, max_consecutive_errors=args.max_consecutive_errors,
+                 key=lambda job: job[1])
     except KeyboardInterrupt:
         log.info("interrupted, saving progress")
     finally:
-        save(args.data_dir, latest, fetched_by_day)
-    log.info("done: %d fetched, %d errors, %d still due", done, errors, len(todo) - done)
+        checkpoint()
+    still_due = len(plan(snapshot, latest, now, policy))
+    log.info("done: %d still due", still_due)
     return 0
 
 

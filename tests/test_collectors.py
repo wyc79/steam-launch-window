@@ -1,6 +1,10 @@
 from datetime import date, datetime, timezone
 
+import pytest
+
 from pipeline import collect_followers as cf
+from pipeline import common, steam
+from pipeline.http import HTTPStatusError, RateLimited
 from pipeline import collect_history as ch
 from pipeline import collect_upcoming as cu
 from pipeline import storage
@@ -99,17 +103,12 @@ def test_merge_keeps_prior_check_so_relisting_does_not_undo_the_relabel():
 
 
 def test_needs_prior_check():
-    row = {"launch_type": "full", "reviews_before_launch": "", "reviews_total_now": "50"}
+    row = {"launch_type": "full", "prior_check_fetched": "", "reviews_total_now": "50"}
     assert ch.needs_prior_check(row, 50)
     assert not ch.needs_prior_check({**row, "reviews_total_now": "49"}, 50)
-    assert not ch.needs_prior_check({**row, "reviews_before_launch": "0"}, 50)
+    assert not ch.needs_prior_check({**row, "prior_check_fetched": "2026-10-11"}, 50)
     assert not ch.needs_prior_check({**row, "launch_type": "early_access"}, 50)
-    assert ch.needs_prior_check({k: v for k, v in row.items() if k != "reviews_before_launch"}, 50)  # old file
-
-
-class Args:
-    checkpoint = 2
-    max_consecutive_errors = 2
+    assert ch.needs_prior_check({k: v for k, v in row.items() if k != "prior_check_fetched"}, 50)  # old file
 
 
 class NeverExpires:
@@ -117,24 +116,70 @@ class NeverExpires:
         return False
 
 
+def run(todo, fetch, saves):
+    return common.run_pass(todo, fetch, "test", NeverExpires(), lambda: saves.append(1),
+                           checkpoint=2, max_consecutive_errors=2)
+
+
 def test_run_pass_checkpoints_and_stops_on_repeated_errors():
     saves = []
 
-    def fetch(row):
-        if row["appid"] >= 3:
-            raise RuntimeError("blocked")
+    def fetch(i):
+        if i >= 3:
+            raise RuntimeError("boom")
         return True
 
-    todo = [{"appid": i} for i in range(1, 6)]
-    assert ch.run_pass(todo, fetch, "test", NeverExpires(), lambda: saves.append(1), Args()) is False
+    assert run(list(range(1, 6)), fetch, saves) is False
     assert saves == [1]  # one checkpoint after 2 fetches, then 2 errors in a row stop it
 
 
+def test_run_pass_stops_at_the_first_rate_limit():
+    calls = []
+
+    def fetch(i):
+        calls.append(i)
+        raise RateLimited("https://steamcommunity.com/x")
+
+    assert run([1, 2, 3], fetch, []) is False
+    assert calls == [1]
+
+
+def test_run_pass_skips_single_errors_and_finishes():
+    def fetch(i):
+        if i == 2:
+            raise RuntimeError("one bad item")
+        return True
+
+    assert run([1, 2, 3], fetch, []) is True
+
+
+@pytest.mark.parametrize("err, gone", [
+    (steam.Unavailable("no data"), True),
+    (HTTPStatusError(404, "u"), True),
+    (HTTPStatusError(403, "u"), True),
+    (HTTPStatusError(503, "u"), False),
+    (RateLimited("u"), False),
+    (RuntimeError("network"), False),
+])
+def test_is_gone(err, gone):
+    assert ch.is_gone(err) is gone
+
+
+def test_unavailable_rows_are_not_retried():
+    row = {"reviews_30d": "", "reviews_30d_source": "unavailable", "launch_ts": "1000"}
+    assert not ch.needs_reviews(row, 10**10)
+
+
+def test_skip_listing_without_file_fails_loudly(tmp_path):
+    with pytest.raises(SystemExit, match="missing or empty"):
+        ch.main(["--data-dir", str(tmp_path), "--skip-listing", "--cache-dir", str(tmp_path / "c")])
+
+
 def test_needs_reviews_waits_for_window_to_close():
-    row = {"reviews_30d": "", "launch_ts": "1000"}
+    row = {"reviews_30d": "", "reviews_30d_source": "", "launch_ts": "1000"}
     assert not ch.needs_reviews(row, 1000 + ch.WINDOW - 1)
     assert ch.needs_reviews(row, 1000 + ch.WINDOW)
-    assert not ch.needs_reviews({**row, "reviews_30d": "0"}, 10**10)
+    assert not ch.needs_reviews({**row, "reviews_30d": "0", "reviews_30d_source": "zero_total"}, 10**10)
 
 
 def test_month_starts():

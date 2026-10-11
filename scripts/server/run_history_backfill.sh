@@ -19,13 +19,12 @@ if [ ! -x .venv/bin/python ]; then
   .venv/bin/pip install -q .
 fi
 
-listing=()
-if [ -f "$DATA_DIR/history/games.csv" ]; then
-  # The game list came over with the file; only fill in the missing counts.
-  listing=(--skip-listing)
-fi
-
 while true; do
+  listing=()
+  if [ -s "$DATA_DIR/history/games.csv" ]; then
+    # The game list is already there; only fill in the missing counts.
+    listing=(--skip-listing)
+  fi
   set +e
   .venv/bin/python -m pipeline.collect_history \
     --data-dir "$DATA_DIR" "${listing[@]}" \
@@ -36,7 +35,6 @@ while true; do
     echo "backfill complete"
     exit 0
   fi
-  listing=(--skip-listing)
   echo "collector exited with $code and work remains; trying again in 5 minutes"
   sleep 300
 done

@@ -53,12 +53,8 @@ def merge_apps(existing: list[dict], items: list[dict], today: str) -> list[dict
 
 
 def main(argv=None) -> int:
-    p = base_parser(__doc__)
-    p.add_argument("--store-interval", type=float, default=2.0,
-                   help="seconds between store search requests (GitHub's IPs got 429s at 1s)")
-    args = p.parse_args(argv)
+    args = base_parser(__doc__).parse_args(argv)
     client, today = setup(args)
-    client.host_intervals["store.steampowered.com"] = args.store_interval
     t0 = time.monotonic()
     day = today.isoformat()
     out = args.data_dir
