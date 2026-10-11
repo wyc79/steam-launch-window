@@ -1,0 +1,60 @@
+name: collect daily
+
+# Daily: snapshot every coming-soon game, then refresh follower counts that
+# are due under the tiered schedule (see pipeline/collect_followers.py).
+# The full first scrape is done outside Actions; this job only does increments.
+#
+# Off by default. Repository variables (Settings > Secrets and variables >
+# Actions > Variables) turn parts on:
+#   COLLECT_DAILY=on      let the schedule run this job
+#   COLLECT_FOLLOWERS=on  include the follower step in scheduled runs
+# A manual run (Run workflow button) always does the snapshot and asks
+# whether to include followers.
+
+on:
+  schedule:
+    - cron: "30 18 * * *"  # after Steam's 10:00 Pacific store updates
+  workflow_dispatch:
+    inputs:
+      followers:
+        description: "Also refresh follower counts"
+        type: boolean
+        default: false
+      follower_budget_minutes:
+        description: "Time budget for the follower step"
+        default: "200"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-branch
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    if: github.event_name == 'workflow_dispatch' || vars.COLLECT_DAILY == 'on'
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: data
+          path: _data
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install .
+
+      - name: Upcoming snapshot
+        run: python -m pipeline.collect_upcoming
+      - run: scripts/commit_data.sh "upcoming snapshot $(date -u +%F)"
+
+      - name: Follower counts
+        if: inputs.followers || (github.event_name == 'schedule' && vars.COLLECT_FOLLOWERS == 'on')
+        run: python -m pipeline.collect_followers --budget-minutes "${{ inputs.follower_budget_minutes || '200' }}"
+      - name: Commit follower counts
+        if: inputs.followers || (github.event_name == 'schedule' && vars.COLLECT_FOLLOWERS == 'on')
+        run: scripts/commit_data.sh "followers $(date -u +%F)"

@@ -1,0 +1,2180 @@
+# Steam events and big game releases that compete for attention.
+# Hand-maintained. Every entry has a source; add new ones the same way.
+#
+# type:
+#   seasonal_sale  Steam Lunar New Year, Spring, Summer, Autumn, Winter sales
+#   next_fest      Steam Next Fest (demo festival)
+#   themed_fest    Valve-run themed fests (third-party events are left out)
+#   aaa_release    big releases; on_steam_at_launch says if PC players could buy it on Steam that day
+# start, end: calendar dates in Pacific time, both inclusive. Steam events start at 10:00 Pacific.
+# confidence: high = official Steam source or several reliable sources agree;
+#             medium = one reliable source; low = not confirmed, see note.
+#
+# Sources, in order of preference:
+#   1. Steamworks "Upcoming Events" page: https://partner.steamgames.com/doc/marketing/upcoming_events
+#      (archived snapshots on web.archive.org for past dates)
+#   2. Steam and Steamworks news posts (store.steampowered.com/news/...)
+#   3. Publisher pages and reputable press for game release dates
+# SteamDB is not scraped. It may be read by hand to spot-check a date.
+#
+# AAA entries whose date was only a year or season ("2027") are left out
+# until a real date is announced.
+
+events:
+- name: Steam Winter Sale 2021
+  type: seasonal_sale
+  start: 2021-12-22
+  end: 2022-01-05
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/5071614219293722781
+  note: Steam post (Dec 22 2021) says sale runs through January 5th at 10am Pacific; also listed as Dec
+    22, 2021 - Jan 5, 2022 in Steamworks upcoming_events doc (Wayback 20211029200502)
+- name: Steam Lunar New Year Sale 2022
+  type: seasonal_sale
+  start: 2022-01-27
+  end: 2022-02-03
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/3100165379962854006
+  note: Steam post dated Jan 27 2022 says "now through February 3rd at 10am Pacific". Last official Valve
+    Lunar New Year Sale.
+- name: 'Pokemon Legends: Arceus'
+  type: aaa_release
+  start: 2022-01-28
+  end: 2022-01-28
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2021/05/pokemon-legends-arceus-launches-january-28-2022
+  note: Switch exclusive
+- name: Dying Light 2 Stay Human
+  type: aaa_release
+  start: 2022-02-04
+  end: 2022-02-04
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2021/09/dying-light-2-stay-human-delayed-to-february-4-2022
+- name: Lost Ark
+  type: aaa_release
+  start: 2022-02-11
+  end: 2022-02-11
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.playlostark.com/en-us/news/articles/launch-details
+  note: Western F2P launch on Steam; paid Founder's Pack head start from Feb 8; peaked 1.3M concurrent
+    on Steam
+- name: 'Total War: Warhammer III'
+  type: aaa_release
+  start: 2022-02-17
+  end: 2022-02-17
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.pcgamer.com/total-war-warhammer-3-release-time-unlock/
+  note: PC only; also Epic, Microsoft Store and PC Game Pass
+- name: Horizon Forbidden West
+  type: aaa_release
+  start: 2022-02-18
+  end: 2022-02-18
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gamespot.com/articles/ps5s-horizon-forbidden-west-release-date-now-february-18-2022-zero-dawn-60fps-patch-out-now/1100-6495581/
+  note: PS5/PS4 exclusive; PC (Steam) Complete Edition 2024-03-21
+- name: Steam Next Fest February 2022
+  type: next_fest
+  start: 2022-02-21
+  end: 2022-02-28
+  confidence: high
+  source: https://web.archive.org/web/20211125104155/https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest/2022feb
+  note: Steamworks doc - Starts Monday, February 21st, 2022 @ 10AM PST, Ends Monday, February 28th, 2022
+    @ 10AM PST; Steam post https://store.steampowered.com/news/app/593110/view/3091161894497668373 says
+    through Feb 28 @ 10am PT
+- name: Elden Ring
+  type: aaa_release
+  start: 2022-02-25
+  end: 2022-02-25
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2021/10/elden-ring-delayed-to-february-25-2022-closed-network-test-begins-november-12
+  note: PC unlocked Feb 24 evening in the Americas
+- name: Steam Remote Play Together Sale & Event 2022
+  type: themed_fest
+  start: 2022-02-28
+  end: 2022-03-07
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/3091161894501379844
+  note: Steam news post says "now through Monday March 7th at 10am Pacific"; start Feb 28 10am PT confirmed
+    by Steamworks post https://store.steampowered.com/news/group/4145017/view/4330775883772405893
+- name: Gran Turismo 7
+  type: aaa_release
+  start: 2022-03-04
+  end: 2022-03-04
+  on_steam_at_launch: false
+  confidence: high
+  source: https://blog.playstation.com/2021/09/09/gran-turismo-7-arrives-on-ps5-and-ps4-march-4/
+  note: PS5/PS4 only; no PC version
+- name: Steam JRPG Sale 2022
+  type: themed_fest
+  start: 2022-03-14
+  end: 2022-03-21
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/3091163163109910644
+  note: Start "March 14th at 10am Pacific" per Steamworks post https://store.steampowered.com/news/group/4145017/view/3133946090936871350;
+    Steam news says "now through March 21"
+- name: 'Ghostwire: Tokyo'
+  type: aaa_release
+  start: 2022-03-25
+  end: 2022-03-25
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2022/02/ghostwire-tokyo-launches-march-25-showcase-set-for-february-3
+  note: PS5 and PC (Steam, Epic)
+- name: Kirby and the Forgotten Land
+  type: aaa_release
+  start: 2022-03-25
+  end: 2022-03-25
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.nintendo.com/en-gb/Games/Nintendo-Switch-games/Kirby-and-the-Forgotten-Land-2045110.html
+  note: Switch exclusive
+- name: Tiny Tina's Wonderlands
+  type: aaa_release
+  start: 2022-03-25
+  end: 2022-03-25
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2021/09/tiny-tinas-wonderlands-launches-march-25-2022
+  note: PC via Epic Games Store only at launch; Steam 2022-06-23
+- name: Steam Simfest Hobby Edition 2022
+  type: themed_fest
+  start: 2022-03-28
+  end: 2022-04-04
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3133947359568029622
+  note: Steamworks post says "March 28 at 10am Pacific - April 4th at 10am Pacific"; included livestream
+    programming
+- name: 'LEGO Star Wars: The Skywalker Saga'
+  type: aaa_release
+  start: 2022-04-05
+  end: 2022-04-05
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2022/01/lego-star-wars-the-skywalker-saga-launches-april-5
+- name: Steam Going Rogue Fest 2022
+  type: themed_fest
+  start: 2022-05-02
+  end: 2022-05-09
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/3175610095143798950
+  note: Roguelike fest; Steam post says "Going Rogue from May 2 - 9". Press reporting the Feb 2022 promo
+    calendar called this slot the "Die-a-lot" sale
+- name: Steam Racing Fest 2022
+  type: themed_fest
+  start: 2022-05-23
+  end: 2022-05-30
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/3180116240852632900
+- name: Steam Next Fest June 2022
+  type: next_fest
+  start: 2022-06-13
+  end: 2022-06-20
+  confidence: high
+  source: https://web.archive.org/web/20220326012133/https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest/2022june
+  note: Steamworks doc - June 13th to June 20th, 2022 @ 10am PDT; Steam post https://store.steampowered.com/news/app/593110/view/3341121821003187514
+    says through June 20 @ 10am PT
+- name: Steam Summer Sale 2022
+  type: seasonal_sale
+  start: 2022-06-23
+  end: 2022-07-07
+  confidence: high
+  source: https://web.archive.org/web/20220705075818/https://www.pcgamer.com/steam-sale-dates/
+  note: PC Gamer states June 23 - July 7, 2022. Steam post (https://store.steampowered.com/news/app/593110/view/3335493590017083917)
+    says "now until July 7th (at 10am PT)". Start confirmed by Wayback of store.steampowered.com - no
+    sale at 20220623161022 (9:10 PT), "Steam Summer Sale is on now" at 20220623183810 (11:38 PT).
+- name: Steam VR Fest 2022
+  type: themed_fest
+  start: 2022-07-18
+  end: 2022-07-25
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3218394291609115017
+- name: Stray
+  type: aaa_release
+  start: 2022-07-19
+  end: 2022-07-19
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2022/06/stray-launches-july-19
+  note: Annapurna-published; also PS Plus day one
+- name: Steam Survival Fest 2022
+  type: themed_fest
+  start: 2022-08-01
+  end: 2022-08-08
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3222900587040657569
+  note: Press summaries of the Feb 2022 calendar listed Survival as Jul 18-25; it actually ran Aug 1-8
+    (VR Fest took Jul 18-25)
+- name: Marvel's Spider-Man Remastered (PC)
+  type: aaa_release
+  start: 2022-08-12
+  end: 2022-08-12
+  on_steam_at_launch: true
+  confidence: high
+  source: https://blog.playstation.com/2022/08/12/marvels-spider-man-remastered-swings-onto-pc-today/
+  note: PC port of PS4/PS5 game; Steam and Epic
+- name: Saints Row
+  type: aaa_release
+  start: 2022-08-23
+  end: 2022-08-23
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2021/11/saints-row-reboot-delayed-to-august-23-2022
+  note: PC via Epic Games Store only at launch; Steam Aug 2023
+- name: Splatoon 3
+  type: aaa_release
+  start: 2022-09-09
+  end: 2022-09-09
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2022/04/splatoon-3-launches-september-9
+  note: Switch exclusive
+- name: Steam Bash Bash 2022
+  type: themed_fest
+  start: 2022-09-19
+  end: 2022-09-26
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3330988721845691320
+  note: Melee-combat games fest
+- name: FIFA 23
+  type: aaa_release
+  start: 2022-09-30
+  end: 2022-09-30
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.pcgamer.com/fifa-23-release-date/
+  note: Ultimate Edition early access from Sep 27
+- name: Steam Next Fest October 2022
+  type: next_fest
+  start: 2022-10-03
+  end: 2022-10-10
+  confidence: high
+  source: https://web.archive.org/web/20220707100846/https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest/2022oct
+  note: Steamworks doc - Monday, October 3rd to Monday, October 10th, 2022 @ 10am PDT; Steam post https://store.steampowered.com/news/app/593110/view/3305103170305173926
+    agrees
+- name: Overwatch 2
+  type: aaa_release
+  start: 2022-10-04
+  end: 2022-10-04
+  on_steam_at_launch: false
+  confidence: high
+  source: https://news.blizzard.com/en-us/article/23814216/overwatch-2-launches-october-4-as-a-free-to-play-live-experience
+  note: F2P; PC via Battle.net only at launch; Steam 2023-08-10
+- name: 'A Plague Tale: Requiem'
+  type: aaa_release
+  start: 2022-10-18
+  end: 2022-10-18
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2022/06/a-plague-tale-requiem-launches-october-18-extended-gameplay
+  note: Also Game Pass day one
+- name: Gotham Knights
+  type: aaa_release
+  start: 2022-10-21
+  end: 2022-10-21
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2022/08/gotham-knights-release-date-moved-up-to-october-21-villains-trailer
+- name: Steam Scream Fest 2022
+  type: themed_fest
+  start: 2022-10-25
+  end: 2022-11-01
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3404177923749444203
+  note: Halloween fest; first edition under the Steam Scream name
+- name: 'Call of Duty: Modern Warfare II'
+  type: aaa_release
+  start: 2022-10-28
+  end: 2022-10-28
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.callofduty.com/blog/2022/06/call-of-duty-modern-warfare-II-announcement-release-reveal
+  note: Steam and Battle.net; digital pre-order campaign early access from Oct 20
+- name: Sonic Frontiers
+  type: aaa_release
+  start: 2022-11-08
+  end: 2022-11-08
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2022/08/sonic-frontiers-launches-november-8-story-trailer
+- name: God of War Ragnarok
+  type: aaa_release
+  start: 2022-11-09
+  end: 2022-11-09
+  on_steam_at_launch: false
+  confidence: high
+  source: https://blog.playstation.com/2022/07/06/god-of-war-ragnarok-launches-november-9-new-cg-trailer-revealed/
+  note: PS5/PS4 exclusive; PC (Steam) 2024-09-19
+- name: 'Call of Duty: Warzone 2.0'
+  type: aaa_release
+  start: 2022-11-16
+  end: 2022-11-16
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.callofduty.com/blog/2022/09/call-of-duty-next-warzone-new-era-al-mazrah-map-intel-guide
+  note: F2P battle royale; first Warzone on Steam
+- name: Pokemon Scarlet and Violet
+  type: aaa_release
+  start: 2022-11-18
+  end: 2022-11-18
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2022/06/pokemon-scarlet-and-violet-launch-november-18
+  note: Switch exclusive
+- name: Steam Autumn Sale 2022
+  type: seasonal_sale
+  start: 2022-11-22
+  end: 2022-11-29
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/3475118496195190446
+  note: Steam post (Nov 22 2022) says until November 29 at 10am PT; dates pre-announced in Steamworks
+    post https://store.steampowered.com/news/group/4145017/view/3282583269823858400
+- name: 'Warhammer 40,000: Darktide'
+  type: aaa_release
+  start: 2022-11-30
+  end: 2022-11-30
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.pcgamer.com/warhammer-40000-darktide-release-times/
+  note: Pre-order beta from Nov 17; Xbox later
+- name: Marvel's Midnight Suns
+  type: aaa_release
+  start: 2022-12-02
+  end: 2022-12-02
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2022/09/marvels-midnight-suns-for-ps5-xbox-series-and-pc-launches-december-2
+- name: Need for Speed Unbound
+  type: aaa_release
+  start: 2022-12-02
+  end: 2022-12-02
+  on_steam_at_launch: true
+  confidence: high
+  source: https://news.ea.com/press-releases/press-releases-details/2022/Race-to-the-Top-in-Need-for-Speed-Unbound-theNext-Generation-Street-Racing-Fantasy-Releasing-December-2/default.aspx
+  note: Pre-order/Palace Edition early play from Nov 29
+- name: The Callisto Protocol
+  type: aaa_release
+  start: 2022-12-02
+  end: 2022-12-02
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2022/06/the-callisto-protocol-launches-december-2-for-ps5-xbox-series-ps4-xbox-one-and-pc-gameplay-trailer
+- name: Steam Winter Sale 2022
+  type: seasonal_sale
+  start: 2022-12-22
+  end: 2023-01-05
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/6332655088363338634
+  note: Steam post (Dec 22 2022) says until January 5th at 10am PST; Steamworks post of 2022-09-27 lists
+    Dec 22nd to Jan 5th
+- name: Steam Base Builder Fest 2023
+  type: themed_fest
+  start: 2023-01-23
+  end: 2023-01-30
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3225161106686509391
+- name: Forspoken
+  type: aaa_release
+  start: 2023-01-24
+  end: 2023-01-24
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2022/07/forspoken-delayed-to-january-24-2023
+- name: Dead Space (remake)
+  type: aaa_release
+  start: 2023-01-27
+  end: 2023-01-27
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2022/05/dead-space-remake-launches-january-27-2023
+- name: Steam Next Fest February 2023
+  type: next_fest
+  start: 2023-02-06
+  end: 2023-02-13
+  confidence: high
+  source: https://web.archive.org/web/20221013234551/https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest/2023feb
+  note: Steamworks doc - Monday, February 6th to Monday, February 13th, 2023 @ 10am PST; Steam post https://store.steampowered.com/news/app/593110/view/3638380325135497081
+    agrees
+- name: Hogwarts Legacy
+  type: aaa_release
+  start: 2023-02-10
+  end: 2023-02-10
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2022/08/hogwarts-legacy-delayed-to-february-10-2023-for-ps5-xbox-series-ps4-xbox-one-and-pc-later-for-switch
+  note: Deluxe Edition early access from Feb 7; PS4/XB1 Apr 2023, Switch later
+- name: Steam Mystery Fest 2023
+  type: themed_fest
+  start: 2023-02-20
+  end: 2023-02-27
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3524658636207210571
+- name: 'Wo Long: Fallen Dynasty'
+  type: aaa_release
+  start: 2023-03-03
+  end: 2023-03-03
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2022/10/wo-long-fallen-dynasty-launches-march-3-2023
+- name: Steam Spring Sale 2023
+  type: seasonal_sale
+  start: 2023-03-16
+  end: 2023-03-23
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/3694679839286985808
+  note: First-ever Steam Spring Sale (replaced Lunar New Year as a major seasonal sale). Post says March
+    16th - March 23rd at 10am Pacific.
+- name: Resident Evil 4 (remake)
+  type: aaa_release
+  start: 2023-03-24
+  end: 2023-03-24
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.pcgamer.com/resident-evil-4-remake-launch-unlock-time/
+- name: Steam Puzzle Fest 2023
+  type: themed_fest
+  start: 2023-04-24
+  end: 2023-05-01
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3611354355084733653
+- name: 'Star Wars Jedi: Survivor'
+  type: aaa_release
+  start: 2023-04-28
+  end: 2023-04-28
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.ea.com/games/starwars/jedi/news/star-wars-jedi-survivor-now-arrives-april-28
+- name: Redfall
+  type: aaa_release
+  start: 2023-05-02
+  end: 2023-05-02
+  on_steam_at_launch: true
+  confidence: medium
+  source: https://www.gamespot.com/articles/redfall-release-date-confirmed-for-may-2-as-lots-of-new-gameplay-footage-debuts/1100-6510848/
+  note: Xbox/PC, Game Pass day one; Steam availability at launch from memory, not re-verified
+- name: 'The Legend of Zelda: Tears of the Kingdom'
+  type: aaa_release
+  start: 2023-05-12
+  end: 2023-05-12
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2022/09/the-legend-of-zelda-breath-of-the-wild-sequel-the-legend-of-zelda-tears-of-the-kingdom-launches-may-12-2023
+  note: Switch exclusive
+- name: Steam Sports Fest 2023
+  type: themed_fest
+  start: 2023-05-15
+  end: 2023-05-22
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3611354355085197082
+- name: Street Fighter 6
+  type: aaa_release
+  start: 2023-06-02
+  end: 2023-06-02
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.videogameschronicle.com/news/street-fighter-6s-release-date-has-been-confirmed-for-june/
+- name: Diablo IV
+  type: aaa_release
+  start: 2023-06-06
+  end: 2023-06-06
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2022/12/diablo-iv-launches-june-6-2023
+  note: PC via Battle.net only at launch; Steam 2023-10-17; Deluxe/Ultimate early access from Jun 1
+- name: Steam Next Fest June 2023
+  type: next_fest
+  start: 2023-06-19
+  end: 2023-06-26
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3645136358931000680
+  note: Steamworks 2023 schedule lists Next Fest June 19 - 26; Steamworks doc (Wayback 20230222232435,
+    nextfest/2023jun) says June 19 to June 26 at 10:00 AM PDT. The Steam launch post for this edition
+    mistakenly says "through February 13" (copy-paste from Feb post).
+- name: Final Fantasy XVI
+  type: aaa_release
+  start: 2023-06-22
+  end: 2023-06-22
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2022/12/final-fantasy-xvi-launches-june-22-2023
+  note: PS5 exclusive; PC (Steam) 2024-09-17
+- name: Steam Summer Sale 2023
+  type: seasonal_sale
+  start: 2023-06-29
+  end: 2023-07-13
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3645136358931000680
+  note: Steamworks 2023 schedule lists June 29 - July 13; Steam post of Jun 29 2023 (https://store.steampowered.com/news/app/593110/view/3682303734604033314)
+    says runs until July 13th at 10am PT
+- name: Steam Stealth Fest 2023
+  type: themed_fest
+  start: 2023-07-24
+  end: 2023-07-31
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3645136358931000680
+  note: From the official 2023 schedule post; Steam news launch post https://store.steampowered.com/news/app/593110/view/3690185668844106880
+    says through July 31 at 10am PT
+- name: Baldur's Gate 3
+  type: aaa_release
+  start: 2023-08-03
+  end: 2023-08-03
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/06/baldurs-gate-iii-release-date-moved-up-to-august-3-for-pc-delayed-to-september-6-for-ps5
+  note: PC (Steam, GOG) Aug 3; PS5 Sep 6; left Steam early access
+- name: Steam Visual Novel Fest 2023
+  type: themed_fest
+  start: 2023-08-07
+  end: 2023-08-14
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3645136358931000680
+  note: Confirmed by Steam news launch post https://store.steampowered.com/news/app/593110/view/3656410664812213045
+- name: 'Armored Core VI: Fires of Rubicon'
+  type: aaa_release
+  start: 2023-08-25
+  end: 2023-08-25
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/04/armored-core-vi-fires-of-rubicon-launches-august-25
+- name: Steam Strategy Fest 2023
+  type: themed_fest
+  start: 2023-08-28
+  end: 2023-09-04
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3645136358931000680
+  note: Confirmed by Steam news launch post https://store.steampowered.com/news/app/593110/view/3656413110959860072
+- name: Starfield
+  type: aaa_release
+  start: 2023-09-06
+  end: 2023-09-06
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.pcgamer.com/you-can-launch-starfield-as-early-as-august-31-its-global-release-times-confirm/
+  note: Premium Edition early access from Sep 1 (Aug 31 Americas); Steam and Microsoft Store, Game Pass
+- name: Lies of P
+  type: aaa_release
+  start: 2023-09-19
+  end: 2023-09-19
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/06/lies-of-p-delayed-to-september-19-demo-now-available
+- name: Mortal Kombat 1
+  type: aaa_release
+  start: 2023-09-19
+  end: 2023-09-19
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/05/mortal-kombat-1-announced-for-ps5-xbox-series-switch-and-pc
+  note: Premium/Kollector's early access from Sep 14
+- name: Steam SHMUP Fest 2023
+  type: themed_fest
+  start: 2023-09-25
+  end: 2023-10-02
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3645136358931000680
+  note: Confirmed by Steam news launch post https://store.steampowered.com/news/app/593110/view/3667672744266350604
+- name: 'Cyberpunk 2077: Phantom Liberty'
+  type: aaa_release
+  start: 2023-09-26
+  end: 2023-09-26
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gamespot.com/articles/cyberpunk-2077-phantom-liberty-release-date-revealed-with-new-gameplay-trailer/1100-6514830/
+  note: Paid expansion; PC unlocked Sep 25 in the Americas
+- name: Counter-Strike 2
+  type: aaa_release
+  start: 2023-09-27
+  end: 2023-09-27
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.pcgamer.com/counter-strike-2-released/
+  note: F2P; replaced CS:GO on Steam, 1.26M peak on launch day
+- name: EA Sports FC 24
+  type: aaa_release
+  start: 2023-09-29
+  end: 2023-09-29
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/07/ea-sports-fc-24-launches-september-29
+  note: Ultimate Edition early access from Sep 22
+- name: Assassin's Creed Mirage
+  type: aaa_release
+  start: 2023-10-05
+  end: 2023-10-05
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2023/08/assassins-creed-mirage-release-date-moved-up-to-october-5
+  note: PC via Ubisoft Store and Epic only at launch; Steam 2024-10-17
+- name: Steam Next Fest October 2023
+  type: next_fest
+  start: 2023-10-09
+  end: 2023-10-16
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/3711586646022775054
+  note: Steam post (Oct 9 2023) says through October 16 at 10am PDT; Steamworks 2023 schedule lists October
+    9 - 16
+- name: Forza Motorsport
+  type: aaa_release
+  start: 2023-10-10
+  end: 2023-10-10
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/06/forza-motorsport-launches-october-10
+  note: Premium Edition early access from Oct 5; Game Pass day one
+- name: Marvel's Spider-Man 2
+  type: aaa_release
+  start: 2023-10-20
+  end: 2023-10-20
+  on_steam_at_launch: false
+  confidence: high
+  source: https://blog.playstation.com/2023/06/08/marvels-spider-man-2-arrives-only-on-ps5-october-20-collectors-digital-deluxe-editions-detailed/
+  note: PS5 exclusive; PC (Steam) 2025-01-30
+- name: Super Mario Bros. Wonder
+  type: aaa_release
+  start: 2023-10-20
+  end: 2023-10-20
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gamespot.com/articles/super-mario-bros-wonder-a-new-2d-mario-is-releasing-in-october/1100-6515326/
+  note: Switch exclusive
+- name: Lethal Company
+  type: aaa_release
+  start: 2023-10-23
+  end: 2023-10-23
+  on_steam_at_launch: true
+  confidence: high
+  source: https://store.steampowered.com/app/1966720/Lethal_Company/
+  note: Solo-dev Steam Early Access viral hit; went viral in Nov 2023 and outsold CoD on Steam
+- name: 'Steam Scream: The Revenge 2023'
+  type: themed_fest
+  start: 2023-10-26
+  end: 2023-11-02
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3719453992471603362
+  note: Halloween fest (Steam Scream Fest 2023)
+- name: Alan Wake 2
+  type: aaa_release
+  start: 2023-10-27
+  end: 2023-10-27
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2023/08/alan-wake-ii-delayed-to-october-27
+  note: PC via Epic Games Store only (Epic-published)
+- name: 'Call of Duty: Modern Warfare III'
+  type: aaa_release
+  start: 2023-11-10
+  end: 2023-11-10
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.callofduty.com/blog/2023/08/call-of-duty-modern-warfare-III-worldwide-full-reveal-announcement
+  note: Steam and Battle.net
+- name: Steam Autumn Sale 2023
+  type: seasonal_sale
+  start: 2023-11-21
+  end: 2023-11-28
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/3823053915973576611
+  note: Steam post (Nov 21 2023) says until November 28th at 10am PST; Steamworks 2023 schedule lists
+    November 21 - 28
+- name: Steam VR Fest 2023
+  type: themed_fest
+  start: 2023-12-04
+  end: 2023-12-11
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/6690718524057147205
+  note: Not on the Feb 2023 schedule; added in Oct 2023 alongside SteamVR 2.0
+- name: 'Avatar: Frontiers of Pandora'
+  type: aaa_release
+  start: 2023-12-07
+  end: 2023-12-07
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2023/06/avatar-frontiers-of-pandora-launches-december-7
+  note: PC via Ubisoft Store and Epic only at launch; Steam June 2024
+- name: The Finals
+  type: aaa_release
+  start: 2023-12-07
+  end: 2023-12-07
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gamespot.com/articles/the-finals-surprise-launches-today-on-pc-ps5-and-xbox-series-x-s/1100-6519814/
+  note: F2P shadow-drop at The Game Awards
+- name: Steam Winter Sale 2023
+  type: seasonal_sale
+  start: 2023-12-21
+  end: 2024-01-04
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/3877100446784190796
+  note: Steam post (Dec 21 2023) says through January 4th at 10am Pacific; Steamworks 2023 schedule lists
+    December 21 - January 4, 2024
+- name: Steam Capitalism and Economy Fest 2024
+  type: themed_fest
+  start: 2024-01-08
+  end: 2024-01-15
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/3901870710019684987
+  note: Steam news post says on through January 15th at 10am PT; also in Steamworks schedule https://store.steampowered.com/news/group/4145017/view/3970553774441642998
+- name: Palworld
+  type: aaa_release
+  start: 2024-01-19
+  end: 2024-01-19
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/01/palworld-launches-in-early-access-on-january-19-for-xbox-series-xbox-one-and-pc
+  note: Steam Early Access; 7M Steam sales in 5 days
+- name: Steam Pirates vs. Ninjas Fest 2024
+  type: themed_fest
+  start: 2024-01-22
+  end: 2024-01-29
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3970553774441642998
+  note: Steamworks full-2024 schedule lists it as January 22 - 29 (Concluded!). No Steam News Hub 'on
+    now' post found for this fest.
+- name: Enshrouded
+  type: aaa_release
+  start: 2024-01-24
+  end: 2024-01-24
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/11/enshrouded-launches-in-early-access-on-january-24-2024
+  note: Steam Early Access
+- name: 'Like a Dragon: Infinite Wealth'
+  type: aaa_release
+  start: 2024-01-26
+  end: 2024-01-26
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gamespot.com/articles/like-a-dragon-infinite-wealth-save-on-your-preorder-ahead-of-january-26-launch/1100-6520239/
+- name: Tekken 8
+  type: aaa_release
+  start: 2024-01-26
+  end: 2024-01-26
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/08/tekken-8-launches-january-26-2024
+- name: Persona 3 Reload
+  type: aaa_release
+  start: 2024-02-02
+  end: 2024-02-02
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/08/persona-3-reload-launches-february-2-2024
+- name: Steam Next Fest February 2024
+  type: next_fest
+  start: 2024-02-05
+  end: 2024-02-12
+  confidence: high
+  source: https://web.archive.org/web/20230921142939/https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest/2024feb
+  note: Steamworks doc - February 5 at 10:00 AM PST to February 12 at 10:00 AM PST; also in Steamworks
+    2024 schedule posts
+- name: Helldivers 2
+  type: aaa_release
+  start: 2024-02-08
+  end: 2024-02-08
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/09/helldivers-ii-delayed-to-february-8-2024
+  note: PS5 and PC (Steam); 12M sold by May 2024
+- name: Steam Remote Play Together Fest 2024
+  type: themed_fest
+  start: 2024-02-12
+  end: 2024-02-19
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4054997536259411341
+  note: Steam news post says from now until February 19th at 10am PT; runs right after Next Fest Feb 2024
+- name: Steam Dinos vs. Robots Fest 2024
+  type: themed_fest
+  start: 2024-02-26
+  end: 2024-03-04
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4161959294788967203
+  note: Steam news post says until March 4th at 10am PT
+- name: Final Fantasy VII Rebirth
+  type: aaa_release
+  start: 2024-02-29
+  end: 2024-02-29
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2023/09/final-fantasy-vii-rebirth-launches-february-29-2024
+  note: PS5 exclusive; PC (Steam) 2025-01-23
+- name: Steam Spring Sale 2024
+  type: seasonal_sale
+  start: 2024-03-14
+  end: 2024-03-21
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4118050466868346370
+  note: Steam post says March 14th through 21st at 10am Pacific; also in Steamworks 2024 schedule
+- name: Dragon's Dogma 2
+  type: aaa_release
+  start: 2024-03-22
+  end: 2024-03-22
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/11/dragons-dogma-ii-launches-march-22-2024
+- name: Steam Deckbuilders Fest 2024
+  type: themed_fest
+  start: 2024-03-25
+  end: 2024-04-01
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/7251430632294768766
+  note: Steam news post says runs March 25th through April 1st
+- name: Steam FPS Fest 2024
+  type: themed_fest
+  start: 2024-04-15
+  end: 2024-04-22
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4202494859454272278
+  note: Steam news post says through April 22nd at 10am PT
+- name: Manor Lords
+  type: aaa_release
+  start: 2024-04-26
+  end: 2024-04-26
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/10/manor-lords-launches-in-early-access-for-pc-on-april-26-2024-later-for-consoles
+  note: Steam Early Access; was Steam's most-wishlisted game
+- name: Stellar Blade
+  type: aaa_release
+  start: 2024-04-26
+  end: 2024-04-26
+  on_steam_at_launch: false
+  confidence: high
+  source: https://blog.playstation.com/2024/01/31/stellar-blade-arrives-only-on-ps5-april-26/
+  note: PS5 exclusive; PC (Steam) 2025-06-11
+- name: Steam Farming Fest 2024
+  type: themed_fest
+  start: 2024-04-29
+  end: 2024-05-06
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4182231197189256401
+  note: Steam news post says now through May 6th
+- name: Hades II
+  type: aaa_release
+  start: 2024-05-06
+  end: 2024-05-06
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/05/hades-ii-now-available-in-early-access
+  note: Surprise Early Access launch on Steam and Epic
+- name: Steam Endless Replayability Fest 2024
+  type: themed_fest
+  start: 2024-05-13
+  end: 2024-05-20
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4192364930209202127
+  note: Steam news post says until May 20th at 10am PT; roguelike/roguelite-style replayable games
+- name: Steam Open World Survival Crafting Fest 2024
+  type: themed_fest
+  start: 2024-05-27
+  end: 2024-06-03
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/6216734321444879616
+  note: Steam news post says through June 3rd at 10am Pacific
+- name: Steam Next Fest June 2024
+  type: next_fest
+  start: 2024-06-10
+  end: 2024-06-17
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3970553774441642998
+  note: Steamworks 2024 schedule lists June 10 - 17; Steamworks doc (Wayback 20231211180417, nextfest/2024jun)
+    agrees; Steam post https://store.steampowered.com/news/app/593110/view/4193493367545320889 says through
+    June 17th
+- name: 'Elden Ring: Shadow of the Erdtree'
+  type: aaa_release
+  start: 2024-06-21
+  end: 2024-06-21
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gamespot.com/articles/elden-ring-shadow-of-the-erdtree-launch-times-revealed/1100-6524289/
+  note: Expansion; PC unlocked Jun 20 in the Americas
+- name: Steam Summer Sale 2024
+  type: seasonal_sale
+  start: 2024-06-27
+  end: 2024-07-11
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3970553774441642998
+  note: Steamworks full 2024 schedule lists June 27 - July 11; Steam post of Jun 27 2024 says on now through
+    July 11th
+- name: Steam Fighting Games Fest 2024
+  type: themed_fest
+  start: 2024-07-15
+  end: 2024-07-22
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4225021101233444835
+  note: 'MOVED: Steamworks schedule (Feb 2024) listed Aug 5 - 12, but it actually ran Jul 15 - 22 timed
+    to EVO 2024 (Steam news post 2024-07-15 says on now through July 22nd; GamingOnLinux and EventHubs
+    agree)'
+- name: Steam Tower Defense Fest 2024
+  type: themed_fest
+  start: 2024-07-29
+  end: 2024-08-05
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4326354629803682061
+  note: Steam news post says now until August 5th at 10am Pacific
+- name: Steam Rhythm Fest 2024
+  type: themed_fest
+  start: 2024-08-19
+  end: 2024-08-26
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4326355898859360378
+  note: Steam news post says until August 26th at 10am PT
+- name: 'Black Myth: Wukong'
+  type: aaa_release
+  start: 2024-08-20
+  end: 2024-08-20
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/12/black-myth-wukong-launches-august-20-2024
+  note: PS5 and PC; 1.4M+ Steam concurrent within hours; Xbox 2025
+- name: Star Wars Outlaws
+  type: aaa_release
+  start: 2024-08-30
+  end: 2024-08-30
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.pcgamer.com/games/action/star-wars-outlaws-release-time-date/
+  note: Gold/Ultimate early access from Aug 27; PC via Ubisoft Store/Epic at launch; Steam 2024-11-21
+- name: Steam Space Exploration Fest 2024
+  type: themed_fest
+  start: 2024-09-02
+  end: 2024-09-09
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4238536974133897932
+  note: Steam news post says on now through September 9th at 10am PT; Steamworks schedule says Sep 2 -
+    9 (Labor Day start)
+- name: Astro Bot
+  type: aaa_release
+  start: 2024-09-06
+  end: 2024-09-06
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gamespot.com/articles/astro-bot-sequel-announced-for-ps5-coming-september-6/1100-6523821/
+  note: PS5 exclusive
+- name: 'Warhammer 40,000: Space Marine 2'
+  type: aaa_release
+  start: 2024-09-09
+  end: 2024-09-09
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2023/12/warhammer-40000-space-marine-ii-launches-september-9-2024
+  note: Gold/Ultra early access from Sep 5
+- name: Satisfactory (1.0)
+  type: aaa_release
+  start: 2024-09-10
+  end: 2024-09-10
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/07/satisfactory-launches-september-10
+  note: Left Early Access; first time over 100k Steam concurrent
+- name: Steam Planes, Trains, and Automobiles Fest 2024
+  type: themed_fest
+  start: 2024-09-16
+  end: 2024-09-23
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4605582245627513363
+  note: Steam news post says September 16th through the 23rd at 10am PT; vehicle/transport sim theme
+- name: 'The Legend of Zelda: Echoes of Wisdom'
+  type: aaa_release
+  start: 2024-09-26
+  end: 2024-09-26
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gamespot.com/articles/the-legend-of-zelda-echoes-of-wisdom-starring-zelda-launches-september-26/1100-6524358/
+  note: Switch exclusive
+- name: EA Sports FC 25
+  type: aaa_release
+  start: 2024-09-27
+  end: 2024-09-27
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/07/ea-sports-fc-25-launches-september-27
+  note: Ultimate Edition early access from Sep 20
+- name: Steam Turn-Based RPG Fest 2024
+  type: themed_fest
+  start: 2024-09-30
+  end: 2024-10-07
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4696781406113751120
+  note: Steam news post says now through October 7th at 10am PT
+- name: Silent Hill 2 (remake)
+  type: aaa_release
+  start: 2024-10-08
+  end: 2024-10-08
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/05/silent-hill-2-remake-launches-october-8
+  note: PS5 and PC; Deluxe early access from Oct 6
+- name: 'Dragon Ball: Sparking! Zero'
+  type: aaa_release
+  start: 2024-10-11
+  end: 2024-10-11
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/06/dragon-ball-sparking-zero-launches-october-11
+  note: Ultimate Edition early access from Oct 8; 3M sold in 24 hours
+- name: 'Metaphor: ReFantazio'
+  type: aaa_release
+  start: 2024-10-11
+  end: 2024-10-11
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/04/metaphor-refantazio-launches-october-11
+- name: Steam Next Fest October 2024
+  type: next_fest
+  start: 2024-10-14
+  end: 2024-10-21
+  confidence: high
+  source: https://web.archive.org/web/20240303193610/https://partner.steamgames.com/doc/marketing/upcoming_events/nextfest/2024oct
+  note: Steamworks doc - October 14 at 10:00 AM PDT to October 21 at 10:00 AM PDT; Steam post https://store.steampowered.com/news/app/593110/view/4699034475093339126
+    says through October 21st
+- name: 'Call of Duty: Black Ops 6'
+  type: aaa_release
+  start: 2024-10-25
+  end: 2024-10-25
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.callofduty.com/blog/2024/10/call-of-duty-black-ops-6-pc-trailer-specs-preloading-intel
+  note: Steam, Battle.net, Microsoft Store; Game Pass day one
+- name: Steam Scream Fest 3 2024
+  type: themed_fest
+  start: 2024-10-28
+  end: 2024-11-04
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4530150757095178245
+  note: Halloween fest, branded 'Steam Scream 3'; Steam news post says October 28th - November 4th
+- name: 'Dragon Age: The Veilguard'
+  type: aaa_release
+  start: 2024-10-31
+  end: 2024-10-31
+  on_steam_at_launch: true
+  confidence: high
+  source: https://news.ea.com/press-releases/press-releases-details/2024/Dragon-Age-The-Veilguard-Launches-October-31-2024-Pre-Orders-Available-Now/default.aspx
+- name: Steam Cooking Fest 2024
+  type: themed_fest
+  start: 2024-11-11
+  end: 2024-11-18
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4464849834079158327
+  note: Steam news post says on now through November 18th at 10am PT
+- name: 'S.T.A.L.K.E.R. 2: Heart of Chornobyl'
+  type: aaa_release
+  start: 2024-11-20
+  end: 2024-11-20
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/07/stalker-2-heart-of-chornobyl-delayed-to-november-20
+  note: Xbox and PC (Steam, Epic, GOG); Game Pass day one
+- name: Steam Autumn Sale 2024
+  type: seasonal_sale
+  start: 2024-11-27
+  end: 2024-12-04
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/4464851103138185582
+  note: Steam post (Nov 27 2024) says through December 4th at 10am PST; Steamworks 2024 schedule lists
+    November 27 - December 4
+- name: Marvel Rivals
+  type: aaa_release
+  start: 2024-12-06
+  end: 2024-12-06
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/08/marvel-rivals-launches-december-6
+  note: F2P
+- name: Path of Exile 2
+  type: aaa_release
+  start: 2024-12-06
+  end: 2024-12-06
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/10/path-of-exile-ii-early-access-delayed-to-december-6
+  note: Paid Early Access; 570k+ Steam concurrent peak
+- name: Indiana Jones and the Great Circle
+  type: aaa_release
+  start: 2024-12-09
+  end: 2024-12-09
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/08/indiana-jones-and-the-great-circle-launches-december-9-for-xbox-series-and-pc-in-spring-2025-for-ps5
+  note: Premium Edition early access from Dec 5/6; PS5 2025
+- name: Steam Winter Sale 2024
+  type: seasonal_sale
+  start: 2024-12-19
+  end: 2025-01-02
+  confidence: high
+  source: https://store.steampowered.com/news/group/4145017/view/3970553774441642998
+  note: Steamworks 2024 schedule lists December 19 - January 2; Steam post of Dec 19 2024 (https://store.steampowered.com/news/app/593110/view/520825178851115844)
+    says runs through January 2 (2025!) at 10am PST
+- name: Steam Real-Time Strategy Fest 2025
+  type: themed_fest
+  start: 2025-01-20
+  end: 2025-01-27
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Idler Fest 2025
+  type: themed_fest
+  start: 2025-02-03
+  end: 2025-02-10
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: 'Kingdom Come: Deliverance II'
+  type: aaa_release
+  start: 2025-02-04
+  end: 2025-02-04
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/12/kingdom-come-deliverance-ii-release-date-moved-up-to-february-4-2025
+  note: Moved up from Feb 11. PS5/Xbox/PC (Steam) same day.
+- name: Steam Couch Co-Op Fest 2025
+  type: themed_fest
+  start: 2025-02-10
+  end: 2025-02-17
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Sid Meier's Civilization VII
+  type: aaa_release
+  start: 2025-02-11
+  end: 2025-02-11
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gamespot.com/articles/civilization-vii-releasing-february-11-or-a-week-earlier-with-more-expensive-editions/1100-6525960/
+  note: Deluxe/Founders editions got paid early access from Feb 6. Steam + Epic + consoles same day.
+- name: Steam Next Fest February 2025
+  type: next_fest
+  start: 2025-02-24
+  end: 2025-03-03
+  confidence: high
+  source: https://store.steampowered.com/news/app/593110/view/515202473879666860
+  note: Steam post (Feb 24 2025) says on now through March 3rd at 10am PST; Steamworks post https://store.steampowered.com/news/group/4145017/view/4264427597939246983
+    lists February 24 - March 3
+- name: R.E.P.O.
+  type: aaa_release
+  start: 2025-02-26
+  end: 2025-02-26
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gamespot.com/articles/repo-has-come-out-of-nowhere-on-steam-topping-145000-concurrent-players/1100-6530038/
+  note: Steam viral early access hit; 145k+ concurrent within two weeks, 100k+ daily through March.
+- name: Monster Hunter Wilds
+  type: aaa_release
+  start: 2025-02-28
+  end: 2025-02-28
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/09/monster-hunter-wilds-launches-february-28-2025
+  note: PS5/Xbox/PC (Steam) same day. Switch 2 version announced for 2026-12-04.
+- name: Steam Visual Novel Fest 2025
+  type: themed_fest
+  start: 2025-03-03
+  end: 2025-03-10
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Split Fiction
+  type: aaa_release
+  start: 2025-03-06
+  end: 2025-03-06
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/12/ea-and-hazelight-announce-co-op-adventure-game-split-fiction-for-ps5-xbox-series-and-pc
+  note: PS5/Xbox/PC (Steam) same day.
+- name: Steam Spring Sale 2025
+  type: seasonal_sale
+  start: 2025-03-13
+  end: 2025-03-20
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Assassin's Creed Shadows
+  type: aaa_release
+  start: 2025-03-20
+  end: 2025-03-20
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2025/01/assassins-creed-shadows-delayed-to-march-20
+  note: Delayed from Nov 15 2024, then Feb 14 2025. First Ubisoft day-one Steam release since policy reversal.
+- name: Schedule I
+  type: aaa_release
+  start: 2025-03-24
+  end: 2025-03-24
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gamespot.com/articles/drug-selling-game-explodes-on-steam-charts-surpassing-assassins-creed-shadows/1100-6530401/
+  note: Steam viral early access hit; out-peaked AC Shadows on Steam, 400k+ concurrent at peak.
+- name: Steam City Builder and Colony Sim Fest 2025
+  type: themed_fest
+  start: 2025-03-24
+  end: 2025-03-31
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: inZOI
+  type: aaa_release
+  start: 2025-03-28
+  end: 2025-03-28
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2024/11/inzoi-launches-in-early-access-on-march-28-2025
+  note: Krafton life sim, Steam early access; topped Steam charts, 1M sold in first week.
+- name: Steam Box-Pushing Fest 2025
+  type: themed_fest
+  start: 2025-04-21
+  end: 2025-04-28
+  confidence: high
+  source: https://web.archive.org/web/20250511174938/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Listed as "Sokoban Fest" on earlier versions of the page; renamed by May 2025. Dates from the
+    official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: 'The Elder Scrolls IV: Oblivion Remastered'
+  type: aaa_release
+  start: 2025-04-22
+  end: 2025-04-22
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.pcgamer.com/games/rpg/despite-the-usd50-price-tag-oblivion-remastered-shoots-straight-to-the-top-of-steams-best-sellers/
+  note: Shadow-dropped same day as reveal on PC (Steam)/Xbox/PS5; topped Steam best sellers.
+- name: 'Clair Obscur: Expedition 33'
+  type: aaa_release
+  start: 2025-04-24
+  end: 2025-04-24
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.videogameschronicle.com/news/clair-obscur-expedition-33-gets-a-release-date-and-new-game-details/
+  note: PS5/Xbox (Game Pass)/PC (Steam) same day. Launched two days after Oblivion Remastered shadow drop.
+- name: Steam Wargames Fest 2025
+  type: themed_fest
+  start: 2025-04-28
+  end: 2025-05-05
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Creature Collector Fest 2025
+  type: themed_fest
+  start: 2025-05-12
+  end: 2025-05-19
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: 'Doom: The Dark Ages'
+  type: aaa_release
+  start: 2025-05-15
+  end: 2025-05-15
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gamespot.com/articles/doom-the-dark-ages-launch-times-and-preload-details-revealed/1100-6531435/
+  note: Premium Edition paid early access from May 13. PC (Steam)/Xbox/PS5 same day.
+- name: Steam Zombies vs. Vampires Fest 2025
+  type: themed_fest
+  start: 2025-05-26
+  end: 2025-06-02
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Elden Ring Nightreign
+  type: aaa_release
+  start: 2025-05-30
+  end: 2025-05-30
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.pcgamer.com/games/rpg/elden-ring-nightreign-release-date-set-for-may-will-cost-usd40/
+  note: PC (Steam)/PS5/PS4/Xbox same day.
+- name: Mario Kart World (Nintendo Switch 2 launch)
+  type: aaa_release
+  start: 2025-06-05
+  end: 2025-06-05
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gamespot.com/articles/mario-kart-9-release-date-trailer-news/1100-6528874/
+  note: Switch 2 exclusive; console launch day.
+- name: Steam Next Fest June 2025
+  type: next_fest
+  start: 2025-06-09
+  end: 2025-06-16
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: PEAK
+  type: aaa_release
+  start: 2025-06-16
+  end: 2025-06-16
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gamespot.com/articles/co-op-climbing-game-peak-has-exploded-on-steam-with-huge-player-numbers/1100-6532633/
+  note: Steam viral co-op hit; 100k+ concurrent first week, 1M sold in under a week, 2M in 9 days.
+- name: Steam Fishing Fest 2025
+  type: themed_fest
+  start: 2025-06-16
+  end: 2025-06-23
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: 'Death Stranding 2: On the Beach'
+  type: aaa_release
+  start: 2025-06-26
+  end: 2025-06-26
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gamespot.com/articles/death-stranding-2-on-the-beach-launches-in-june/1100-6529987/
+  note: PS5 exclusive at launch; Deluxe/Collector's paid early access from June 24. PC version released
+    2026-03-19.
+- name: Steam Summer Sale 2025
+  type: seasonal_sale
+  start: 2025-06-26
+  end: 2025-07-10
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Automation Fest 2025
+  type: themed_fest
+  start: 2025-07-14
+  end: 2025-07-21
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Donkey Kong Bananza
+  type: aaa_release
+  start: 2025-07-17
+  end: 2025-07-17
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gamespot.com/articles/donkey-kong-bananza-release-date-trailer-gameplay-details-and-everything-we-know/1100-6530797/
+  note: Switch 2 exclusive.
+- name: Steam Racing Fest 2025
+  type: themed_fest
+  start: 2025-07-28
+  end: 2025-08-04
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: 'Mafia: The Old Country'
+  type: aaa_release
+  start: 2025-08-08
+  end: 2025-08-08
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.videogameschronicle.com/news/mafia-the-old-country-release-date-and-50-price-point-confirmed/
+  note: PS5/Xbox/PC (Steam) same day.
+- name: Steam 4X Fest 2025
+  type: themed_fest
+  start: 2025-08-11
+  end: 2025-08-18
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam TPS Fest 2025
+  type: themed_fest
+  start: 2025-08-25
+  end: 2025-09-01
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: 'Metal Gear Solid Delta: Snake Eater'
+  type: aaa_release
+  start: 2025-08-28
+  end: 2025-08-28
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2025/02/metal-gear-solid-delta-snake-eater-launches-august-28-leaked-playstation-store-trailer-reveals
+  note: Digital Deluxe paid early access from Aug 26. PS5/Xbox/PC (Steam) same day.
+- name: 'Hollow Knight: Silksong'
+  type: aaa_release
+  start: 2025-09-04
+  end: 2025-09-04
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2025/08/21/hollow-knight-silksong-launches-on-september-4
+  note: Announced only two weeks ahead. PC (Steam), all PlayStation/Xbox/Switch platforms, Game Pass day
+    one.
+- name: Steam Political Sim Fest 2025
+  type: themed_fest
+  start: 2025-09-08
+  end: 2025-09-15
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Borderlands 4
+  type: aaa_release
+  start: 2025-09-12
+  end: 2025-09-12
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2025/04/borderlands-4-release-date-moved-up-to-september-12-state-of-play-set-for-april-30
+  note: Moved up from Sep 23. PS5/Xbox/PC (Steam + Epic) same day; Switch 2 later.
+- name: 'Dying Light: The Beast'
+  type: aaa_release
+  start: 2025-09-19
+  end: 2025-09-19
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2025
+  note: Slipped from an earlier Aug 22 date. PS5/Xbox/PC same day.
+- name: Hades II
+  type: aaa_release
+  start: 2025-09-25
+  end: 2025-09-25
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gamespot.com/articles/hades-2-release-date-set-for-september-25-launching-first-for-switch-2-on-console/1100-6533578/
+  note: 1.0 release out of early access; Steam/Epic + Switch/Switch 2 same day (timed console exclusive).
+- name: Silent Hill f
+  type: aaa_release
+  start: 2025-09-25
+  end: 2025-09-25
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.pcgamer.com/games/horror/silent-hill-f-release-date-launch-times/
+  note: Digital Deluxe paid early access two days prior. PC (Steam)/PS5/Xbox same day.
+- name: EA Sports FC 26
+  type: aaa_release
+  start: 2025-09-26
+  end: 2025-09-26
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2025
+  note: Annual football release; PC plus all consoles same day.
+- name: Steam Autumn Sale 2025
+  type: seasonal_sale
+  start: 2025-09-29
+  end: 2025-10-06
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Moved from the usual late-November slot to late September / early October. Dates from the official
+    Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Ghost of Yotei
+  type: aaa_release
+  start: 2025-10-02
+  end: 2025-10-02
+  on_steam_at_launch: false
+  confidence: high
+  source: https://gameinformer.com/2025
+  note: PS5 exclusive.
+- name: Battlefield 6
+  type: aaa_release
+  start: 2025-10-10
+  end: 2025-10-10
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2025
+  note: PS5/Xbox/PC (Steam) same day.
+- name: Steam Next Fest October 2025
+  type: next_fest
+  start: 2025-10-13
+  end: 2025-10-20
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: 'Pokemon Legends: Z-A'
+  type: aaa_release
+  start: 2025-10-16
+  end: 2025-10-16
+  on_steam_at_launch: false
+  confidence: high
+  source: https://gameinformer.com/2025
+  note: Switch / Switch 2 only.
+- name: Steam Scream 4 Fest 2025
+  type: themed_fest
+  start: 2025-10-27
+  end: 2025-11-03
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Halloween / horror fest. Dates from the official Steamworks Upcoming Events page (Wayback Machine
+    snapshot).
+- name: The Outer Worlds 2
+  type: aaa_release
+  start: 2025-10-29
+  end: 2025-10-29
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2025
+  note: Xbox/PC (Steam, Game Pass)/PS5 same day.
+- name: ARC Raiders
+  type: aaa_release
+  start: 2025-10-30
+  end: 2025-10-30
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2025
+  note: PS5/Xbox/PC (Steam) same day.
+- name: Steam Animal Fest 2025
+  type: themed_fest
+  start: 2025-11-10
+  end: 2025-11-17
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: 'Call of Duty: Black Ops 7'
+  type: aaa_release
+  start: 2025-11-14
+  end: 2025-11-14
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2025
+  note: PC (Steam/Battle.net) and PS/Xbox current and last gen same day.
+- name: Where Winds Meet
+  type: aaa_release
+  start: 2025-11-14
+  end: 2025-11-14
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2025
+  note: Free-to-play wuxia open world; global PC (Steam) and PS5 launch same day as Black Ops 7.
+- name: Steam Sports Fest 2025
+  type: themed_fest
+  start: 2025-12-08
+  end: 2025-12-15
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Winter Sale 2025
+  type: seasonal_sale
+  start: 2025-12-18
+  end: 2026-01-05
+  confidence: high
+  source: https://web.archive.org/web/20250304232209/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Detective Fest 2026
+  type: themed_fest
+  start: 2026-01-12
+  end: 2026-01-19
+  confidence: high
+  source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Board Game Fest 2026
+  type: themed_fest
+  start: 2026-01-26
+  end: 2026-02-02
+  confidence: high
+  source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Typing Fest 2026
+  type: themed_fest
+  start: 2026-02-05
+  end: 2026-02-09
+  confidence: high
+  source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Nioh 3
+  type: aaa_release
+  start: 2026-02-06
+  end: 2026-02-06
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: PS5 and PC (Steam) same day.
+- name: Steam (Combat) PvP Fest 2026
+  type: themed_fest
+  start: 2026-02-09
+  end: 2026-02-16
+  confidence: high
+  source: https://web.archive.org/web/20260109010625/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Listed as "PvP Fest" in 2025 versions of the page. Dates from the official Steamworks Upcoming
+    Events page (Wayback Machine snapshot).
+- name: Steam Horse Fest 2026
+  type: themed_fest
+  start: 2026-02-19
+  end: 2026-02-23
+  confidence: high
+  source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Next Fest February 2026
+  type: next_fest
+  start: 2026-02-23
+  end: 2026-03-02
+  confidence: high
+  source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Resident Evil Requiem
+  type: aaa_release
+  start: 2026-02-27
+  end: 2026-02-27
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: PS5/Xbox/Switch 2/PC (Steam) same day.
+- name: Marathon
+  type: aaa_release
+  start: 2026-03-05
+  end: 2026-03-05
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: Bungie extraction shooter; previously delayed out of a Sept 2025 date. PS5/Xbox/PC (Steam) same
+    day.
+- name: Pokemon Pokopia
+  type: aaa_release
+  start: 2026-03-05
+  end: 2026-03-05
+  on_steam_at_launch: false
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: Switch 2 exclusive.
+- name: Slay the Spire 2
+  type: aaa_release
+  start: 2026-03-05
+  end: 2026-03-05
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: Steam early access; dominated Steam charts at launch (same day as Marathon and Pokopia).
+- name: Steam Tower Defense Fest 2026
+  type: themed_fest
+  start: 2026-03-09
+  end: 2026-03-16
+  confidence: high
+  source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: 'Monster Hunter Stories 3: Twisted Reflection'
+  type: aaa_release
+  start: 2026-03-13
+  end: 2026-03-13
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: PS5/Xbox/Switch 2/PC same day; Steam store lists Mar 12 (US time zone unlock).
+- name: Crimson Desert
+  type: aaa_release
+  start: 2026-03-19
+  end: 2026-03-19
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: Multiple earlier delays. PS5/Xbox/PC (Steam)/Mac same day. Death Stranding 2 PC port also launched
+    2026-03-19.
+- name: Steam Spring Sale 2026
+  type: seasonal_sale
+  start: 2026-03-19
+  end: 2026-03-26
+  confidence: high
+  source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam House and Home Fest 2026
+  type: themed_fest
+  start: 2026-03-30
+  end: 2026-04-06
+  confidence: high
+  source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Hidden Object Fest 2026
+  type: themed_fest
+  start: 2026-04-09
+  end: 2026-04-13
+  confidence: high
+  source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Pragmata
+  type: aaa_release
+  start: 2026-04-17
+  end: 2026-04-17
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: Long-delayed Capcom title.PS5/Xbox/Switch 2/PC; Steam lists Apr 16 (US time zone unlock).
+- name: Steam Medieval Fest 2026
+  type: themed_fest
+  start: 2026-04-20
+  end: 2026-04-27
+  confidence: high
+  source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Saros
+  type: aaa_release
+  start: 2026-04-30
+  end: 2026-04-30
+  on_steam_at_launch: false
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: PS5 exclusive (Housemarque).
+- name: Steam Deckbuilders Fest 2026
+  type: themed_fest
+  start: 2026-05-04
+  end: 2026-05-11
+  confidence: high
+  source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Subnautica 2
+  type: aaa_release
+  start: 2026-05-14
+  end: 2026-05-14
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.pcgamer.com/games/survival-crafting/subnautica-2-pulls-over-370-000-concurrent-players-in-its-first-30-minutes-on-steam-as-it-cannonballs-into-early-access/
+  note: Early access (Steam + Xbox); delayed from 2025. 370k+ Steam concurrent in first 30 minutes.
+- name: Steam Ocean Fest 2026
+  type: themed_fest
+  start: 2026-05-18
+  end: 2026-05-25
+  confidence: high
+  source: https://web.archive.org/web/20250801033424/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Forza Horizon 6
+  type: aaa_release
+  start: 2026-05-19
+  end: 2026-05-19
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: Xbox and PC (Steam) at launch; PS5 later. Steam lists May 18 (US time zone unlock).
+- name: 'LEGO Batman: Legacy of the Dark Knight'
+  type: aaa_release
+  start: 2026-05-22
+  end: 2026-05-22
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: PS5/Xbox/PC same day; Switch 2 version 2026-09-18.
+- name: 007 First Light
+  type: aaa_release
+  start: 2026-05-27
+  end: 2026-05-27
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: Delayed from 2026-03-27. PS5/Xbox/PC (Steam lists May 26, US time zone); Switch 2 version slipped
+    to May 2027.
+- name: Steam Bullet Fest 2026
+  type: themed_fest
+  start: 2026-06-08
+  end: 2026-06-15
+  confidence: high
+  source: https://web.archive.org/web/20260217191207/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Next Fest June 2026
+  type: next_fest
+  start: 2026-06-15
+  end: 2026-06-22
+  confidence: high
+  source: https://web.archive.org/web/20260217191207/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Summer Sale 2026
+  type: seasonal_sale
+  start: 2026-06-25
+  end: 2026-07-09
+  confidence: high
+  source: https://web.archive.org/web/20260217191207/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Assassin's Creed Black Flag Resynced
+  type: aaa_release
+  start: 2026-07-09
+  end: 2026-07-09
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: Remake; PS5/Xbox/PC (Steam) same day.
+- name: Steam Social Deduction Fest 2026
+  type: themed_fest
+  start: 2026-07-13
+  end: 2026-07-16
+  confidence: high
+  source: https://web.archive.org/web/20260217191207/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Train Fest 2026
+  type: themed_fest
+  start: 2026-07-20
+  end: 2026-07-27
+  confidence: high
+  source: https://web.archive.org/web/20260217191207/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: 'Halo: Campaign Evolved'
+  type: aaa_release
+  start: 2026-07-28
+  end: 2026-07-28
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: Xbox/PC (Steam) and PS5 same day.
+- name: Steam Cyberpunk Fest 2026
+  type: themed_fest
+  start: 2026-08-03
+  end: 2026-08-10
+  confidence: high
+  source: https://web.archive.org/web/20260217191207/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Pins and Pegs Fest 2026
+  type: themed_fest
+  start: 2026-08-17
+  end: 2026-08-20
+  confidence: high
+  source: https://web.archive.org/web/20260217191207/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Star Wars Zero Company
+  type: aaa_release
+  start: 2026-08-27
+  end: 2026-08-27
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: EA/Bit Reactor tactics game; PS5/Xbox/PC (Steam) same day.
+- name: Steam PvE Survival Crafting Fest 2026
+  type: themed_fest
+  start: 2026-08-31
+  end: 2026-09-07
+  confidence: high
+  source: https://web.archive.org/web/20260217191207/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: The Blood of Dawnwalker
+  type: aaa_release
+  start: 2026-09-03
+  end: 2026-09-03
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: PS5/Xbox/PC; Steam lists Sep 2 (US time zone unlock).
+- name: 'Onimusha: Way of the Sword'
+  type: aaa_release
+  start: 2026-09-04
+  end: 2026-09-04
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: PS5/Xbox/Switch 2/PC; Steam lists Sep 3 (US time zone unlock).
+- name: Steam Programming Fest 2026
+  type: themed_fest
+  start: 2026-09-10
+  end: 2026-09-14
+  confidence: high
+  source: https://web.archive.org/web/20260217191207/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Steam Party-Based RPG Fest 2026
+  type: themed_fest
+  start: 2026-09-14
+  end: 2026-09-21
+  confidence: high
+  source: https://web.archive.org/web/20260217191207/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Dates from the official Steamworks Upcoming Events page (Wayback Machine snapshot).
+- name: Marvel's Wolverine
+  type: aaa_release
+  start: 2026-09-15
+  end: 2026-09-15
+  on_steam_at_launch: false
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: PS5 exclusive; no PC date.
+- name: Control Resonant
+  type: aaa_release
+  start: 2026-09-24
+  end: 2026-09-24
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: Remedy; PS5/Xbox/PC (Steam)/Mac same day.
+- name: EA Sports FC 27
+  type: aaa_release
+  start: 2026-09-24
+  end: 2026-09-24
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: Annual football release; PC plus all consoles same day.
+- name: Steam Autumn Sale 2026
+  type: seasonal_sale
+  start: 2026-10-01
+  end: 2026-10-08
+  confidence: high
+  source: https://web.archive.org/web/20260923065829/https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Second year in the early-October slot. Dates from the official Steamworks Upcoming Events page
+    (Wayback Machine snapshot).
+- name: 'Ace Combat 8: Wings of Theve'
+  type: aaa_release
+  start: 2026-10-02
+  end: 2026-10-02
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gameinformer.com/2026
+  note: PS5/Xbox/PC; Steam lists Oct 1 (US time zone unlock).
+- name: 'Gears of War: E-Day'
+  type: aaa_release
+  start: 2026-10-06
+  end: 2026-10-06
+  on_steam_at_launch: true
+  confidence: high
+  source: https://news.xbox.com/en-us/2026/06/07/xbox-games-showcase-2026-recap-everything-announced/
+  note: Xbox and PC (Steam page confirms Oct 6); Premium Upgrade sold on Steam.
+- name: Steam Cooking Fest 2026
+  type: themed_fest
+  start: 2026-10-12
+  end: 2026-10-19
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Steam Next Fest October 2026
+  type: next_fest
+  start: 2026-10-19
+  end: 2026-10-26
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: 'Call of Duty: Modern Warfare 4'
+  type: aaa_release
+  start: 2026-10-23
+  end: 2026-10-23
+  on_steam_at_launch: true
+  confidence: high
+  source: https://news.xbox.com/en-us/2026/06/07/xbox-games-showcase-2026-recap-everything-announced/
+  note: PC/Xbox/PS5/Switch 2; Steam lists Oct 22 (US time zone unlock).
+- name: Steam Scream V Fest 2026
+  type: themed_fest
+  start: 2026-10-26
+  end: 2026-11-02
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; Halloween / horror fest; officially announced. Dates from the official Steamworks Upcoming
+    Events page (live, checked 2026-10-10).
+- name: Phantom Blade Zero
+  type: aaa_release
+  start: 2026-10-29
+  end: 2026-10-29
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gematsu.com/2026/06/phantom-blade-zero-delayed-to-october-29
+  note: Delayed 50 days from Sep 9. PS5 (timed console exclusive) and PC (Steam/Epic); Steam lists Oct
+    28 (US time zone).
+- name: 'The Legend of Zelda: Ocarina of Time (Switch 2 remake)'
+  type: aaa_release
+  start: 2026-11-05
+  end: 2026-11-05
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gameinformer.com/nintendo-direct/2026/09/08/the-legend-of-zelda-ocarina-of-time-remake-launches-this-november
+  note: Switch 2 exclusive full remake, Zelda 40th anniversary.
+- name: Steam Auto-Battler RPG Fest 2026
+  type: themed_fest
+  start: 2026-11-16
+  end: 2026-11-23
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Grand Theft Auto VI
+  type: aaa_release
+  start: 2026-11-19
+  end: 2026-11-19
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gamespot.com/articles/gta-6-still-on-track-for-november-release/1100-6537831/
+  note: PS5/Xbox only; no PC date announced. Delayed from Fall 2025 to 2026-05-26, then to 2026-11-19;
+    Take-Two reaffirmed in Aug 2026.
+- name: Steam Winter Sale 2026
+  type: seasonal_sale
+  start: 2026-12-17
+  end: 2027-01-04
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced on the Steamworks Upcoming Events page. Dates from the official
+    Steamworks Upcoming Events page (live, checked 2026-10-10).
+- name: Steam Desktop Companion Fest 2027
+  type: themed_fest
+  start: 2027-01-14
+  end: 2027-01-18
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Stranger Than Heaven
+  type: aaa_release
+  start: 2027-01-15
+  end: 2027-01-15
+  on_steam_at_launch: true
+  confidence: high
+  source: https://gematsu.com/2026/06/stranger-than-heaven-launches-january-15-2027
+  note: RGG Studio; PS5/Xbox/PC (Steam lists Jan 14, US time zone); Game Pass day one.
+- name: Steam Shop Keeper Fest 2027
+  type: themed_fest
+  start: 2027-01-25
+  end: 2027-02-01
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Metroid Ravenous
+  type: aaa_release
+  start: 2027-01-28
+  end: 2027-01-28
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.levelup.com/en/news/metroid-ravenous-shows-off-its-metroidvania-action-and-confirms-release-date-when-will-samus-next-2d-adventure-launch/
+  note: Switch 2 exclusive; dated in Sept 2026 Nintendo Direct.
+- name: Until Dawn 2
+  type: aaa_release
+  start: 2027-01-28
+  end: 2027-01-28
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.gematsu.com/2026/09/until-dawn-2-launches-january-28-2027
+  note: PS5 exclusive.
+- name: Metro 2039
+  type: aaa_release
+  start: 2027-02-04
+  end: 2027-02-04
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.gamingonlinux.com/2026/09/metro-2039-arrives-february-4-2027-and-theres-a-new-trailer/
+  note: PS5/Xbox/PC (Steam page lists Feb 4 2027).
+- name: Steam Sheep Fest 2027
+  type: themed_fest
+  start: 2027-02-04
+  end: 2027-02-08
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Steam Couch Co-Op Fest 2027
+  type: themed_fest
+  start: 2027-02-08
+  end: 2027-02-15
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: 'Tomb Raider: Legacy of Atlantis'
+  type: aaa_release
+  start: 2027-02-12
+  end: 2027-02-12
+  on_steam_at_launch: true
+  confidence: high
+  source: https://stevivor.com/news/tomb-raider-legacy-of-atlantis-release-date-set-for-12-february-2027/
+  note: Delayed from 2026. PS5/Xbox/PC (Steam)/Switch 2 same day.
+- name: God of War Laufey
+  type: aaa_release
+  start: 2027-02-16
+  end: 2027-02-16
+  on_steam_at_launch: false
+  confidence: high
+  source: https://www.thesixthaxis.com/2026/07/25/god-of-war-laufey-release-date-set-for-february-16th-2027/
+  note: PS5 exclusive; no PC date.
+- name: Persona 4 Revival
+  type: aaa_release
+  start: 2027-02-18
+  end: 2027-02-18
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.rpgsite.net/news/20578-persona-4-revival-launches-on-february-18-2027
+  note: PS5/Xbox/PC (Steam lists Feb 17, US time zone); Game Pass day one; Switch 2 version 2027-05-20.
+- name: Steam Next Fest February 2027
+  type: next_fest
+  start: 2027-02-22
+  end: 2027-03-01
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Fable
+  type: aaa_release
+  start: 2027-02-23
+  end: 2027-02-23
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.xbox.com/en-US/games/fable
+  note: Delayed from autumn 2026 to avoid GTA VI / holiday crowding. Xbox/PC (Steam)/PS5 same day, Game
+    Pass.
+- name: 'Wo Long 2: Wings of Ember'
+  type: aaa_release
+  start: 2027-03-04
+  end: 2027-03-04
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.videogameschronicle.com/news/video-heres-a-look-at-the-wo-long-2-alpha-demo-which-is-available-today-to-mark-its-release-date-announcement/
+  note: PS5/Xbox/Switch 2/PC (Steam) same day; Game Pass.
+- name: Steam Rhythm Fest 2027
+  type: themed_fest
+  start: 2027-03-08
+  end: 2027-03-15
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Steam Spring Sale 2027
+  type: seasonal_sale
+  start: 2027-03-18
+  end: 2027-03-25
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Steam Dinos vs. Robots Fest 2027
+  type: themed_fest
+  start: 2027-03-29
+  end: 2027-04-05
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Exodus
+  type: aaa_release
+  start: 2027-04-07
+  end: 2027-04-07
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.rpgsite.net/news/21185-exodus-release-date-ps5-xbox-pc-steam
+  note: Archetype Entertainment / Wizards of the Coast; PS5/Xbox/PC (Steam) same day.
+- name: Final Fantasy VII Revelation
+  type: aaa_release
+  start: 2027-04-08
+  end: 2027-04-08
+  on_steam_at_launch: true
+  confidence: high
+  source: https://www.videogameschronicle.com/news/square-enix-confirms-final-fantasy-7-revelation-release-date/
+  note: PS5/Xbox/Switch 2/PC simultaneous (Steam page lists Apr 8 2027).
+- name: Steam Racing Fest 2027
+  type: themed_fest
+  start: 2027-04-12
+  end: 2027-04-19
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Steam Witch Fest 2027
+  type: themed_fest
+  start: 2027-04-22
+  end: 2027-04-26
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Steam Fighting Fest 2027
+  type: themed_fest
+  start: 2027-04-26
+  end: 2027-05-03
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Steam Real-Time Strategy Fest 2027
+  type: themed_fest
+  start: 2027-05-10
+  end: 2027-05-17
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Steam Mountaineering Fest 2027
+  type: themed_fest
+  start: 2027-05-31
+  end: 2027-06-03
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Steam Next Fest June 2027
+  type: next_fest
+  start: 2027-06-14
+  end: 2027-06-21
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).
+- name: Steam Summer Sale 2027
+  type: seasonal_sale
+  start: 2027-06-24
+  end: 2027-07-08
+  confidence: high
+  source: https://partner.steamgames.com/doc/marketing/upcoming_events
+  note: Upcoming; officially announced. Dates from the official Steamworks Upcoming Events page (live,
+    checked 2026-10-10).

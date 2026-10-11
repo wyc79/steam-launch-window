@@ -1,0 +1,15 @@
+# systemd user service: runs the history backfill and restarts it after a
+# crash or reboot. Install steps are in scripts/server/README.md.
+[Unit]
+Description=steam-launch-window history backfill
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/steam-launch-window/scripts/server/run_history_backfill.sh
+Restart=on-failure
+RestartSec=300
+
+[Install]
+WantedBy=default.target

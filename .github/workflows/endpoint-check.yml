@@ -1,0 +1,23 @@
+name: endpoint check
+
+# Weekly smoke test: do the Steam endpoints still look the way we expect?
+# About 10 requests. Off by default: set the repository variable
+# ENDPOINT_CHECK=on to let the schedule run it.
+
+on:
+  schedule:
+    - cron: "0 12 * * 3"  # Wednesdays
+  workflow_dispatch:
+
+jobs:
+  live:
+    if: github.event_name == 'workflow_dispatch' || vars.ENDPOINT_CHECK == 'on'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: pytest -m live -v

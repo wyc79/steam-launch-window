@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# pipeline outputs (the data branch is checked out here in CI)
+_data/
