@@ -11,7 +11,7 @@ name: publish dataset
 
 on:
   schedule:
-    - cron: "0 12 * * 1"  # Mondays, after the weekly history run
+    - cron: "17 12 * * 1"  # Mondays, after the weekly history run
   workflow_dispatch:
     inputs:
       upload:
@@ -22,6 +22,7 @@ on:
 concurrency:
   group: data-branch
   cancel-in-progress: false
+  queue: max  # wait in line instead of cancelling a waiting run
 
 jobs:
   publish:
@@ -49,6 +50,7 @@ jobs:
           name: dataset-preview
           path: .cache/dataset
           include-hidden-files: true
+          retention-days: 7
 
       - name: Build and upload
         if: github.event_name == 'schedule' || inputs.upload

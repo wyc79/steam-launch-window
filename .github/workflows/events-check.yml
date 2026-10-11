@@ -6,7 +6,7 @@ name: events check
 
 on:
   schedule:
-    - cron: "0 15 * * 1"  # Mondays
+    - cron: "41 15 * * 1"  # Mondays
   push:
     branches: [main]
     paths: ["data/events.yaml", "pipeline/events.py"]
