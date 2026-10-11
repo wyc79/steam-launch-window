@@ -28,6 +28,7 @@ import pandas as pd
 import yaml
 
 from . import collect_followers, collect_history, collect_upcoming
+from . import events as event_data
 
 log = logging.getLogger("publish_dataset")
 
@@ -35,14 +36,16 @@ INT_COLUMNS = {
     "appid", "tagid", "release_ts", "date_ok", "early_access", "wishlist_rank", "price_cents",
     "is_free", "followers", "launch_ts", "steam_release_ts", "early_access_now",
     "demo_release_ts", "demo_before_launch", "reviews_total_now", "reviews_30d",
-    "reviews_30d_positive", "reviews_before_launch",
+    "reviews_30d_positive", "reviews_before_launch", "steam_appid",
 }
+BOOL_COLUMNS = {"on_steam_at_launch", "free_to_play"}
 DATE_COLUMNS = {"date", "date_end", "launch_date", "first_seen", "snapshot_date",
                 "reviews_30d_fetched", "prior_check_fetched", "start", "end"}
 
 
 def typed(df: pd.DataFrame, columns: list[str] | None = None) -> pd.DataFrame:
-    """Integers as nullable Int64, ISO dates as dates, everything else as text.
+    """Integers as nullable Int64, flags as nullable booleans, ISO dates as dates,
+    everything else as text.
 
     With `columns`, missing ones are added empty, so files written at
     different times (before and after a column was added) share one schema.
@@ -55,8 +58,12 @@ def typed(df: pd.DataFrame, columns: list[str] | None = None) -> pd.DataFrame:
     for col in df.columns:
         if col in INT_COLUMNS:
             df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64")
+        elif col in BOOL_COLUMNS:
+            df[col] = df[col].astype("boolean")
         elif col in DATE_COLUMNS:
             df[col] = pd.to_datetime(df[col], errors="coerce").dt.date
+        elif col in ("starts_at", "ends_at"):
+            continue  # already UTC timestamps
         elif col == "fetched_at":
             df[col] = pd.to_datetime(df[col], errors="coerce", utc=True)
         else:
@@ -108,10 +115,31 @@ def build(data_dir: Path, events_path: Path, out: Path, license_id: str) -> dict
         months = monthly(data_dir / name / "snapshots", out / name / "snapshots", columns)
         if months:
             stats[f"{name}/snapshots"] = months
-    events = yaml.safe_load(events_path.read_text(encoding="ascii"))["events"]
-    stats["events.parquet"] = write(typed(pd.DataFrame(events)), out / "events.parquet")
+    stats["events.parquet"] = write(events_table(events_path), out / "events.parquet")
     (out / "README.md").write_text(card(stats, license_id), encoding="utf-8")
     return stats
+
+
+def events_table(path: Path) -> pd.DataFrame:
+    """events.yaml as a table (list fields joined with "|").
+
+    starts_at / ends_at give the exact window in UTC (Steam events run 10:00 to
+    10:00 Pacific; other events cover whole Pacific days). free_to_play is only
+    written in the YAML when true; releases get an explicit false here.
+    """
+    rows = []
+    for e in event_data.load(path):
+        starts, ends = event_data.window(e)
+        row = {**e, "starts_at": starts, "ends_at": ends}
+        if "tags" in row:
+            row["tags"] = "|".join(row["tags"])
+        if row["type"] == "major_release":
+            row.setdefault("free_to_play", False)
+        rows.append(row)
+    df = pd.DataFrame(rows)
+    for col in ("starts_at", "ends_at"):
+        df[col] = pd.to_datetime(df[col], utc=True)
+    return typed(df)
 
 
 def card(stats: dict, license_id: str) -> str:
@@ -160,7 +188,7 @@ No personal data: no Steam IDs, usernames or review texts, only counts.
 | `upcoming_snapshots` | {rows("upcoming/snapshots"):,} | one row per coming-soon game per day ({snap_months[0] if snap_months else "-"} to {snap_months[-1] if snap_months else "-"}): release date and its precision, Early Access, wishlist rank, price if set |
 | `upcoming_apps` | {rows("upcoming/apps.parquet"):,} | name, developers, publishers, tags with vote weights, languages, demo |
 | `followers` | {rows("followers/snapshots"):,} | community hub follower counts for tracked upcoming games, with fetch time |
-| `events` | {rows("events.parquet"):,} | Steam sales, Next Fests, themed fests, big releases, regional holidays, each with a source |
+| `events` | {rows("events.parquet"):,} | Steam sales, Next Fests, themed fests, major releases, regional holidays, each with a source; `starts_at`/`ends_at` (UTC) give the exact window: Steam events run from 10:00 Pacific on `start` to 10:00 Pacific on `end` |
 | `tags` | {rows("tags.parquet"):,} | Steam tag id to name |
 
 ```python

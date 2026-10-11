@@ -134,17 +134,17 @@ The site shows a free-to-play developer the free-game results.
 | Variable | Definition |
 |---|---|
 | **Niche competition** | number of other launches in the same week whose top-10 tags overlap the game's (tag-weight cosine similarity at least 0.3) and that share a major language with it; also tried as "in the same primary tag" |
-| **Big competitor nearby** | an on-Steam AAA release from `events.yaml` within 3 days of launch |
-| **Seasonal sale** | launch date falls inside a seasonal sale; separately, launch in the 7 days before one |
+| **Big competitor nearby** | a `major_release` from `events.yaml` within 3 days of launch that is on Steam at launch, paid (not `free_to_play`), not an `expansion`, and not a `surprise` (shadow drops and breakouts could not be planned around); the game itself is excluded by `steam_appid`. Free-to-play and console-only releases as a separate "attention" indicator |
+| **Seasonal sale** | launch time falls inside a seasonal sale window (10:00 to 10:00 Pacific, from `pipeline.events.window`); separately, launch in the 7 days before one |
 | **Next Fest** | launch during Next Fest; separately, the game had a demo in the last Next Fest before launch (from demo date) |
-| **Themed fest** | launch during a themed fest |
+| **Themed fest** | launch during a themed fest whose `tags` overlap the game's top 10 tags; fests without tags are not counted |
 | **Genre** | indicators for the 30 most common tags |
 | **Time** | launch year and month (fixed effects), day of week |
 | **Price** | log of US price; under $5 indicator |
 | **Price vs niche** | log(price / median price of the game's niche), so a $25 game in an $8 niche differs from one in a $30 niche |
 | **Same-tier competition** | as niche competition, but only launches in the same price tier (under $10, $10 to $25, over $25); kept instead of plain competition if it predicts held-out launches better. History only, since upcoming games rarely have prices |
 | **Languages** | supports Simplified Chinese, Japanese, Russian, Korean, Brazilian Portuguese, German, French, Spanish (indicators); number of languages; English audio |
-| **Regional holidays** | launch during Lunar New Year week, China's Golden Week, Japan's Golden Week, US Thanksgiving to Cyber Monday, Christmas to New Year (from `events.yaml`); the Chinese and Japanese holidays also as interactions with the matching language |
+| **Regional holidays** | launch during China's Spring Festival or National Day holiday, US Thanksgiving to Cyber Monday, or Christmas to New Year (from `events.yaml`); the Chinese holidays also as interactions with Simplified Chinese support |
 | **Launch hour** | hour of release in Pacific time (10 am Pacific is 1 am in China); in bands |
 | **Early Access** | launch_type = early_access |
 | **Demo** | had a demo before launch |
