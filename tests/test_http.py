@@ -168,3 +168,29 @@ def test_get_json_cache_if_rejects_semantic_failures(tmp_path):
     assert c.get_json("https://a.test/", cache_ttl=60, cache_if=ok) == {"success": 1}
     assert c.get_json("https://a.test/", cache_ttl=60, cache_if=ok) == {"success": 1}  # now cached
     assert len(session.calls) == 2
+
+
+def test_error_message_and_cache_hide_api_key_param(tmp_path):
+    c, _, _ = make([FakeResponse(text="ok"), FakeResponse(404)], min_interval=0, cache_dir=tmp_path)
+    c.get_text("https://a.test/", {"apiKey": "SECRET", "x": 1}, cache_ttl=60)
+    for f in tmp_path.rglob("*.json"):
+        assert "SECRET" not in f.read_text()
+    with pytest.raises(HTTPStatusError) as e:
+        c.get_text("https://a.test/other", {"apiKey": "SECRET"})
+    assert "SECRET" not in str(e.value)
+
+
+def test_retry_after_as_http_date():
+    # 2026-10-11 12:00:30 GMT is 30 s after the fake clock's "now"
+    c, session, ft = make([FakeResponse(429, headers={"Retry-After": "Sun, 11 Oct 2026 12:00:30 GMT"}),
+                           FakeResponse(text="ok")], min_interval=0)
+    c._now = lambda: 1791720000.0  # 2026-10-11 12:00:00 UTC
+    assert c.get_text("https://a.test/") == "ok"
+    assert 30 in ft.sleeps
+
+
+def test_per_host_retry_limit():
+    c, session, _ = make([FakeResponse(500)] * 5, min_interval=0, max_retries=4, host_max_retries={"a.test": 1})
+    with pytest.raises(HTTPStatusError):
+        c.get_text("https://a.test/")
+    assert len(session.calls) == 2

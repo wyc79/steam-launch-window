@@ -14,6 +14,7 @@ import json
 import logging
 import random
 import time
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from urllib.parse import urlencode, urlsplit
 
@@ -21,7 +22,7 @@ import requests
 
 USER_AGENT = "steam-launch-window/0.1 (+https://github.com/wyc79/steam-launch-window)"
 RETRY_STATUSES = {429, 500, 502, 503, 504}
-SECRET_PARAMS = {"key"}
+SECRET_PARAMS = {"key", "apiKey"}
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +60,7 @@ class Client:
         host_intervals: dict[str, float] | None = None,
         stop_on_429_hosts: set[str] | frozenset[str] = frozenset(),
         max_retries: int = 5,
+        host_max_retries: dict[str, int] | None = None,
         backoff_base: float = 2.0,
         backoff_cap: float = 300.0,
         timeout: float = 60.0,
@@ -73,6 +75,7 @@ class Client:
         self.host_intervals = host_intervals or {}
         self.stop_on_429_hosts = set(stop_on_429_hosts)
         self.max_retries = max_retries
+        self.host_max_retries = host_max_retries or {}
         self.backoff_base = backoff_base
         self.backoff_cap = backoff_cap
         self.timeout = timeout
@@ -116,19 +119,31 @@ class Client:
                 self._sleep(wait)
         self._last_request[host] = self._clock()
 
+    def _retry_after(self, value: str | None) -> float | None:
+        """Seconds to wait from a Retry-After header (seconds or an HTTP date)."""
+        if not value:
+            return None
+        if value.isdigit():
+            return float(value)
+        try:
+            return max(0.0, parsedate_to_datetime(value).timestamp() - self._now())
+        except (TypeError, ValueError):
+            return None
+
     def _backoff(self, attempt: int) -> float:
         base = min(self.backoff_cap, self.backoff_base * (2 ** attempt))
         return base * (1 + 0.25 * random.random())
 
     def _fetch(self, url: str, params: dict | None) -> str:
         host = urlsplit(url).netloc
-        for attempt in range(self.max_retries + 1):
+        max_retries = self.host_max_retries.get(host, self.max_retries)
+        for attempt in range(max_retries + 1):
             self._wait_for_host(host)
             self.requests_made += 1
             try:
                 r = self.session.get(url, params=params, timeout=self.timeout)
             except (requests.ConnectionError, requests.Timeout) as e:
-                if attempt == self.max_retries:
+                if attempt == max_retries:
                     raise
                 delay = self._backoff(attempt)
                 log.warning("network error (%s) on %s, retry in %.0fs", type(e).__name__, _describe(url, params), delay)
@@ -137,13 +152,12 @@ class Client:
 
             if 200 <= r.status_code < 300:
                 return r.text
-            retry_after = r.headers.get("Retry-After")
-            retry_after = float(retry_after) if retry_after and retry_after.isdigit() else None
+            retry_after = self._retry_after(r.headers.get("Retry-After"))
             if r.status_code == 429 and (
                     host in self.stop_on_429_hosts
                     or (retry_after is not None and retry_after > self.backoff_cap)):
                 raise RateLimited(_describe(url, params), retry_after)
-            if r.status_code not in RETRY_STATUSES or attempt == self.max_retries:
+            if r.status_code not in RETRY_STATUSES or attempt == max_retries:
                 raise HTTPStatusError(r.status_code, _describe(url, params))
 
             delay = self._backoff(attempt)
