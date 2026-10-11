@@ -17,8 +17,9 @@ anything here, and update this file when behavior changes.
 | Wishlist rank | store search `filter=popularwishlist` | no | works, top ~5,300 only |
 | App details | `IStoreBrowseService/GetItems` (bulk), `appdetails` (single) | no | works |
 | User tags | `GetItems` (with weights), SteamSpy (vote counts, released only) | no | works |
-| Followers | community `memberslistxml` `memberCount` | no | works, 1 request per app, strict rate limit |
-| First-30-day reviews | `appreviews` with a date range | no | works, checked exactly |
+| Followers | community `memberslistxml` `memberCount` | no | works, but blocks an IP for 8+ hours after ~60 requests; manual checks only |
+| Follower and player history | Games Popularity API (section 10) | yes, free | works, ~1,000 requests a day; **used** |
+| Reviews in a date window (1, 7, 30 days) | `appreviews` with a date range | no | works, checked exactly |
 | Tag names | `IStoreService/GetTagList` | no | works |
 | PICS / appinfo | `steam` Python lib, anonymous login | no | works locally, not tested in Actions |
 
@@ -220,8 +221,11 @@ No key needed.
   per 5 s, 60 requests succeeded, then the 61st got 429 (5 minutes in). So the
   site allows about 60 requests in a short window. The sustainable rate is
   still being measured; the collector stops on the first 429.
-- Because of this, followers are only tracked for about 11,000 games
-  (see the README), not all 60,000.
+- **Later (2026-10-11):** a pace test on the always-on box still got 429 on
+  every check 8+ hours later, sent once every 2 hours. Community reports say a
+  block can last 6+ hours and requests during it extend it. The scraper and the
+  pace test were stopped, and followers now come from Games Popularity
+  (section 10). Use this endpoint only for occasional manual checks.
 - **Checked against SteamDB by hand (2026-10-10, 5 games, 2,900 to 114,000
   followers):** all within 0.1% to 1.1%, ours always slightly higher (SteamDB's
   numbers are a bit older, and upcoming games keep gaining followers). So
@@ -285,6 +289,36 @@ Tested with the `steam` Python package (1.4.4, with gevent) and `anonymous_login
 - Verdict: it adds nothing that `GetItems` lacks, and it is a heavier dependency.
   **Do not use it for now.**
 
+## 10. Games Popularity (followers and players)
+
+Not a Steam endpoint: a free third-party API, [games-popularity.com/api-docs](https://games-popularity.com/api-docs).
+Checked 2026-10-11 with about 40 requests without a key and about 140 with one.
+
+- Base `https://games-popularity.com/swagger/api`. Key in the `apiKey` query
+  parameter (free after logging in). Without a key: 100 requests a day per IP.
+- **Limit:** the owner said (Discord, 2026-10-11) it is now about 1,000
+  requests a day per key and per IP, with paid higher limits possible later.
+  The docs still say 1 request per second and no daily quota.
+- `GET /game/followers/{appid}` and `/game/players/{appid}`: history, newest
+  first, up to 1,000 points per page, `nextCursor` (a timestamp, pass it back
+  as `cursor`) for older pages. Followers are about one point a day, players
+  one an hour.
+- Times are UTC without an offset, with 0 to 7 fractional digits.
+- No data: `200` with `history: []`. App not tracked: `404`. `/game/latest/{appid}`
+  gives the newest value of each metric (any may be `null`).
+- **Same number as ours:** on 122 games (1,099 to 113,717 followers), values
+  interpolated to our fetch time differed by a median 0.06%, 116 within 1%.
+  Smaller games were not compared.
+- **History starts 2024-03-15**, so games launched since then have their
+  pre-launch series. Of 27 sampled upcoming games, 22 were updated that day,
+  3 were weeks or months old, and 2 had no data.
+- **Players:** hourly; one page covers about 41 days for a busy game, so the
+  first month after launch costs one request if pulled within 42 days.
+- A single 429 sometimes comes on the first request of a run and clears on a
+  retry 2 s later (seen twice).
+- No terms page. Asked about republishing; until then the data stays in a
+  private dataset. Credit: link to games-popularity.com.
+
 ## Recommendation
 
 | Field | Source |
@@ -297,9 +331,10 @@ Tested with the `steam` Python package (1.4.4, with gevent) and `anonymous_login
 | Developer, publisher | `GetItems` `basic_info` |
 | Demo | `GetItems` `related_items.demo_appid` |
 | Wishlist rank | store search `filter=popularwishlist`, full crawl daily |
-| Followers | `memberslistxml?p=99999`, only `memberCount` |
+| Followers | Games Popularity follower history (section 10); `memberslistxml?p=99999` for manual checks |
+| Players after launch | Games Popularity player history |
 | Historical launches | `Query` with `released_only` + `release_date_filter`, month by month |
-| First-30-day reviews | `appreviews` date-range count |
+| Reviews in the first day, week, 30 days | `appreviews` date-range count |
 | Early Access at launch (history) | `release.original_steam_release_date` when present, else check `written_during_early_access` on launch-window reviews |
 | Tag names | `GetTagList` |
 | Full app list | `GetAppList` (keyed), fallback only |
@@ -308,8 +343,8 @@ Tested with the `steam` Python package (1.4.4, with gevent) and `anonymous_login
 
 1. **Wishlist rank** for the top ~5,300 unreleased games. Ordinal, daily, cheap
    (54 requests). Most small indie games are not in it.
-2. **Follower count** for every game. A real number, but one request per app.
-   Plan: daily for games dated inside the next 26 weeks, weekly for the rest.
+2. **Follower count** for every game, with daily history since 2024-03-15
+   from Games Popularity. One request per game returns the whole series.
 3. Nothing else is usable. Wishlist counts are not public.
    `popularcomingsoon` and the `Query` sort orders are not clean ranks.
 
@@ -319,4 +354,5 @@ Tested with the `steam` Python package (1.4.4, with gevent) and `anonymous_login
   at launch. A demo removed after launch will not show up. Price is today's price.
 - Review counts are only reviews that still exist.
 - Games that were delisted do not appear in `Query`, so history is biased
-  toward games that are still on sale.
+  toward games that are still on sale. Since Phase 6 the collector keeps the
+  rows of games that disappear later (`last_listed` shows when).
