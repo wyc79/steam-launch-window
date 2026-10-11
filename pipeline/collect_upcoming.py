@@ -19,13 +19,14 @@ from . import steam, storage
 from .common import base_parser, setup
 
 SNAPSHOT_FIELDS = ["appid", "release_ts", "display", "raw", "precision", "date", "date_end",
-                   "date_ok", "early_access", "wishlist_rank"]
+                   "date_ok", "early_access", "wishlist_rank", "price_cents"]
 APP_FIELDS = ["appid", "name", "developers", "publishers", "franchises", "tags",
-              "demo_appids", "is_free", "first_seen"]
+              "demo_appids", "is_free", "languages", "audio_languages", "first_seen"]
 RUN_FIELDS = ["date", "games", "dated", "ranked", "ranked_not_listed", "date_mismatch",
               "requests", "seconds"]
 
-DATA_REQUEST = {"include_release": True, "include_tag_count": 20, "include_basic_info": True}
+DATA_REQUEST = {"include_release": True, "include_tag_count": 20, "include_basic_info": True,
+                "include_supported_languages": True}
 CACHE_TTL = 20 * 3600
 
 log = logging.getLogger("collect_upcoming")
@@ -35,7 +36,8 @@ def build_snapshot(items: list[dict], ranking: list[int]) -> list[dict]:
     rank = {appid: i + 1 for i, appid in enumerate(ranking)}
     rows = []
     for it in items:
-        row = {"appid": it["appid"], **steam.release_fields(it), "wishlist_rank": rank.get(it["appid"], "")}
+        row = {"appid": it["appid"], **steam.release_fields(it), "wishlist_rank": rank.get(it["appid"], ""),
+               "price_cents": steam.price_cents(it)}
         rows.append(row)
     rows.sort(key=lambda r: r["appid"])
     return rows

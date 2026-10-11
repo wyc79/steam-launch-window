@@ -191,9 +191,11 @@ def test_month_starts():
 
 def test_build_snapshot_attaches_wishlist_rank():
     items = [{"appid": 5, "release": {"coming_soon_display": "text_tba"}},
-             {"appid": 3, "release": {"coming_soon_display": "date_year", "steam_release_date": 1830240000}}]
+             {"appid": 3, "release": {"coming_soon_display": "date_year", "steam_release_date": 1830240000},
+              "best_purchase_option": {"final_price_in_cents": "1999"}}]
     rows = cu.build_snapshot(items, [3, 99])
-    assert [(r["appid"], r["wishlist_rank"], r["precision"]) for r in rows] == [(3, 1, "year"), (5, "", "unknown")]
+    assert [(r["appid"], r["wishlist_rank"], r["precision"], r["price_cents"]) for r in rows] == [
+        (3, 1, "year", 1999), (5, "", "unknown", "")]
 
 
 def test_merge_apps_keeps_first_seen():

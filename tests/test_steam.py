@@ -48,6 +48,20 @@ def test_release_fields_early_access():
     assert steam.release_fields(release("date_full", 1791993600, is_early_access=True))["early_access"] == 1
 
 
+def test_language_fields():
+    item = {"supported_languages": [
+        {"elanguage": 0, "supported": True, "full_audio": True},
+        {"elanguage": 6, "supported": True, "full_audio": False},
+        {"elanguage": 22, "supported": True},
+        {"elanguage": 8, "supported": False},
+        {"elanguage": 99, "supported": True},
+        {"elanguage": -1, "eadditionallanguage": 53, "supported": True},
+    ]}
+    assert steam.language_fields(item) == {
+        "languages": "english|schinese|brazilian|lang99|extra53", "audio_languages": "english"}
+    assert steam.language_fields({}) == {"languages": "", "audio_languages": ""}
+
+
 def test_meta_fields():
     m = steam.meta_fields(BOLTGUN2)
     assert m["developers"] == "Auroch Digital"

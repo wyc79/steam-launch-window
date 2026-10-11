@@ -45,7 +45,8 @@ from .http import HTTPStatusError, RateLimited
 FIELDS = [
     "appid", "name", "launch_date", "launch_ts", "steam_release_ts", "launch_type",
     "early_access_now", "price_cents", "is_free", "tags", "developers", "publishers",
-    "franchises", "demo_appids", "demo_release_ts", "demo_before_launch",
+    "franchises", "languages", "audio_languages", "demo_appids", "demo_release_ts",
+    "demo_before_launch",
     "reviews_total_now", "reviews_30d", "reviews_30d_positive", "reviews_30d_source",
     "reviews_30d_fetched", "reviews_before_launch", "prior_check_fetched",
 ]
@@ -53,6 +54,7 @@ COUNT_FIELDS = ("reviews_30d", "reviews_30d_positive", "reviews_30d_source", "re
                 "reviews_before_launch", "prior_check_fetched")
 PRIOR_GAP = 7 * 86400  # reviews this long before launch mean the game was already on sale
 DATA_REQUEST = {"include_release": True, "include_tag_count": 20, "include_basic_info": True,
+                "include_supported_languages": True,
                 "include_reviews": True}
 WINDOW = 30 * 86400
 LISTING_TTL = 6 * 86400  # month listings are refetched about weekly
@@ -117,6 +119,8 @@ def game_row(item: dict, demo_release: dict[int, int]) -> dict | None:
         "developers": meta["developers"],
         "publishers": meta["publishers"],
         "franchises": meta["franchises"],
+        "languages": meta["languages"],
+        "audio_languages": meta["audio_languages"],
         "demo_appids": meta["demo_appids"],
         "demo_release_ts": demo_ts or "",
         "demo_before_launch": "" if demo_ts is None else int(demo_ts < launch_ts),

@@ -98,14 +98,15 @@ Outputs go to `_data/` (in CI this is the `data` branch).
 tags.csv                              tag id, name
 upcoming/snapshots/YYYY-MM-DD.csv.gz  one row per coming-soon game per day:
                                       release date (raw, date, date_end, precision),
-                                      Early Access flag, wishlist rank
-upcoming/apps.csv                     name, developers, publishers, tags with weights, demo
+                                      Early Access flag, wishlist rank, price if set
+upcoming/apps.csv                     name, developers, publishers, tags with weights,
+                                      demo, supported and full-audio languages
 upcoming/runs.csv                     one line per daily run
 followers/latest.csv                  newest follower count per game
 followers/snapshots/YYYY-MM-DD.csv.gz counts fetched that day
 history/games.csv                     one row per game released since 2022:
-                                      launch date and type, price, tags, demo,
-                                      reviews in the first 30 days
+                                      launch date and type, price, tags, languages,
+                                      demo, reviews in the first 30 days
 ```
 
 Release dates: Steam gives a timestamp plus a precision (day, month, quarter,

@@ -165,6 +165,15 @@ No key needed.
 - `related_items.demo_appid`: the current demo app ID.
 - `reviews.summary_filtered`: `review_count`, `percent_positive`, `review_score`.
 - `categories`, `best_purchase_option` (current price) also available.
+  Only about 6% of coming-soon games have a price (mostly free games);
+  paid games set it at launch.
+- `include_supported_languages: true` adds `supported_languages`:
+  `[{"elanguage", "eadditionallanguage", "supported", "full_audio", "subtitles"}]`.
+  `elanguage` is Steam's language enum (0 english, 1 german, 2 french,
+  3 italian, 4 korean, 5 spanish, 6 schinese, 7 tchinese, 8 russian,
+  10 japanese, 12 polish, 19 czech, 22 brazilian were checked against the
+  store's language list). `elanguage: -1` means one of Steam's extra
+  languages, numbered by `eadditionallanguage`; about 3% of games have them.
 
 ### 4b. `appdetails` (one app per call)
 
