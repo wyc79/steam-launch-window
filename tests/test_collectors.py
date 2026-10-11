@@ -85,6 +85,51 @@ def test_merge_keeps_counts_unless_launch_moved():
     assert ch.merge(old, {"launch_ts": 101})["reviews_30d"] == ""
 
 
+def test_prior_reviews_relabel_full_launch_as_ea_exit():
+    assert ch.apply_prior_check({"launch_type": "full", "reviews_before_launch": "61331"})["launch_type"] == "ea_exit"
+    assert ch.apply_prior_check({"launch_type": "full", "reviews_before_launch": "0"})["launch_type"] == "full"
+    assert ch.apply_prior_check({"launch_type": "full", "reviews_before_launch": ""})["launch_type"] == "full"
+    assert ch.apply_prior_check({"launch_type": "early_access", "reviews_before_launch": "5"})["launch_type"] == "early_access"
+
+
+def test_merge_keeps_prior_check_so_relisting_does_not_undo_the_relabel():
+    old = {"launch_ts": "100", "reviews_before_launch": "12", "prior_check_fetched": "2026-10-11"}
+    row = ch.merge(old, {"launch_ts": 100, "launch_type": "full"})
+    assert (row["launch_type"], row["reviews_before_launch"]) == ("ea_exit", "12")
+
+
+def test_needs_prior_check():
+    row = {"launch_type": "full", "reviews_before_launch": "", "reviews_total_now": "50"}
+    assert ch.needs_prior_check(row, 50)
+    assert not ch.needs_prior_check({**row, "reviews_total_now": "49"}, 50)
+    assert not ch.needs_prior_check({**row, "reviews_before_launch": "0"}, 50)
+    assert not ch.needs_prior_check({**row, "launch_type": "early_access"}, 50)
+    assert ch.needs_prior_check({k: v for k, v in row.items() if k != "reviews_before_launch"}, 50)  # old file
+
+
+class Args:
+    checkpoint = 2
+    max_consecutive_errors = 2
+
+
+class NeverExpires:
+    def expired(self):
+        return False
+
+
+def test_run_pass_checkpoints_and_stops_on_repeated_errors():
+    saves = []
+
+    def fetch(row):
+        if row["appid"] >= 3:
+            raise RuntimeError("blocked")
+        return True
+
+    todo = [{"appid": i} for i in range(1, 6)]
+    assert ch.run_pass(todo, fetch, "test", NeverExpires(), lambda: saves.append(1), Args()) is False
+    assert saves == [1]  # one checkpoint after 2 fetches, then 2 errors in a row stop it
+
+
 def test_needs_reviews_waits_for_window_to_close():
     row = {"reviews_30d": "", "launch_ts": "1000"}
     assert not ch.needs_reviews(row, 1000 + ch.WINDOW - 1)
