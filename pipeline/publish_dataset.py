@@ -184,8 +184,12 @@ def check_manifest(new: dict, old: dict | None) -> list[str]:
 def remote_gp_kinds(repo_id: str, token: str, api=None) -> set[str]:
     """Which Games Popularity series ("followers", "players") already have files in the dataset."""
     from huggingface_hub import HfApi
+    from huggingface_hub.errors import RepositoryNotFoundError
 
-    files = (api or HfApi(token=token)).list_repo_files(repo_id, repo_type="dataset")
+    try:
+        files = (api or HfApi(token=token)).list_repo_files(repo_id, repo_type="dataset")
+    except RepositoryNotFoundError:
+        raise SystemExit(f"dataset {repo_id} not found: create it on Hugging Face first") from None
     return {kind for kind in GP_KINDS if any(f.startswith(f"gp/{kind}/") and f.endswith(".csv.gz") for f in files)}
 
 

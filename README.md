@@ -58,7 +58,7 @@ does not start collecting:
 | `COLLECT_GP=on` | the Games Popularity step in the daily job (also needs the `GP_API_KEY` and `HF_TOKEN` secrets and the `HF_DATASET_REPO` variable; `GP_DAILY_BUDGET` is optional, default 900) |
 | `COLLECT_HISTORY=on` | the weekly history job |
 | `ENDPOINT_CHECK=on` | the weekly endpoint smoke test |
-| `PUBLISH_DATASET=on` | the weekly upload to Hugging Face (also needs the `HF_TOKEN` secret and `HF_DATASET_REPO` variable) |
+| `PUBLISH_DATASET=on` | the weekly upload to Hugging Face, which starts when the weekly history job ends (also needs the `HF_TOKEN` secret and `HF_DATASET_REPO` variable) |
 
 Each workflow can also be run by hand from the Actions tab.
 

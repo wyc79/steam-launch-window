@@ -1,9 +1,11 @@
 name: publish dataset
 
-# Weekly: publish the data branch as Parquet on Hugging Face, each time the
-# collect history run ends (scheduled or manual, failed or not: it saves its
-# progress either way). Starting from that run, not from a cron of its own,
-# keeps the order when GitHub delays schedules (9 hours on 2026-10-12).
+# Weekly: publish the data branch as Parquet on Hugging Face, each time a
+# collect history run on main ends, whatever its result: it saves its progress
+# even when it fails or times out, and a run skipped because COLLECT_HISTORY is
+# off still starts the weekly upload. Starting from that run, not from a cron
+# of its own, keeps the order when GitHub delays schedules (9 hours on 2026-10-12).
+# The manifest check below still stops an upload of a broken build.
 # The gp/ folder in the dataset is written by the daily job and left alone here.
 #
 # Off by default. Needs:
@@ -17,6 +19,7 @@ on:
   workflow_run:
     workflows: ["collect history"]
     types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       upload:
@@ -31,9 +34,7 @@ concurrency:
 
 jobs:
   publish:
-    if: >-
-      github.event_name == 'workflow_dispatch' || (vars.PUBLISH_DATASET == 'on'
-      && contains(fromJSON('["success", "failure", "timed_out"]'), github.event.workflow_run.conclusion))
+    if: github.event_name == 'workflow_dispatch' || vars.PUBLISH_DATASET == 'on'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

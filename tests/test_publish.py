@@ -264,6 +264,26 @@ def test_upload_names_its_parent_and_skips_the_marker(data, tmp_path):
     hub = FakeHub(tmp_path)
     pub.upload(out, "me/data", "tok", api=hub)
     assert hub.uploads[0]["parent_commit"] == "head1" and pub.MARKER in hub.uploads[0]["ignore_patterns"]
+    assert not hub.uploads[0].get("delete_patterns")  # gp/ in the dataset is the daily job's; never delete it
+
+
+def test_main_lists_the_remote_gp_configs_on_the_card(data, tmp_path, monkeypatch):
+    d, events = data
+    out = tmp_path / "out"
+    monkeypatch.setenv("HF_TOKEN", "x")
+    monkeypatch.setattr(pub, "remote_gp_kinds", lambda repo_id, token: {"players"})
+    assert pub.main(["--data-dir", str(d), "--events", str(events), "--out", str(out),
+                     "--repo-id", "me/data", "--dry-run"]) == 0
+    assert "config_name: gp_players" in (out / "README.md").read_text(encoding="utf-8")
+
+
+def test_remote_gp_kinds_explains_a_missing_dataset():
+    from huggingface_hub.errors import RepositoryNotFoundError
+
+    def missing(repo_id, repo_type=None):
+        raise RepositoryNotFoundError("nope", response=SimpleNamespace(headers={}, request=None))
+    with pytest.raises(SystemExit, match="create it"):
+        pub.remote_gp_kinds("me/data", "x", api=SimpleNamespace(list_repo_files=missing))
 
 
 def test_upload_stops_when_the_check_fails(data, tmp_path):

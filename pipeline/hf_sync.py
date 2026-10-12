@@ -7,7 +7,7 @@ keep their data there (Games Popularity, under gp/ in the public dataset).
 pull downloads the named files that exist (missing --file ones are skipped, a
 missing --require one stops it) from the current revision and writes that
 revision to .hf_parent. push commits every file under the folder except
-dotfiles, with .hf_parent as the parent commit, so a write made by someone else
+dotfiles and .tmp files, with .hf_parent as the parent commit, so a write made by someone else
 in between makes the push fail instead of being overwritten. push refuses to run
 without .hf_parent. pull refuses a folder that already has files. Unchanged
 files are left out of the commit by huggingface_hub.
@@ -54,8 +54,9 @@ def pull(api, repo_id: str, names: list[str], dest: Path, required: list[str] = 
 def push(api, repo_id: str, src: Path, message: str) -> None:
     from huggingface_hub import CommitOperationAdd
 
-    files = sorted(p for p in src.rglob("*")
-                   if p.is_file() and not any(part.startswith(".") for part in p.relative_to(src).parts))
+    files = sorted(p for p in src.rglob("*")  # .tmp: left by a write killed before its rename
+                   if p.is_file() and p.suffix != ".tmp"
+                   and not any(part.startswith(".") for part in p.relative_to(src).parts))
     if not files:
         log.info("nothing to push")
         return

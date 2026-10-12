@@ -43,11 +43,12 @@ def test_pull_copies_files_that_exist_and_records_the_revision(tmp_path):
     assert (dest / hf_sync.PARENT_FILE).read_text() == "abc123"
 
 
-def test_push_commits_every_file_but_dotfiles_with_the_parent(tmp_path):
+def test_push_commits_every_file_but_dotfiles_and_tmp_with_the_parent(tmp_path):
     src = tmp_path / "gp"
     (src / "followers").mkdir(parents=True)
     (src / "state.csv").write_text("s")
     (src / "followers/2026-10-20.csv.gz").write_text("f")
+    (src / "state.csv.tmp").write_text("half-written")
     (src / hf_sync.PARENT_FILE).write_text("abc123")
     api = FakeApi(tmp_path, {})
     hf_sync.push(api, "me/data", src, "gp 2026-10-20")
