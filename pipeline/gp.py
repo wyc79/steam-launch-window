@@ -35,16 +35,23 @@ class History:
     points: list[tuple[datetime, int]] = field(default_factory=list)  # newest first
     requests: int = 0
     complete: bool = True            # False if max_pages stopped it early
+    next_cursor: str | None = None   # when not complete: the older page to resume from
+    oldest: datetime | None = None   # oldest point seen (with or without a value)
 
 
-def history(client: Client, kind: str, appid: int, key: str, *,
-            since: datetime | None = None, max_pages: int = 5) -> History:
-    """Points for one game newer than `since` (all if None), paging back as needed."""
+def history(client: Client, kind: str, appid: int, key: str, *, since: datetime | None = None,
+            cursor: str | None = None, before: datetime | None = None, max_pages: int = 5) -> History:
+    """Points for one game newer than `since` (all if None), paging back as needed.
+
+    To resume a pull that stopped early, pass its `next_cursor` as `cursor` and
+    its `oldest` as `before`: points at or after `before` are skipped, so a page
+    boundary seen twice gives no duplicates.
+    """
     if kind not in KINDS:
         raise ValueError(f"unknown kind {kind!r}")
     url = f"{BASE}/game/{kind}/{appid}"
-    params = {"apiKey": key}
-    res = History(status="ok")
+    params = {"apiKey": key, **({"cursor": cursor} if cursor else {})}
+    res = History(status="ok", oldest=before)
     while True:
         try:
             page = client.get_json(url, params)
@@ -53,7 +60,7 @@ def history(client: Client, kind: str, appid: int, key: str, *,
                 raise
             res.requests += 1
             if "cursor" in params:  # odd, but keep the newer pages already fetched
-                res.complete = False
+                res.complete, res.next_cursor = False, params["cursor"]
                 return res
             return History(status="not_in_dataset", requests=res.requests)
         res.requests += 1
@@ -63,16 +70,19 @@ def history(client: Client, kind: str, appid: int, key: str, *,
             if since is not None and t <= since:
                 reached_since = True
                 break
+            if res.oldest is not None and t >= res.oldest:
+                continue  # already have it
+            res.oldest = t
             if p.get(kind) is not None:
                 res.points.append((t, int(p[kind])))
-        cursor = page.get("nextCursor")
-        if reached_since or not cursor:
+        nxt = page.get("nextCursor")
+        if reached_since or not nxt:
             break
         if res.requests >= max_pages:
-            res.complete = False
+            res.complete, res.next_cursor = False, nxt
             break
-        params = {"apiKey": key, "cursor": cursor}
-    if not res.points and since is None:
+        params = {"apiKey": key, "cursor": nxt}
+    if not res.points and since is None and cursor is None:
         res.status = "null"
     return res
 

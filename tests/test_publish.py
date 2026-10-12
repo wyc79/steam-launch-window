@@ -82,6 +82,17 @@ def test_card_lists_only_configs_with_data(data, tmp_path):
     assert "license: cc-by-4.0" in card
 
 
+def test_default_card_grants_no_data_license(data, tmp_path, monkeypatch):
+    d, events = data
+    out = tmp_path / "out"
+    monkeypatch.setenv("HF_TOKEN", "x")
+    monkeypatch.setattr(pub, "upload", lambda *a, **k: pytest.fail("a dry run must not upload"))
+    assert pub.main(["--data-dir", str(d), "--events", str(events), "--out", str(out), "--dry-run"]) == 0
+    card = (out / "README.md").read_text(encoding="utf-8")
+    assert "license: other" in card and "license: mit" not in card
+    assert "No license is granted here for the data" in card
+
+
 def test_upload_needs_token(data, tmp_path, monkeypatch):
     d, events = data
     monkeypatch.delenv("HF_TOKEN", raising=False)

@@ -27,7 +27,7 @@ are in [docs/endpoints.md](docs/endpoints.md).
 | Hype: wishlist rank (top ~5,300 games) | Steam's "Top Wishlisted" search list |
 | Hype: follower history | [Games Popularity](https://games-popularity.com) API: Steam community hub followers, daily since 2024-03-15 |
 | Past launches since 2022 | `IStoreQueryService/Query` with a release date filter |
-| Reviews in the first day, week and 30 days | `appreviews` with a date range |
+| Reviews in the first day, week and 30 days | `IUserReviewsService/GetAppReviews` with a date range (replaced `appreviews`, retired 2026-10-22) |
 | Players in the first month | [Games Popularity](https://games-popularity.com) API, hourly |
 | Steam sales, fests, major releases, holidays | [data/events.yaml](data/events.yaml), kept by hand, checked by `python -m pipeline.events` |
 
@@ -86,6 +86,14 @@ requests a day. The daily job uses up to 900, in this order:
 2. players 35 to 42 days after each launch (hourly counts for the first month)
 3. every upcoming game with a date or a wishlist rank, once every 60 days
 4. the rest backfills games launched since 2024-03-15, paid games with 10+ reviews first
+
+A pull that gets nothing new (a failed request, no data yet, or a launch week
+Games Popularity has not reached) is retried after 1, 2, 4, 8 and 16 days, then
+left alone. A history longer than 5 pages is fetched over several runs, from
+where the last one stopped. A day that ended with a 429 is not retried until
+the next UTC day. Manual scripts with the same key (`scripts/compare_followers.py`)
+count against the same 1,000 a day but are not in the job's count: keep them
+under 100 a day.
 
 Until Games Popularity allows republishing, this data is kept in a private
 Hugging Face dataset and only derived numbers are published.
@@ -146,7 +154,9 @@ Games Popularity data (private Hugging Face dataset, synced by the daily job):
 followers/YYYY-MM-DD.csv.gz           points fetched that day: appid, followers,
                                       observed_at (their time), fetched_at (ours)
 players/YYYY-MM-DD.csv.gz             the same, with players
-state.csv                             per game: last pull, status, newest point
+state.csv                             per game: last pull and try, status, newest point,
+                                      tries in a row without new points, where an
+                                      unfinished pull goes on
 runs.csv                              one line per run: requests, results, why it stopped
 ```
 
@@ -160,8 +170,10 @@ are in Pacific time, like the store.
   covers the top ~5,300 games; followers are the only hype number for the rest.
 - **Followers come from a third party.** Games Popularity history starts on
   2024-03-15, and some small games have gaps or stale values. Each pull records
-  a status: `ok`, `null`, `not_in_dataset`, `stale`, or `partial` (very long
-  series where only the newest 5,000 points were fetched).
+  a status: `ok`, `null`, `not_in_dataset`, `stale`, `error`, or `partial`
+  (a long series still being fetched; `resume_cursor` in `state.csv` marks the
+  gap until it is filled). A game is only complete when its status is not
+  `partial` and `resume_cursor` is empty.
 - **History is today's view of the past.** Price, demo, tags and Early Access
   status are as they are now, not as they were at launch. A demo removed after
   launch is invisible. Deleted reviews are not counted. Games delisted before
@@ -177,5 +189,7 @@ Follower and player history: [Games Popularity](https://games-popularity.com).
 
 ## License
 
-MIT for the code and this compilation. The underlying data comes from Steam,
-owned by Valve, which has not licensed or endorsed this project.
+MIT for the code. The license does not cover the data: it comes from Steam,
+owned by Valve, which has not licensed or endorsed this project, so the dataset
+on Hugging Face is marked `license: other` and grants no license.
+Games Popularity data stays in a private dataset until they allow republishing.

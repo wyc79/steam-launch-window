@@ -121,3 +121,33 @@ def test_a_404_on_a_later_page_keeps_the_pages_already_fetched():
     client = FakeClient(fixture("gp_followers_light_no_fire_page1.json"), HTTPStatusError(404, "u"))
     res = gp.history(client, "followers", 2719590, "KEY")
     assert len(res.points) == 3 and res.complete is False and res.requests == 2
+
+
+def test_history_stops_at_max_pages_with_a_cursor_to_resume_from():
+    page = fixture("gp_followers_light_no_fire_page1.json")
+    res = gp.history(FakeClient(page), "followers", 2719590, "KEY", max_pages=1)
+    assert (res.complete, res.next_cursor) == (False, "2026-01-09T08:00:30.0800000")
+    assert res.oldest == utc(2026, 10, 11, 11, 57, 46, 793000)
+
+
+def test_resumed_history_starts_at_the_cursor_and_skips_points_it_already_has():
+    page2 = {"history": [{"followers": 214100, "added": "2026-10-11T11:57:46.793"},  # seen on page 1
+                         {"followers": 214012, "added": "2026-01-09T08:00:30.08"}],
+             "nextCursor": None}
+    client = FakeClient(page2)
+    res = gp.history(client, "followers", 2719590, "KEY", cursor="2026-01-09T08:00:30.0800000",
+                     before=utc(2026, 10, 11, 11, 57, 46, 793000))
+    assert client.calls[0][1] == {"apiKey": "KEY", "cursor": "2026-01-09T08:00:30.0800000"}
+    assert res.points == [(utc(2026, 1, 9, 8, 0, 30, 80000), 214012)] and res.complete
+    assert res.status == "ok"
+
+
+def test_resume_with_nothing_left_is_ok_not_null():
+    res = gp.history(FakeClient({"history": [], "nextCursor": None}), "followers", 1, "KEY", cursor="2026-01-01T00:00:00")
+    assert (res.status, res.points, res.complete) == ("ok", [], True)
+
+
+def test_zero_followers_is_a_value():
+    client = FakeClient({"history": [{"followers": 0, "added": "2026-10-01T00:00:00"}], "nextCursor": None})
+    res = gp.history(client, "followers", 1, "KEY")
+    assert (res.status, res.points) == ("ok", [(utc(2026, 10, 1), 0)])

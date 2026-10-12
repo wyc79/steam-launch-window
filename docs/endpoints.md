@@ -19,7 +19,7 @@ anything here, and update this file when behavior changes.
 | User tags | `GetItems` (with weights), SteamSpy (vote counts, released only) | no | works |
 | Followers | community `memberslistxml` `memberCount` | no | works, but blocks an IP for 8+ hours after ~60 requests; manual checks only |
 | Follower and player history | Games Popularity API (section 10) | yes, free | works, ~1,000 requests a day; **used** |
-| Reviews in a date window (1, 7, 30 days) | `appreviews` with a date range | no | works, checked exactly |
+| Reviews in a date window (1, 7, 30 days) | `IUserReviewsService/GetAppReviews` with a date range | no | works, same counts as `appreviews` (retired 2026-10-22) |
 | Tag names | `IStoreService/GetTagList` | no | works |
 | PICS / appinfo | `steam` Python lib, anonymous login | no | works locally, not tested in Actions |
 
@@ -233,7 +233,42 @@ No key needed.
 
 ## 7. Reviews
 
-### 7a. `appreviews`
+### 7a. `IUserReviewsService/GetAppReviews` (used since 2026-10-11)
+
+Valve retires `appreviews` (7b) on **2026-10-22** and points to this method,
+which "takes the same filters and returns the same fields"
+([docs](https://partner.steamgames.com/doc/webapi/IUserReviewsService)).
+
+`GET https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/?input_json=...`
+
+```json
+{"appid": 3271280, "filter": 1, "languages": ["all"], "purchase_type": 0, "num_per_page": 1,
+ "date_range_start": 1789055435, "date_range_end": 1791647435}
+```
+
+- No key needed. A publisher key for the app gets a higher limit; our Web API
+  key is not one, so we send none. Keyless calls share a lower limit and get
+  429 past it (the client backs off; a 429 that outlasts the retries stops the
+  run and leaves the game due). Anonymous replies may be cached up to 10 minutes.
+- Enums: `filter` 1 = recent, `purchase_type` 0 = Steam purchases (the default),
+  `review_type` 0 = all (the default). `languages` is a list; `["all"]` means every language.
+  Off-topic review bombs are filtered by default, as before.
+- Response: `{"response": {"query_summary": {"num_reviews", "review_score",
+  "review_score_desc", "total_positive", "total_negative", "total_reviews"},
+  "reviews": [...], "cursor", "total_matching"}}`. No `success` field. The
+  totals are only on the first page and only when `review_type` is all.
+  `total_matching` equals `total_reviews`.
+- `num_per_page: 0` returns 20 reviews (not 0 as before), so we ask for 1.
+- **Checked 2026-10-11 against `appreviews`** on 4 games launched Aug and Sep
+  2026 (2, 35, 141 and 1,719 reviews in their first 30 days): total, positive
+  and negative were identical. A window `[t, t]` around one review's
+  `timestamp_created` counted it on both endpoints, so both ends are included.
+  An unknown app returns `{"response": {}}`; a window with no reviews returns
+  zeros with `total_matching: 0`.
+- Same caveat as before: only reviews that still exist are counted.
+  Reviews now carry a `refunded` flag; we do not use it.
+
+### 7b. `appreviews` (retired 2026-10-22)
 
 `GET https://store.steampowered.com/appreviews/<appid>?json=1`
 
@@ -258,7 +293,7 @@ No key needed.
   about 5 to 10% more. The pipeline uses `steam`, so the 30-day count can be
   compared with the summary count, and a summary count of 0 means 0.
 
-### 7b. Review histogram
+### 7c. Review histogram
 
 `GET https://store.steampowered.com/appreviewhistogram/<appid>?l=english&review_score_preference=0`
 
@@ -318,6 +353,14 @@ Checked 2026-10-11 with about 40 requests without a key and about 140 with one.
   retry 2 s later (seen twice).
 - No terms page. Asked about republishing; until then the data stays in a
   private dataset. Credit: link to games-popularity.com.
+- **Paging:** the cursor of the next page is a timestamp. Whether its point is
+  also the last one of the page before is not checked, so the collector skips
+  any point at or after the oldest one it already has. A pull stopped by the
+  5-page cap or the budget saves `resume_cursor` and goes on in a later run.
+- **Budget accounting:** the daily job counts its own requests in `runs.csv`
+  (synced with the private dataset). Requests from other places with the same
+  key (manual scripts) or IP are not counted; the 900 budget leaves 100 for them.
+  Whether their day is UTC or a rolling 24 hours is not known.
 
 ## Recommendation
 
@@ -334,7 +377,7 @@ Checked 2026-10-11 with about 40 requests without a key and about 140 with one.
 | Followers | Games Popularity follower history (section 10); `memberslistxml?p=99999` for manual checks |
 | Players after launch | Games Popularity player history |
 | Historical launches | `Query` with `released_only` + `release_date_filter`, month by month |
-| Reviews in the first day, week, 30 days | `appreviews` date-range count |
+| Reviews in the first day, week, 30 days | `GetAppReviews` date-range count |
 | Early Access at launch (history) | `release.original_steam_release_date` when present, else check `written_during_early_access` on launch-window reviews |
 | Tag names | `GetTagList` |
 | Full app list | `GetAppList` (keyed), fallback only |

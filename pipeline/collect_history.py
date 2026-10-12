@@ -5,7 +5,8 @@ Steps:
    release date filter). Cheap; refreshed every run.
 2. Look up demo release dates in bulk.
 3. For each game whose 30-day window has closed and has no count yet,
-   ask appreviews for the number of reviews written in that window.
+   ask Steam (IUserReviewsService/GetAppReviews) for the number of reviews
+   written in that window.
    Games with zero reviews in total skip the call. This step is slow
    (one request per game), so it runs until --budget-minutes and is
    saved every --checkpoint games. Rerun to continue.
@@ -181,7 +182,9 @@ def is_gone(e: Exception) -> bool:
     """Errors that will repeat on every retry: Steam has no data for this app."""
     if isinstance(e, steam.Unavailable):
         return True
-    return isinstance(e, HTTPStatusError) and not isinstance(e, RateLimited) and 400 <= e.status < 500
+    # A 429 that outlasted the retries is a rate limit, not a missing app: marking the game
+    # would record unknown counts as done (or delay it 90 days).
+    return isinstance(e, HTTPStatusError) and not isinstance(e, RateLimited) and 400 <= e.status < 500         and e.status != 429
 
 
 def main(argv=None) -> int:

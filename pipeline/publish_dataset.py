@@ -314,11 +314,14 @@ history = load_dataset("<this repo>", "history")
 
 ## Data rights
 
-The MIT license covers this compilation and the code that builds it. The
-underlying facts (release dates, tags, review counts) come from Steam, owned by
-Valve Corporation, which has not licensed or endorsed this dataset. Game names
-are trademarks of their owners. If you reuse the data, follow Valve's terms for
-Steam data as well.
+No license is granted here for the data. The code that builds it is MIT
+licensed ([LICENSE](https://github.com/wyc79/steam-launch-window/blob/main/LICENSE)),
+and that license covers the code only. The facts in this dataset (release
+dates, tags, review and follower counts) come from Steam, owned by Valve
+Corporation, which has not licensed or endorsed this dataset. Game names are
+trademarks of their owners. Whether you may reuse the data depends on Valve's
+terms for Steam data and on your local law. Games Popularity follower and player
+histories are not part of this dataset.
 
 Full methods: [README](https://github.com/wyc79/steam-launch-window#readme) and
 [endpoint notes](https://github.com/wyc79/steam-launch-window/blob/main/docs/endpoints.md).
@@ -355,7 +358,8 @@ def main(argv=None) -> int:
     p.add_argument("--out", type=Path, default=Path(".cache/dataset"))
     p.add_argument("--repo-id", default=os.environ.get("HF_DATASET_REPO", ""),
                    help="Hugging Face dataset, e.g. user/steam-launch-data")
-    p.add_argument("--license", default="mit", help="must match the license set on Hugging Face")
+    p.add_argument("--license", default="other",
+                   help="Hugging Face license id for the card. 'other': the data is Steam's, not ours to license")
     p.add_argument("--dry-run", action="store_true", help="build the folder but do not upload")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")

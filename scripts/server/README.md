@@ -16,6 +16,12 @@ GitHub Actions job, which does not use this box. Do not request steamcommunity.c
 from this network while the block may still be on.
 Both jobs need Python 3.11+ and git.
 
+**Steam retires the old reviews endpoint (`appreviews`) on 2026-10-22.** Code from
+before PR #13's review fixes still calls it. Any review job still running then must
+be stopped, updated (`git pull` once the fix is on `main`) and restarted, or games it reaches
+may be marked as having no review data (how the old endpoint fails is not known). The CSV and its checkpoints
+work with both versions, so the restart goes on where it stopped.
+
 ## 1. Get the code
 
 ```bash

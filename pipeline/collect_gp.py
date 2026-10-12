@@ -10,17 +10,33 @@ is pulled only decides how fresh its newest value is. Jobs, most urgent first:
      ago; newer ones get job 0) that were never pulled;
      paid launches with 10+ reviews first, then 1+, then the rest; newest first
 
+Before all of these, a pull that stopped at the page cap (or the budget) is resumed
+from where it stopped, so a long history is fetched over several runs without gaps.
+
+Retries: a pull that brought no new points (a failed request, no data, 404, or
+nothing newer) is retried after 1, 2, 4, 8... days (at most 32): within the
+post-launch windows for jobs 0 and 1, failed requests only for job 3, and failed
+requests early for job 2 (the rest wait for its 60-day refresh). After 5 such pulls
+in a row a game is left alone by jobs 0, 1 and 3.
+
 The run stops when the day's budget is used (requests already made today, from
-runs.csv, count too), at the first 429, or after too many errors in a row.
+runs.csv, count too), at the first 429, or after too many errors in a row. A run
+on a UTC day that already ended with a 429 does not start.
 
 Reads (under --data-dir): the newest upcoming snapshot and history/games.csv.
 Writes (under --gp-dir; the daily job syncs it with a private Hugging Face dataset):
   followers/YYYY-MM-DD.csv.gz  points fetched that UTC day: appid, followers, observed_at, fetched_at
   players/YYYY-MM-DD.csv.gz    same, with players
-  state.csv                    per (appid, kind): last_pulled, status, last_observed_at, points
+  state.csv                    per (appid, kind): see below
   runs.csv                     one row per run: requests, results, why it stopped
+state.csv columns: last_pulled (last answer from the API), last_tried (last attempt,
+failed or not), status (of the last attempt), last_observed_at (newest point ever
+fetched), points (fetched in total), tries (attempts in a row with no new points),
+resume_cursor / resume_before / resume_since (where an unfinished pull goes on).
 status is ok, null (no data), not_in_dataset (404), stale (newest point older than
-14 days) or partial (stopped after max pages; older points not fetched).
+14 days), partial (stopped at the page cap; the rest is fetched by a resume job)
+or error (the request failed; earlier points and last_observed_at are kept).
+Rows written before tries and last_tried existed count as 0 tries if ok, else 1.
 observed_at is Games Popularity's own time for the point, fetched_at is ours.
 """
 
@@ -38,7 +54,8 @@ from .common import base_parser, setup
 from .collect_followers import latest_snapshot_path
 from .http import Client, HTTPStatusError
 
-STATE_FIELDS = ["appid", "kind", "last_pulled", "status", "last_observed_at", "points"]
+STATE_FIELDS = ["appid", "kind", "last_pulled", "status", "last_observed_at", "points",
+                "tries", "last_tried", "resume_cursor", "resume_before", "resume_since"]
 RUN_FIELDS = ["date", "started_at", "requests", "jobs", "ok", "null", "not_in_dataset", "stale",
               "partial", "points", "errors", "stopped"]
 MAX_PAGES = 5
@@ -56,6 +73,8 @@ class Policy:
     stale_page_days: int = 30      # upcoming dates this far past are stale store pages, not tracked
     stale_days: int = 14
     backfill_since: date = date(2024, 3, 15)
+    max_tries: int = 5           # pulls in a row with no new points before jobs 0, 1, 3 give up
+    max_retry_wait: int = 32     # days
 
 
 @dataclass(frozen=True, order=True)
@@ -65,10 +84,39 @@ class Job:
     kind: str = field(compare=False)
     appid: int = field(compare=False)
     since: datetime | None = field(default=None, compare=False)
+    cursor: str | None = field(default=None, compare=False)        # resume an unfinished pull
+    before: datetime | None = field(default=None, compare=False)
 
 
 def _ts(raw: str | None) -> datetime | None:
     return datetime.fromisoformat(raw) if raw else None
+
+
+def _tries(row: dict | None) -> int:
+    if not row:
+        return 0
+    if row.get("tries") not in (None, ""):
+        return int(row["tries"])
+    return 0 if row.get("status") == "ok" else 1  # a row from before the column existed
+
+
+def _last_tried(row: dict) -> datetime | None:
+    return _ts(row.get("last_tried") or row.get("last_pulled"))
+
+
+def retry_due(row: dict, today: date, policy: Policy) -> bool:
+    """True once the wait after the last attempt is over: 1 day after a pull that got
+    new points, else 1, 2, 4, 8... days (at most max_retry_wait) after the last of
+    `tries` attempts that got none."""
+    last = _last_tried(row)
+    if last is None:
+        return True
+    wait = min(2 ** max(_tries(row) - 1, 0), policy.max_retry_wait)
+    return (today - last.date()).days >= wait
+
+
+def gave_up(row: dict | None, policy: Policy) -> bool:
+    return _tries(row) >= policy.max_tries
 
 
 def _midnight(d: date) -> datetime:
@@ -94,20 +142,45 @@ def plan(snapshot: list[dict], history: list[dict], state: dict, today: date, po
         if key not in best or job < best[key]:
             best[key] = job
 
+    def retry(row):
+        return retry_due(row, today, policy) and not gave_up(row, policy)
+
+    # Unfinished pulls go on first; other jobs for that game wait until the gap is closed
+    # (or the resume gives up, which leaves resume_cursor on record as a known gap).
+    resuming = set()
+    for (kind, appid), row in state.items():
+        if row.get("resume_cursor") and not gave_up(row, policy):
+            resuming.add((kind, appid))
+            if retry_due(row, today, policy):
+                add(Job(0, (0, appid), kind, appid, _ts(row.get("resume_since")),
+                        row["resume_cursor"], _ts(row.get("resume_before"))))
+
     for row in history:
         appid = int(row["appid"])
         launch = date.fromisoformat(row["launch_date"])
         age = (today - launch).days
         followers = state.get(("followers", appid))
-        last = _ts(followers["last_pulled"]) if followers else None
+        players = state.get(("players", appid))
         since = _ts(followers["last_observed_at"]) if followers else None
-        if policy.post_launch_days <= age <= policy.post_launch_window and (
-                last is None or last.date() < launch + timedelta(days=policy.post_launch_days - 1)):
-            add(Job(0, (launch.toordinal(), appid), "followers", appid, since))
-        if policy.players_days <= age <= policy.players_window and ("players", appid) not in state:
-            add(Job(1, (launch.toordinal(), appid), "players", appid, _midnight(launch - timedelta(days=1))))
-        if launch >= policy.backfill_since and age > policy.post_launch_window and followers is None:
-            add(Job(3, (_backfill_group(row), -launch.toordinal(), appid), "followers", appid))
+        if ("followers", appid) not in resuming and policy.post_launch_days <= age <= policy.post_launch_window:
+            # done once a point from the last day of the launch week is in
+            seen_week = since is not None and since.date() >= launch + timedelta(days=6)
+            tried = _last_tried(followers) if followers else None
+            first_try = tried is None or tried.date() < launch + timedelta(days=policy.post_launch_days - 1)
+            if not seen_week and (first_try or retry(followers)):
+                add(Job(0, (launch.toordinal(), appid), "followers", appid, since))
+        if ("players", appid) not in resuming:
+            players_since = _midnight(launch - timedelta(days=1))
+            if players is None and policy.players_days <= age <= policy.players_window:
+                add(Job(1, (launch.toordinal(), appid), "players", appid, players_since))
+            elif (players is not None and _tries(players) > 0
+                  and policy.players_days <= age <= policy.post_launch_window and retry(players)):
+                # nothing came back last time; a later retry may cost a second page
+                add(Job(1, (launch.toordinal(), appid), "players", appid, players_since))
+        if (launch >= policy.backfill_since and age > policy.post_launch_window
+                and ("followers", appid) not in resuming
+                and (followers is None or (followers["status"] == "error" and retry(followers)))):
+            add(Job(3, (_backfill_group(row), -launch.toordinal(), appid), "followers", appid, since))
 
     stale_before = (today - timedelta(days=policy.stale_page_days)).isoformat()
     for row in snapshot:
@@ -117,9 +190,15 @@ def plan(snapshot: list[dict], history: list[dict], state: dict, today: date, po
         if dated and row["date_end"] < stale_before:
             continue
         appid = int(row["appid"])
-        followers = state.get(("followers", appid))
-        if followers and (today - _ts(followers["last_pulled"]).date()).days < policy.refresh_days:
+        if ("followers", appid) in resuming:
             continue
+        followers = state.get(("followers", appid))
+        if followers:
+            if followers["status"] == "error":
+                if not retry_due(followers, today, policy):
+                    continue
+            elif (today - _ts(followers["last_pulled"]).date()).days < policy.refresh_days:
+                continue
         rank = int(row["wishlist_rank"]) if row.get("wishlist_rank") else 10**9
         order = (0 if followers is None else 1, row.get("date_end") or "9999", rank, appid)
         add(Job(2, order, "followers", appid, _ts(followers["last_observed_at"]) if followers else None))
@@ -152,12 +231,55 @@ def used_today(gp_dir: Path, day: str) -> int:
     return sum(int(r["requests"] or 0) for r in storage.read_csv(gp_dir / "runs.csv") if r["date"] == day)
 
 
+def rate_limited_today(gp_dir: Path, day: str) -> bool:
+    return any(r["date"] == day and r["stopped"] == "rate_limited" for r in storage.read_csv(gp_dir / "runs.csv"))
+
+
+def pulled_row(job: Job, old: dict, res: gp.History, stamp: str, now: datetime, policy: Policy) -> dict:
+    """The state row after a pull that got an answer. Earlier points and the newest
+    observation time are kept whatever this pull brought."""
+    newest = max([t for t, _ in res.points] + ([_ts(old["last_observed_at"])] if old.get("last_observed_at") else []),
+                 default=None)
+    status = res.status
+    if status == "ok":
+        if not res.complete:
+            status = "partial"
+        elif newest is not None and newest < now - timedelta(days=policy.stale_days):
+            status = "stale"
+    row = {
+        "appid": str(job.appid), "kind": job.kind, "last_pulled": stamp, "last_tried": stamp, "status": status,
+        "last_observed_at": newest.isoformat() if newest else "",
+        "points": str(int(old.get("points") or 0) + len(res.points)),
+        "tries": "0" if res.points else str(_tries(old) + 1),
+        "resume_cursor": "", "resume_before": "", "resume_since": "",
+    }
+    if res.complete and not job.cursor and old.get("resume_cursor"):
+        # a refresh while an unfinished pull is parked (it gave up): keep the gap on record
+        row.update({f: old.get(f, "") for f in ("resume_cursor", "resume_before", "resume_since")})
+    if not res.complete:
+        # resume_since stays the target of the first unfinished pull; a resume never moves it
+        target = old.get("resume_since", "") if job.cursor else (job.since.isoformat() if job.since else "")
+        oldest = res.oldest or _ts(old.get("resume_before"))
+        row.update(resume_cursor=res.next_cursor, resume_before=oldest.isoformat() if oldest else "",
+                   resume_since=target)
+    return row
+
+
+def failed_row(job: Job, old: dict, stamp: str) -> dict:
+    """The state row after a failed request: counted as a try, nothing else lost."""
+    row = {f: "" for f in STATE_FIELDS} | {"appid": str(job.appid), "kind": job.kind, "points": "0"} | old
+    return row | {"status": "error", "last_tried": stamp, "tries": str(_tries(old) + 1)}
+
+
 # -- running -------------------------------------------------------------------
 
 def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datetime, budget: int, *,
         policy: Policy = Policy(), checkpoint: int = 100, max_consecutive_errors: int = 10) -> dict:
     day = now.date().isoformat()
     allowed = budget - used_today(gp_dir, day)
+    if rate_limited_today(gp_dir, day):
+        log.error("an earlier run today was rate limited; not starting until tomorrow (UTC)")
+        allowed = 0
     start = client.requests_made
     stamp = now.replace(microsecond=0).isoformat()
     points: dict[str, list[dict]] = {k: [] for k in gp.KINDS}
@@ -175,14 +297,16 @@ def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datet
                 stopped = "budget"
                 break
             try:
-                res = gp.history(client, job.kind, job.appid, key, since=job.since,
-                                 max_pages=min(MAX_PAGES, left))
-            except Exception as e:  # noqa: BLE001 - leave the game due for the next run
+                res = gp.history(client, job.kind, job.appid, key, since=job.since, cursor=job.cursor,
+                                 before=job.before, max_pages=min(MAX_PAGES, left))
+            except Exception as e:  # noqa: BLE001 - recorded as a try; the game is retried later
                 if isinstance(e, HTTPStatusError) and e.status == 429:
                     # The client already retried; a 429 that persists means the day's quota is used up.
+                    # Not the game's fault, so it is not counted as a try.
                     log.error("rate limited (%s); stopping", e)
                     stopped = "rate_limited"
                     break
+                state[(job.kind, job.appid)] = failed_row(job, state.get((job.kind, job.appid), {}), stamp)
                 stats["errors"] += 1
                 consecutive += 1
                 log.warning("%s %s failed: %s", job.kind, job.appid, e)
@@ -191,25 +315,10 @@ def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datet
                     break
                 continue
             consecutive = 0
-            if not res.complete and left < MAX_PAGES:
-                # The budget, not the page cap, cut this pull short: drop it so the game stays
-                # due and is fetched whole another day (saving it would lose the older points).
-                stopped = "budget"
-                break
-            old = state.get((job.kind, job.appid), {})
-            newest = max([t for t, _ in res.points] + ([_ts(old["last_observed_at"])] if old.get("last_observed_at") else []),
-                         default=None)
-            status = res.status
-            if status == "ok":
-                if not res.complete:
-                    status = "partial"
-                elif newest is not None and newest < now - timedelta(days=policy.stale_days):
-                    status = "stale"
-            state[(job.kind, job.appid)] = {
-                "appid": str(job.appid), "kind": job.kind, "last_pulled": stamp, "status": status,
-                "last_observed_at": newest.isoformat() if newest else "",
-                "points": str(int(old.get("points") or 0) + len(res.points)),
-            }
+            # A pull cut short by the page cap or the budget keeps what it got and is resumed later.
+            row = state[(job.kind, job.appid)] = pulled_row(job, state.get((job.kind, job.appid), {}), res,
+                                                            stamp, now, policy)
+            status = row["status"]
             points[job.kind].extend({"appid": job.appid, job.kind: v, "observed_at": t.isoformat(),
                                      "fetched_at": stamp} for t, v in res.points)
             stats["jobs"] += 1

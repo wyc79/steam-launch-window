@@ -158,6 +158,7 @@ def test_run_pass_skips_single_errors_and_finishes():
     (HTTPStatusError(404, "u"), True),
     (HTTPStatusError(403, "u"), True),
     (HTTPStatusError(503, "u"), False),
+    (HTTPStatusError(429, "u"), False),  # rate limit that outlasted the retries
     (RateLimited("u"), False),
     (RuntimeError("network"), False),
 ])
@@ -342,3 +343,28 @@ def test_history_reads_an_older_format_file_without_losing_data(tmp_path, monkey
     assert (rows["99"]["reviews_30d"], rows["99"]["first_listed"]) == ("2", "")
     assert [w for _, w in calls] == []  # counts already there, nothing refetched
     assert set(ch.FIELDS) <= set(rows["7"])
+
+
+def test_run_pass_stops_when_a_429_outlasts_the_retries():
+    calls = []
+
+    def fetch(i):
+        calls.append(i)
+        raise HTTPStatusError(429, "https://api.steampowered.com/x")
+
+    assert run([1, 2, 3], fetch, []) is False
+    assert calls == [1]
+
+
+def test_history_rate_limit_leaves_the_game_due_instead_of_unavailable(tmp_path, monkeypatch):
+    def limited(client, appid, start, end):
+        raise HTTPStatusError(429, "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/")
+
+    monkeypatch.setattr(ch, "list_month", lambda client, month: [_item(7, SEP_5)] if month.month == 9 else [])
+    monkeypatch.setattr(steam, "get_items", lambda *a, **k: {})
+    monkeypatch.setattr(steam, "review_counts", limited)
+    ch.main(["--data-dir", str(tmp_path), "--cache-dir", str(tmp_path / "c"), "--since", "2026-09-01",
+             "--today", "2026-10-20", "--early-since", "2026-09-01"])
+    row = storage.read_csv(tmp_path / "history" / "games.csv")[0]
+    assert (row["reviews_30d_source"], row["reviews_30d_fetched"], row["reviews_early_fetched"]) == ("", "", "")
+    assert ch.needs_reviews(row, ch.pacific_ts(date(2026, 10, 20)), date(2026, 10, 20))

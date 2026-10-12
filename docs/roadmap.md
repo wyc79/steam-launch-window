@@ -27,8 +27,11 @@ starts only after a go-ahead.
 **Code:**
 - `main`: every Steam collector, the events file and checker, and the Hugging Face publisher.
 - PR #13 (`phase6-audit`): the Games Popularity collector, the data-safety fixes from the
-  audit, publisher checks, docs. 224 offline tests pass. A fresh reviewer agent reviewed it;
-  its fixes are in the last commit.
+  audit, publisher checks, docs. A fresh reviewer agent reviewed it; its fixes are in.
+  A second review (2026-10-11) added: review counts from `IUserReviewsService/GetAppReviews`
+  (Steam retires `appreviews` on **2026-10-22**; same counts checked on 4 games), retries
+  for Games Popularity pulls that got nothing, resumable long histories, no `mit` license
+  on the dataset card. 250 offline tests pass.
 
 **Data branch** (`origin/data`): one upcoming snapshot (2026-10-11). No history and no
 followers yet.
@@ -91,7 +94,11 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 1. Wait for `backfill complete` on the Pi.
 2. Copy `history/games.csv` to the PC, check the counts, commit it to the data branch, push.
 
-### 2. Merge PR #13
+### 2. Merge PR #13 (before 2026-10-22)
+
+Steam turns off `appreviews` on Oct 22. After that, only code with the PR's
+`GetAppReviews` change can collect review counts. Any review job on the Pi still
+running then must be stopped, updated and restarted.
 
 1. Optional, before merging: run **publish dataset** by hand on the `phase6-audit` branch
    without "upload" (a dry run: no Steam requests, nothing uploaded). It confirms GitHub
@@ -142,7 +149,8 @@ text for the page is a separate Phase 3 item.
 |---|---|
 | now | Get Games Popularity's answer on republishing and a key-based whitelist |
 | tonight | Copy and commit the finished `games.csv` |
-| step 2 | Merge PR #13, then drop the token's user-wide scope |
+| before Oct 22 | Merge PR #13 (review counts break on old code after Oct 22), then drop the token's user-wide scope |
+| step 2 | The public dataset card may still say `license: mit`; the next upload replaces it with `license: other` |
 | step 3 | Set `GP_DATASET_REPO` (and optionally `GP_DAILY_BUDGET`), then the switches one by one |
 | step 3 | Approve the "Data rights" wording on the dataset card and the first real upload |
 | step 4 | Answer the 4 open questions in the Phase 2 plan |
