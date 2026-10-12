@@ -228,3 +228,6 @@ _hf/
 
 # website data built by analysis.site_data
 site/data/
+
+# agent worktrees
+.claude/worktrees/
