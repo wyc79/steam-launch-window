@@ -9,13 +9,13 @@ from pipeline import hf_sync  # noqa: E402
 
 
 class FakeApi:
-    def __init__(self, tmp_path, remote: dict[str, str], sha="abc123", private=True):
-        self.remote, self.sha, self.dir, self.private = remote, sha, tmp_path / "hfcache", private
+    def __init__(self, tmp_path, remote: dict[str, str], sha="abc123"):
+        self.remote, self.sha, self.dir = remote, sha, tmp_path / "hfcache"
         self.broken = None
         self.commits = []
 
     def repo_info(self, repo_id, repo_type=None):
-        return SimpleNamespace(sha=self.sha, private=self.private)
+        return SimpleNamespace(sha=self.sha)
 
     def hf_hub_download(self, repo_id, filename, repo_type=None, revision=None):
         assert revision == self.sha
@@ -88,16 +88,20 @@ def test_pull_fails_on_a_network_error_instead_of_treating_the_file_as_missing(t
     assert not (dest / hf_sync.PARENT_FILE).exists()  # so a later push refuses to run
 
 
-def test_push_refuses_a_public_dataset_unless_allowed(tmp_path):
-    src = tmp_path / "gp"
-    src.mkdir()
-    (src / "state.csv").write_text("s")
-    (src / hf_sync.PARENT_FILE).write_text("abc123")
-    api = FakeApi(tmp_path, {}, private=False)
-    with pytest.raises(SystemExit, match="public"):
-        hf_sync.push(api, "me/data", src, "msg")
-    hf_sync.push(api, "me/data", src, "msg", allow_public=True)
-    assert len(api.commits) == 1
+def test_pull_stops_when_a_required_file_is_missing(tmp_path):
+    api = FakeApi(tmp_path, {"gp/runs.csv": "r"})
+    dest = tmp_path / "hf"
+    with pytest.raises(SystemExit, match="gp/state.csv"):
+        hf_sync.pull(api, "me/data", ["gp/runs.csv"], dest, required=["gp/state.csv"])
+    assert not (dest / hf_sync.PARENT_FILE).exists()  # so a later push refuses to run
+
+
+def test_pull_downloads_required_files_into_their_folders(tmp_path):
+    api = FakeApi(tmp_path, {"gp/state.csv": "s"})
+    dest = tmp_path / "hf"
+    hf_sync.pull(api, "me/data", ["gp/runs.csv"], dest, required=["gp/state.csv"])
+    assert (dest / "gp/state.csv").read_text() == "s"
+    assert (dest / hf_sync.PARENT_FILE).read_text() == "abc123"
 
 
 def test_pull_refuses_a_folder_that_already_has_files(tmp_path):

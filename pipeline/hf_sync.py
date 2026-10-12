@@ -1,15 +1,16 @@
 """Move a working folder to and from a Hugging Face dataset, for collectors that
-keep their data there (the private Games Popularity dataset).
+keep their data there (Games Popularity, under gp/ in the public dataset).
 
-    python -m pipeline.hf_sync pull --repo user/name --dest _gp --file state.csv --file runs.csv
-    python -m pipeline.hf_sync push --repo user/name --src _gp --message "gp 2026-10-20"
+    python -m pipeline.hf_sync pull --repo user/name --dest _hf --require gp/state.csv --file gp/runs.csv
+    python -m pipeline.hf_sync push --repo user/name --src _hf --message "gp 2026-10-20"
 
-pull downloads the named files that exist (missing ones are skipped) from the
-current revision and writes that revision to .hf_parent. push commits every file
-under the folder except dotfiles, with .hf_parent as the parent commit, so a
-write made by someone else in between makes the push fail instead of being
-overwritten. push refuses to run without .hf_parent, and refuses a public
-dataset unless --allow-public is given. pull refuses a folder that already has files. Unchanged files are left out of the commit by huggingface_hub.
+pull downloads the named files that exist (missing --file ones are skipped, a
+missing --require one stops it) from the current revision and writes that
+revision to .hf_parent. push commits every file under the folder except
+dotfiles, with .hf_parent as the parent commit, so a write made by someone else
+in between makes the push fail instead of being overwritten. push refuses to run
+without .hf_parent. pull refuses a folder that already has files. Unchanged
+files are left out of the commit by huggingface_hub.
 Needs HF_TOKEN.
 """
 
@@ -29,15 +30,18 @@ REPO_TYPE = "dataset"
 log = logging.getLogger("hf_sync")
 
 
-def pull(api, repo_id: str, names: list[str], dest: Path) -> str:
+def pull(api, repo_id: str, names: list[str], dest: Path, required: list[str] = ()) -> str:
     if dest.exists() and any(dest.iterdir()):
         raise SystemExit(f"{dest} is not empty: pull into an empty folder, so push sends only this run's files")
     dest.mkdir(parents=True, exist_ok=True)
     sha = api.repo_info(repo_id, repo_type=REPO_TYPE).sha
-    for name in names:
+    for name in [*required, *names]:
         try:
             path = api.hf_hub_download(repo_id, name, repo_type=REPO_TYPE, revision=sha)
         except RemoteEntryNotFoundError:  # really absent; a network error (LocalEntryNotFoundError) must fail
+            if name in required:
+                # no .hf_parent is written, so a later push refuses to run
+                raise SystemExit(f"{name} is not in {repo_id}: refusing to start from nothing") from None
             log.info("%s: not in %s yet", name, repo_id)
             continue
         target = dest / name
@@ -47,7 +51,7 @@ def pull(api, repo_id: str, names: list[str], dest: Path) -> str:
     return sha
 
 
-def push(api, repo_id: str, src: Path, message: str, *, allow_public: bool = False) -> None:
+def push(api, repo_id: str, src: Path, message: str) -> None:
     from huggingface_hub import CommitOperationAdd
 
     files = sorted(p for p in src.rglob("*")
@@ -58,8 +62,6 @@ def push(api, repo_id: str, src: Path, message: str, *, allow_public: bool = Fal
     if not (src / PARENT_FILE).exists():
         raise SystemExit(f"no {PARENT_FILE} in {src}: run pull first, so the push cannot overwrite newer data")
     parent = (src / PARENT_FILE).read_text().strip()
-    if not allow_public and not api.repo_info(repo_id, repo_type=REPO_TYPE).private:
-        raise SystemExit(f"{repo_id} is public; this data may not be republished (use --allow-public once it may)")
     ops = [CommitOperationAdd(path_in_repo=p.relative_to(src).as_posix(), path_or_fileobj=str(p)) for p in files]
     api.create_commit(repo_id, ops, commit_message=message, repo_type=REPO_TYPE, parent_commit=parent)
     log.info("pushed %d files to %s", len(files), repo_id)
@@ -71,12 +73,12 @@ def main(argv=None) -> int:
     pl = sub.add_parser("pull")
     pl.add_argument("--repo", required=True)
     pl.add_argument("--dest", type=Path, required=True)
-    pl.add_argument("--file", action="append", default=[])
+    pl.add_argument("--file", action="append", default=[], help="download if it exists")
+    pl.add_argument("--require", action="append", default=[], help="download, and stop if it does not exist")
     ps = sub.add_parser("push")
     ps.add_argument("--repo", required=True)
     ps.add_argument("--src", type=Path, required=True)
     ps.add_argument("--message", required=True)
-    ps.add_argument("--allow-public", action="store_true", help="allow pushing to a public dataset")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     token = os.environ.get("HF_TOKEN")
@@ -86,9 +88,9 @@ def main(argv=None) -> int:
 
     api = HfApi(token=token)
     if args.cmd == "pull":
-        pull(api, args.repo, args.file, args.dest)
+        pull(api, args.repo, args.file, args.dest, args.require)
     else:
-        push(api, args.repo, args.src, args.message, allow_public=args.allow_public)
+        push(api, args.repo, args.src, args.message)
     return 0
 
 

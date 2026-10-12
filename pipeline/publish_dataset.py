@@ -14,6 +14,11 @@ Builds a folder like this from --data-dir, then uploads it:
   manifest.json                         rows and columns of every file, checked before upload
   README.md                             dataset card
 
+The dataset also holds gp/ (Games Popularity follower and player histories),
+written there directly by the daily job. This script leaves gp/ alone; the card
+lists its configs when its files are found in the dataset (needs HF_TOKEN and
+--repo-id, also in a dry run).
+
 Needs the `publish` extra (pandas, pyarrow, huggingface_hub). Uploading needs
 HF_TOKEN in the environment and --repo-id; --dry-run only builds the folder.
 
@@ -54,6 +59,7 @@ DATE_COLUMNS = {"date", "date_end", "launch_date", "first_seen", "last_seen", "s
                 "reviews_30d_fetched", "prior_check_fetched", "reviews_early_fetched",
                 "first_listed", "last_listed", "prev_date", "prev_date_end", "start", "end"}
 MARKER = ".publish-dataset-build"  # marks a folder this script built, so it may delete it
+GP_KINDS = ("followers", "players")
 SHRINK_LIMIT = 0.95
 RELEASE_FIELDS = ["raw", "precision", "date", "date_end"]
 
@@ -175,7 +181,15 @@ def check_manifest(new: dict, old: dict | None) -> list[str]:
     return problems
 
 
-def build(data_dir: Path, events_path: Path, out: Path, license_id: str) -> dict:
+def remote_gp_kinds(repo_id: str, token: str, api=None) -> set[str]:
+    """Which Games Popularity series ("followers", "players") already have files in the dataset."""
+    from huggingface_hub import HfApi
+
+    files = (api or HfApi(token=token)).list_repo_files(repo_id, repo_type="dataset")
+    return {kind for kind in GP_KINDS if any(f.startswith(f"gp/{kind}/") and f.endswith(".csv.gz") for f in files)}
+
+
+def build(data_dir: Path, events_path: Path, out: Path, license_id: str, gp_kinds: set[str] = frozenset()) -> dict:
     if out.exists() and any(out.iterdir()):
         if not (out / MARKER).exists():
             raise SystemExit(f"{out} is not a dataset build (no {MARKER}); refusing to delete it")
@@ -204,7 +218,7 @@ def build(data_dir: Path, events_path: Path, out: Path, license_id: str) -> dict
                                                          out / "upcoming" / "release_changes.parquet")
     stats["events.parquet"] = write(events_table(events_path), out / "events.parquet")
     (out / "manifest.json").write_text(json.dumps(manifest(out), indent=1, sort_keys=True), encoding="utf-8")
-    (out / "README.md").write_text(card(stats, license_id, data_date(data_dir)), encoding="utf-8")
+    (out / "README.md").write_text(card(stats, license_id, data_date(data_dir), gp_kinds), encoding="utf-8")
     return stats
 
 
@@ -230,14 +244,17 @@ def events_table(path: Path) -> pd.DataFrame:
     return typed(df)
 
 
-def card(stats: dict, license_id: str, updated: str) -> str:
+def card(stats: dict, license_id: str, updated: str, gp_kinds: set[str] = frozenset()) -> str:
     # (config name, files, key in stats); configs with no data yet are left out
+    stats = {**stats, **{f"gp/{k}": 0 for k in gp_kinds}}  # in the dataset already, not built here
     configs = [
         ("history", "history/games.parquet", "history/games.parquet"),
         ("upcoming_snapshots", "upcoming/snapshots/*.parquet", "upcoming/snapshots"),
         ("upcoming_apps", "upcoming/apps.parquet", "upcoming/apps.parquet"),
         ("release_changes", "upcoming/release_changes.parquet", "upcoming/release_changes.parquet"),
         ("followers", "followers/snapshots/*.parquet", "followers/snapshots"),
+        ("gp_followers", "gp/followers/*.csv.gz", "gp/followers"),
+        ("gp_players", "gp/players/*.csv.gz", "gp/players"),
         ("events", "events.parquet", "events.parquet"),
         ("tags", "tags.parquet", "tags.parquet"),
         ("runs", "upcoming/runs.parquet", "upcoming/runs.parquet"),
@@ -255,6 +272,15 @@ def card(stats: dict, license_id: str, updated: str) -> str:
         return sum(v.values()) if isinstance(v, dict) else (v or 0)
 
     snap_months = sorted(stats.get("upcoming/snapshots", {}))
+    gp_rows = "".join([
+        "| `gp_followers` | raw, daily | grows daily | Steam follower history from [Games Popularity]"
+        "(https://games-popularity.com), about one point a day since 2024-03-15: `appid`, `followers`, "
+        "`observed_at` (their time, UTC), `fetched_at` (ours); one file per fetch day |\n"
+        if "followers" in gp_kinds else "",
+        "| `gp_players` | raw, daily | grows daily | concurrent players, hourly, for the first month after "
+        "launch, from Games Popularity; same columns with `players` |\n"
+        if "players" in gp_kinds else "",
+    ])
     return f"""---
 {yaml.safe_dump(meta, sort_keys=False).strip()}
 ---
@@ -262,11 +288,12 @@ def card(stats: dict, license_id: str, updated: str) -> str:
 # Steam Launch Window Data
 
 Data behind [steam-launch-window](https://github.com/wyc79/steam-launch-window),
-a tool that helps indie developers pick a Steam launch week. Updated weekly.
-Last update: {updated}.
+a tool that helps indie developers pick a Steam launch week. Updated weekly
+(the `gp_` configs daily). Last update: {updated}.
 
-Not affiliated with or endorsed by Valve. All data comes from Steam's public
-store pages and endpoints, collected politely (rate-limited, no logins).
+Not affiliated with or endorsed by Valve. The data comes from Steam's public
+store pages and endpoints, collected politely (rate-limited, no logins), and the
+`gp_` configs from [Games Popularity](https://games-popularity.com).
 No personal data: no Steam IDs, usernames or review texts, only counts.
 
 ## What is here
@@ -278,7 +305,7 @@ No personal data: no Steam IDs, usernames or review texts, only counts.
 | `upcoming_apps` | latest | {rows("upcoming/apps.parquet"):,} | name, developers, publishers, tags with vote weights, languages, demo; `last_seen` is the last day the game was coming soon |
 | `release_changes` | derived | {rows("upcoming/release_changes.parquet"):,} | each game's first day in the snapshots, every change of its release date text or range, each day it left the coming-soon list, and each day it came back (`returned`) |
 | `followers` | raw | {rows("followers/snapshots"):,} | Steam community hub follower counts, with fetch time |
-| `events` | curated | {rows("events.parquet"):,} | Steam sales, Next Fests, themed fests, major releases, regional holidays, each with a source; `starts_at`/`ends_at` (UTC) give the exact window: Steam events run from 10:00 Pacific on `start` to 10:00 Pacific on `end` |
+{gp_rows}| `events` | curated | {rows("events.parquet"):,} | Steam sales, Next Fests, themed fests, major releases, regional holidays, each with a source; `starts_at`/`ends_at` (UTC) give the exact window: Steam events run from 10:00 Pacific on `start` to 10:00 Pacific on `end` |
 | `tags` | latest | {rows("tags.parquet"):,} | Steam tag id to name |
 | `runs` | log | {rows("upcoming/runs.parquet"):,} | one row per daily collection: games, requests, whether the wishlist crawl worked |
 
@@ -291,6 +318,10 @@ history = load_dataset("<this repo>", "history")
 
 - **Observed at the time:** `upcoming_snapshots` (one row per day, `snapshot_date` in UTC),
   `followers` (`fetched_at`), `runs`. Use these for "what was known before launch".
+  The `gp_` configs were recorded at the time by Games Popularity (`observed_at`)
+  but fetched by us later, often long after (`fetched_at`). Each fetch only asks
+  for points newer than the ones already fetched, so a game's series is spread
+  over several fetch-day files.
 - **Frozen before launch:** a launched game's `upcoming_apps` row stops updating
   when it leaves the coming-soon list, so its tags, publisher, demo and languages
   are pre-launch values when `last_seen` is before the launch date.
@@ -320,8 +351,11 @@ and that license covers the code only. The facts in this dataset (release
 dates, tags, review and follower counts) come from Steam, owned by Valve
 Corporation, which has not licensed or endorsed this dataset. Game names are
 trademarks of their owners. Whether you may reuse the data depends on Valve's
-terms for Steam data and on your local law. Games Popularity follower and player
-histories are not part of this dataset.
+terms for Steam data and on your local law. The `gp_` follower and player
+histories come from [Games Popularity](https://games-popularity.com) and are
+republished with its owner's permission (2026-10-12); credit them if you use them.
+The `gp/` folder also holds `state.csv` and `runs.csv`, the collector's working
+files (what was fetched when, and with what result).
 
 Full methods: [README](https://github.com/wyc79/steam-launch-window#readme) and
 [endpoint notes](https://github.com/wyc79/steam-launch-window/blob/main/docs/endpoints.md).
@@ -364,11 +398,12 @@ def main(argv=None) -> int:
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
-    stats = build(args.data_dir, args.events, args.out, args.license)
-    log.info("built %s: %s", args.out, stats)
+    token = os.environ.get("HF_TOKEN")
+    gp_kinds = remote_gp_kinds(args.repo_id, token) if token and args.repo_id else set()
+    stats = build(args.data_dir, args.events, args.out, args.license, gp_kinds)
+    log.info("built %s: %s; Games Popularity configs: %s", args.out, stats, sorted(gp_kinds) or "none")
     if args.dry_run:
         return 0
-    token = os.environ.get("HF_TOKEN")
     if not token or not args.repo_id:
         raise SystemExit("set HF_TOKEN and --repo-id (or HF_DATASET_REPO) to upload, or use --dry-run")
     upload(args.out, args.repo_id, token)

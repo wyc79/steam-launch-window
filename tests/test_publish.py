@@ -1,5 +1,6 @@
 import gzip
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -82,10 +83,31 @@ def test_card_lists_only_configs_with_data(data, tmp_path):
     assert "license: cc-by-4.0" in card
 
 
+def test_card_lists_games_popularity_configs_found_in_the_dataset(data, tmp_path):
+    d, events = data
+    out = tmp_path / "out"
+    pub.build(d, events, out, "mit")
+    card = (out / "README.md").read_text(encoding="utf-8")
+    assert "gp_followers" not in card and "gp_players" not in card
+    pub.build(d, events, out, "mit", gp_kinds={"followers"})
+    card = (out / "README.md").read_text(encoding="utf-8")
+    assert "config_name: gp_followers" in card and "gp/followers/*.csv.gz" in card
+    assert "| `gp_followers` |" in card and "gp_players" not in card
+    assert "games-popularity.com" in card
+    assert "gp/followers/2026-10-01.csv.gz" not in json.loads((out / "manifest.json").read_text())
+
+
+def test_remote_gp_kinds_looks_for_csv_files_under_gp():
+    api = SimpleNamespace(list_repo_files=lambda repo_id, repo_type=None: [
+        "README.md", "gp/state.csv", "gp/followers/2026-10-12.csv.gz", "followers/latest.parquet"])
+    assert pub.remote_gp_kinds("me/data", "x", api=api) == {"followers"}
+
+
 def test_default_card_grants_no_data_license(data, tmp_path, monkeypatch):
     d, events = data
     out = tmp_path / "out"
     monkeypatch.setenv("HF_TOKEN", "x")
+    monkeypatch.delenv("HF_DATASET_REPO", raising=False)  # with a repo, the build would ask Hugging Face
     monkeypatch.setattr(pub, "upload", lambda *a, **k: pytest.fail("a dry run must not upload"))
     assert pub.main(["--data-dir", str(d), "--events", str(events), "--out", str(out), "--dry-run"]) == 0
     card = (out / "README.md").read_text(encoding="utf-8")
