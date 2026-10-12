@@ -82,6 +82,7 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 - The data branch is the source of truth. Hugging Face is a weekly copy rebuilt from it.
 - Long one-off jobs run on the Pi. GitHub Actions only does small daily and weekly steps.
 - The Steam snapshot stays daily. A missed day of release dates and ranks is lost for good.
+- The website lives at `wyc79.github.io/steam-launch-window`.
 
 ## Next steps, in order
 
@@ -120,8 +121,8 @@ tag pairs, year-precision games, reviews-by-language sample.
 
 ### 5. Build Phase 3: website
 
-A static GitHub Pages site. To decide: the URL. The spec says `wyc79.github.io/launch-window`,
-but the repo is `steam-launch-window`.
+A static GitHub Pages site at `wyc79.github.io/steam-launch-window` (the repo name;
+decided 2026-10-11, replacing the spec's `wyc79.github.io/launch-window`).
 
 ### 6. Build Phase 4: agent and Cloudflare Worker
 
@@ -137,7 +138,6 @@ Free tier only.
 | step 3 | Set `GP_DATASET_REPO` (and optionally `GP_DAILY_BUDGET`), then the switches one by one |
 | step 3 | Approve the "Data rights" wording on the dataset card and the first real upload |
 | step 4 | Answer the 4 open questions in the Phase 2 plan |
-| step 5 | Pick the website URL |
 | around Nov 7 | Replace the 2027 China holiday estimates when the official dates are out |
 
 ## Risks to watch
