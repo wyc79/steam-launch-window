@@ -18,7 +18,7 @@ starts only after a go-ahead.
 | Audit | 1 to 5. Audit, sources, costs, Hugging Face, research readiness | reported 2026-10-11 |
 | Audit | 6. Implementation | [PR #13](https://github.com/wyc79/steam-launch-window/pull/13) merged 2026-10-12; fixes from the first Games Popularity run in [PR #14](https://github.com/wyc79/steam-launch-window/pull/14), merged 2026-10-12 |
 | Audit | 7. Deliverables | reported 2026-10-12 in [pipeline-report.md](pipeline-report.md), together with the build Phase 1 report |
-| Build | 2. Analysis | draft plan in [phase2-plan.md](phase2-plan.md); 4 open questions |
+| Build | 2. Analysis | plan in [phase2-plan.md](phase2-plan.md); its 4 questions answered 2026-10-12; waiting for go-ahead |
 | Build | 3. Website | not started |
 | Build | 4. Agent and Worker | not started |
 
@@ -151,8 +151,8 @@ Optional later, on the Pi: first-day and first-week review counts for all launch
 
 ### 5. Build Phase 2: analysis
 
-From [phase2-plan.md](phase2-plan.md). First answer its 4 open questions: niche definition,
-tag pairs, year-precision games, reviews-by-language sample.
+From [phase2-plan.md](phase2-plan.md). Its 4 questions (niche definition, tag pairs,
+year-only dates, reviews by language) were answered on 2026-10-12.
 
 ### 6. Build Phase 3: website
 
@@ -179,7 +179,6 @@ text for the page is a separate Phase 3 item.
 | now | Delete the `GP_DATASET_REPO` variable; turn on `ENDPOINT_CHECK` |
 | step 3 | Check the "Data rights" wording on the dataset card, now with the Games Popularity credit |
 | within days | When Games Popularity cuts the free limits, lower `GP_DAILY_BUDGET` (or pay) |
-| step 5 | Answer the 4 open questions in the Phase 2 plan |
 | step 7 | Set up the Tencent SCF function (mainland region) for the agent's China endpoint |
 | around Nov 7 | Replace the 2027 China holiday estimates when the official dates are out |
 
