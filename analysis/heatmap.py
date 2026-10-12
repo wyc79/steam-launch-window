@@ -130,7 +130,7 @@ def percentile(values: list[float], q: float) -> float:
 
 
 def history_panel(history, selection=(), mode: str = "and", languages=(), min_group: int = MIN_GROUP,
-                  measure: str = "raw") -> dict:
+                  measure: str = "relative") -> dict:
     """Past launches in the selection, per group (paid, free), split into quiet,
     normal and busy launch weeks by tercile of "busy". Each part gives games, its
     busy range, and median, 75th and 90th percentile of 30-day reviews. A part
@@ -138,8 +138,9 @@ def history_panel(history, selection=(), mode: str = "and", languages=(), min_gr
     (`shown` false).
 
     Busy, for launches of the same group in the selection (weeks Monday to Sunday):
-    - measure "raw": how many other launches that week;
-    - measure "relative": launches that week divided by the average week in the
+    - measure "raw" (the site's "raw counts" toggle, off by default): how many
+      other launches that week;
+    - measure "relative" (the default): launches that week divided by the average week in the
       RELATIVE_WEEKS before and after (inside the data's span; an average of 0
       counts as 1), rounded to 2 decimals. Steam grows every year, so raw counts
       make "busy" partly mean "recent"; this compares a week with its own time.

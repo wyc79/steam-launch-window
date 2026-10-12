@@ -78,9 +78,10 @@ For each week and tag:
 
 Exact and spread are always shown separately.
 
-**Raw or normalized** (decided 2026-10-12): raw counts are the default; a switch
-shows each week compared with a usual week of real launches for the same
-selection (its average over the last 52 weeks of history). Steam grows every
+**Normalized by default** (decided 2026-10-12): each week is shown compared
+with a usual week of real launches for the same selection (its average over the
+last 52 weeks of history). A "raw counts" toggle, off by default, shows the
+plain counts instead. Steam grows every
 year, so this reads better than raw counts across tags and years. Announced
 dates are not launches, and the page says so: near weeks run high because some
 will slip, far weeks low because many dates are not set yet. On 2026-10-12,
@@ -288,7 +289,8 @@ launches in the same week that match the user's selection. The browser counts it
 from `history.json`, so the panel and the heatmap tell one story. The model
 (section 3) keeps its own tag-weight similarity measure.
 
-**Normalized busy** (decided 2026-10-12, same switch as the heatmap): the week's
+**Normalized busy, the default** (decided 2026-10-12; the heatmap's "raw counts"
+toggle switches both): the week's
 launches divided by the average week in the 13 weeks before and after. Raw
 counts put mostly recent launches in the busy group (shooters: 40% from 2026 in
 busy, 5% in quiet); normalized, each group has a similar mix of years (busy:
@@ -359,8 +361,9 @@ Steam requests.
    language filter. Used to check whether Chinese localization raises reviews
    more than sales.
 
-5. ~~**Busy compared with what?**~~ Decided: both. Raw counts by default, and a
-   normalized switch on the heatmap (section 2) and the panel (section 4).
+5. ~~**Busy compared with what?**~~ Decided: normalized by default on the
+   heatmap (section 2) and the panel (section 4); a "raw counts" toggle, off by
+   default, shows plain counts.
    Found while building: counted raw, "busy" mostly meant "recent"
    (English-language paid shooters averaged 23.7 other shooter launches a week
    in 2022 and 41.1 in 2026).

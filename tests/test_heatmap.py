@@ -113,7 +113,7 @@ def test_busy_counts_other_matching_launches_of_the_same_group_that_week():
                past("2026-01-12", 40),                                               # next week, alone
                past("2026-01-06", 5, free=True), past("2026-01-06", 5, tags=(COZY,)),
                past("2026-01-06", 5, launch_type="ea_exit")]
-    panel = hm.history_panel(history, [SHOOTER], min_group=1)
+    panel = hm.history_panel(history, [SHOOTER], min_group=1, measure="raw")
     parts = panel["paid"]["parts"]
     assert panel["matched"] == 5 and panel["total"] == 6  # ea_exit is not a past launch here
     assert parts["quiet"]["busy_max"] == 0 and parts["quiet"]["games"] == 1
@@ -144,7 +144,7 @@ def test_panel_reports_review_percentiles_per_part():
         for _ in range(weeks):
             history += [past(week.isoformat(), reviews)] * size
             week += timedelta(weeks=1)
-    panel = hm.history_panel(history, [SHOOTER])
+    panel = hm.history_panel(history, [SHOOTER], measure="raw")
     parts = panel["paid"]["parts"]
     assert panel["paid"]["shown"] is True
     assert [parts[n]["games"] for n in ("quiet", "normal", "busy")] == [40, 40, 40]
@@ -173,10 +173,10 @@ def weekly(counts, start=date(2024, 1, 1)):
 def test_relative_busy_compares_a_week_with_the_weeks_around_it():
     counts = [2] * 27
     counts[13] = 6
-    panel = hm.history_panel(weekly(counts), [SHOOTER], min_group=1, measure="relative")
+    panel = hm.history_panel(weekly(counts), [SHOOTER], min_group=1)  # relative is the default
     assert panel["measure"] == "relative"
     assert max(p.get("busy_max", 0) for p in panel["paid"]["parts"].values()) == 3.0  # 6 against 2 around it
-    raw = hm.history_panel(weekly(counts), [SHOOTER], min_group=1)
+    raw = hm.history_panel(weekly(counts), [SHOOTER], min_group=1, measure="raw")
     assert raw["measure"] == "raw" and max(p.get("busy_max", 0) for p in raw["paid"]["parts"].values()) == 5
 
 
