@@ -251,7 +251,11 @@ which "takes the same filters and returns the same fields"
   429 past it (the client backs off; a 429 that outlasts the retries stops the
   run and leaves the game due). Anonymous replies may be cached up to 10 minutes.
 - Enums: `filter` 1 = recent, `purchase_type` 0 = Steam purchases (the default),
-  `review_type` 0 = all (the default). `languages` is a list; `["all"]` means every language.
+  1 = all, 2 = not bought on Steam (checked 2026-10-12 on Balatro's first 30
+  days: 19,248 + 2,260 = 21,508), `review_type` 0 = all (the default).
+  **Free games need 1:** nobody buys them, so 0 counts almost nothing (Marvel
+  Rivals' first 30 days: 0 with 0, 123,761 with 1). The pipeline uses 1 for free
+  games and 0 for paid ones (column `reviews_purchase`). `languages` is a list; `["all"]` means every language.
   Off-topic review bombs are filtered by default, as before.
 - Response: `{"response": {"query_summary": {"num_reviews", "review_score",
   "review_score_desc", "total_positive", "total_negative", "total_reviews"},

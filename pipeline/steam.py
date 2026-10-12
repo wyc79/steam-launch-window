@@ -147,12 +147,21 @@ def follower_count(client: Client, appid: int) -> int | None:
     return int(m.group(1)) if m else None
 
 
-def review_counts(client: Client, appid: int, start_ts: int, end_ts: int) -> dict:
+PURCHASE_STEAM = 0  # reviewers who bought the game on Steam (the store's own count)
+PURCHASE_ALL = 1    # everyone, including key activations and free-to-play players
+# (2 is "not bought on Steam"; checked 2026-10-12: Balatro's first 30 days 19,248 + 2,260 = 21,508,
+# Marvel Rivals' 0 + 123,761 = 123,761, since nobody buys a free game)
+
+
+def review_counts(client: Client, appid: int, start_ts: int, end_ts: int,
+                  purchase_type: int = PURCHASE_STEAM) -> dict:
     """Review totals for reviews written in [start_ts, end_ts] (both ends included) that still exist.
 
-    Counts Steam purchases only, with Steam's default off-topic filter,
-    which is how the store's own review count works. Reviews from key
-    activations (often curator or giveaway copies) are left out.
+    By default counts Steam purchases only, with Steam's default off-topic
+    filter, which is how the store's own review count works. Reviews from key
+    activations (often curator or giveaway copies) are left out. Free games
+    need PURCHASE_ALL: their players buy nothing, so a purchases-only count is
+    near zero.
 
     Uses IUserReviewsService/GetAppReviews, which replaces store appreviews
     (retired 2026-10-22). No key: keyless calls share a lower rate limit and
@@ -161,7 +170,7 @@ def review_counts(client: Client, appid: int, start_ts: int, end_ts: int) -> dic
     so no cursor is sent; num_per_page=1 keeps the reply small (0 means 20).
     """
     res = client.get_json(f"{API}/IUserReviewsService/GetAppReviews/v1/", _input_json({
-        "appid": appid, "filter": 1, "languages": ["all"], "purchase_type": 0, "num_per_page": 1,
+        "appid": appid, "filter": 1, "languages": ["all"], "purchase_type": purchase_type, "num_per_page": 1,
         "date_range_start": start_ts, "date_range_end": end_ts,
     })).get("response") or {}
     q = res.get("query_summary")
