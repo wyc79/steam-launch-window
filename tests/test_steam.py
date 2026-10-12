@@ -3,6 +3,7 @@ import json
 import pytest
 
 from pipeline import steam
+from pipeline.http import HTTPStatusError
 
 # Shapes copied from real IStoreBrowseService/GetItems responses (2026-10-10), trimmed.
 BOLTGUN2 = {
@@ -138,10 +139,56 @@ def test_wishlist_ranking_advances_by_rows_returned():
     assert client.starts[:3] == [0, 25, 50]
 
 
-def test_review_counts_raises_unavailable_on_failure():
-    class C:
-        def get_json(self, url, params=None):
-            return {"success": 2}
+class ReviewsClient:
+    """Serves one GetAppReviews reply (or raises it) and records the request."""
 
+    def __init__(self, reply):
+        self.reply, self.calls = reply, []
+
+    def get_json(self, url, params=None):
+        self.calls.append((url, json.loads(params["input_json"])))
+        if isinstance(self.reply, Exception):
+            raise self.reply
+        return self.reply
+
+
+# Real IUserReviewsService/GetAppReviews replies (2026-10-11), reviews trimmed.
+# Shroom and Gloom, first 30 days: the old appreviews call gave the same 1719 / 1604 / 115.
+REVIEWS_WINDOW = {"response": {
+    "query_summary": {"num_reviews": 1, "review_score": 8, "review_score_desc": "Very Positive",
+                      "total_positive": 1604, "total_negative": 115, "total_reviews": 1719},
+    "reviews": [{"recommendationid": "1", "timestamp_created": 1789100000, "voted_up": True}],
+    "cursor": "AoJ4", "total_matching": 1719}}
+REVIEWS_EMPTY_WINDOW = {"response": {
+    "query_summary": {"num_reviews": 0, "review_score": 0, "review_score_desc": "No user reviews",
+                      "total_positive": 0, "total_negative": 0, "total_reviews": 0},
+    "cursor": "*", "total_matching": 0}}
+REVIEWS_UNKNOWN_APP = {"response": {}}
+
+
+def test_review_counts_reads_the_window_totals():
+    client = ReviewsClient(REVIEWS_WINDOW)
+    assert steam.review_counts(client, 3271280, 1789055435, 1789055435 + 30 * 86400) == {
+        "total": 1719, "positive": 1604, "negative": 115}
+    url, payload = client.calls[0]
+    assert url == f"{steam.API}/IUserReviewsService/GetAppReviews/v1/"
+    assert payload == {"appid": 3271280, "filter": 1, "languages": ["all"], "purchase_type": 0,
+                       "num_per_page": 1, "date_range_start": 1789055435,
+                       "date_range_end": 1789055435 + 30 * 86400}
+    assert "cursor" not in payload and "key" not in payload  # totals come only on the first page
+
+
+def test_review_counts_zero_in_window_is_a_real_zero():
+    assert steam.review_counts(ReviewsClient(REVIEWS_EMPTY_WINDOW), 1, 0, 1) == {
+        "total": 0, "positive": 0, "negative": 0}
+
+
+@pytest.mark.parametrize("reply", [REVIEWS_UNKNOWN_APP, {}, {"response": {"query_summary": {"num_reviews": 0}}}])
+def test_review_counts_raises_unavailable_without_totals(reply):
     with pytest.raises(steam.Unavailable):
-        steam.review_counts(C(), 1, 0, 1)
+        steam.review_counts(ReviewsClient(reply), 1, 0, 1)
+
+
+def test_review_counts_passes_http_errors_up():
+    with pytest.raises(HTTPStatusError):
+        steam.review_counts(ReviewsClient(HTTPStatusError(429, "u")), 1, 0, 1)

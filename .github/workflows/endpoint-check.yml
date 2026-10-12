@@ -6,7 +6,7 @@ name: endpoint check
 
 on:
   schedule:
-    - cron: "0 12 * * 3"  # Wednesdays
+    - cron: "23 12 * * 3"  # Wednesdays
   workflow_dispatch:
 
 jobs:

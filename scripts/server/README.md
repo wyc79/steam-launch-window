@@ -7,10 +7,20 @@ small daily and weekly increments.
 | Job | Requests | Time | Service |
 |---|---|---|---|
 | History backfill: 30-day review counts and the hidden Early Access check | about 70,000 | about 20 h at 1/s | `steam-history-backfill` |
-| First follower scrape: about 11,000 tracked games | about 11,000 | about 15 h at 1 per 5 s | `steam-follower-scrape` |
+| Optional: first-day and first-week review counts for all launches since 2022 | about 100,000 | about 2 to 3 days | none, a one-off command (section 4) |
+| ~~First follower scrape~~ | retired 2026-10-11 | | `steam-follower-scrape` |
 
-They use different Steam hosts, so they can run at the same time.
-Both need Python 3.11+ and git.
+The follower scrape is retired: steamcommunity.com blocked the IP for 8+ hours
+after about 60 requests. Followers now come from Games Popularity in the daily
+GitHub Actions job, which does not use this box. Do not request steamcommunity.com
+from this network while the block may still be on.
+Both jobs need Python 3.11+ and git.
+
+**Steam retires the old reviews endpoint (`appreviews`) on 2026-10-22.** Code from
+before PR #13's review fixes still calls it. Any review job still running then must
+be stopped, updated (`git pull` once the fix is on `main`) and restarted, or games it reaches
+may be marked as having no review data (how the old endpoint fails is not known). The CSV and its checkpoints
+work with both versions, so the restart goes on where it stopped.
 
 ## 1. Get the code
 
@@ -45,25 +55,23 @@ systemctl --user enable --now steam-history-backfill
 
 It stops by itself when every game is done ("backfill complete").
 
-## 3. First follower scrape
+## 3. First follower scrape (retired)
 
-The script takes the newest upcoming snapshot from the `data` branch, then
-fetches follower counts one request every 5 seconds. steamcommunity.com blocks
-for a long time after a 429, so the first 429 stops the run and the script
-waits an hour before trying again. While blocked, it makes about one request
-an hour.
+Kept for reference only. `run_follower_scrape.sh` and its service still work,
+but do not start them: the community site blocks this IP for many hours.
+
+## 4. Optional: first-day and first-week review counts
+
+After the history backfill is merged and this box runs the current `main`, this
+fills `reviews_1d` and `reviews_7d` for every launch since 2022 (two requests per
+game with any reviews in its first 30 days; games with none get 0 without a request):
 
 ```bash
-cd ~/steam-launch-window
-cp scripts/server/steam-follower-scrape.service ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now steam-follower-scrape
+cd ~/steam-launch-window && git pull
+.venv/bin/python -m pipeline.collect_history --skip-listing --early-since 2022-01-01   --budget-minutes 1440 --fail-if-incomplete
 ```
 
-To change the rate, edit `Environment=COMMUNITY_INTERVAL=5` in
-`~/.config/systemd/user/steam-follower-scrape.service`, then run
-`systemctl --user daemon-reload && systemctl --user restart steam-follower-scrape`.
-It stops by itself when every tracked game has a count ("follower scrape complete").
+Rerun it until it exits with 0. Then copy `history/games.csv` back as in "When they are done".
 
 ## Keep them running after logout and reboots
 
@@ -74,9 +82,8 @@ sudo loginctl enable-linger "$USER"
 ## Watch them
 
 ```bash
-systemctl --user status steam-history-backfill steam-follower-scrape --no-pager
+systemctl --user status steam-history-backfill --no-pager
 sudo journalctl _SYSTEMD_USER_UNIT=steam-history-backfill.service -f
-sudo journalctl _SYSTEMD_USER_UNIT=steam-follower-scrape.service -f
 ```
 
 On Raspberry Pi OS your user may not be able to read its own journal;
@@ -88,11 +95,10 @@ Copy the results back to the machine that commits the data branch:
 
 ```bash
 scp <user>@<server>:steam-launch-window/_data/history/games.csv _data/history/
-scp -r <user>@<server>:steam-launch-window/_data/followers _data/
 ```
 
-Then remove the services:
+Then remove the service:
 
 ```bash
-systemctl --user disable --now steam-history-backfill steam-follower-scrape
+systemctl --user disable --now steam-history-backfill
 ```

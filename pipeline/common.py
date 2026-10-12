@@ -9,7 +9,7 @@ import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from .http import Client, RateLimited
+from .http import Client, HTTPStatusError, RateLimited
 
 STORE_HOST = "store.steampowered.com"
 COMMUNITY_HOST = "steamcommunity.com"
@@ -78,8 +78,9 @@ def run_pass(todo, fetch, label: str, budget: Budget, save, *,
     """Call fetch(item) for each item until done, out of budget, or blocked.
 
     `fetch` returns True if it made a request (counts toward checkpoints).
-    Errors skip the item, which stays due for the next run. A RateLimited
-    error, or too many errors in a row, stops the pass at once.
+    Errors skip the item, which stays due for the next run. A rate limit
+    (RateLimited, or a 429 that outlasted the retries), or too many errors
+    in a row, stops the pass at once.
     Returns False if the pass stopped early.
     """
     fetched = errors = consecutive = 0
@@ -94,6 +95,9 @@ def run_pass(todo, fetch, label: str, budget: Budget, save, *,
             log.error("%s: rate limited (%s), stopping the run; retry later", label, e)
             return False
         except Exception as e:  # noqa: BLE001 - leave the item for the next run
+            if isinstance(e, HTTPStatusError) and e.status == 429:  # still 429 after the client's retries
+                log.error("%s: rate limited (%s), stopping the run; retry later", label, e)
+                return False
             errors += 1
             consecutive += 1
             log.warning("%s failed for %s: %s", label, key(item), e)

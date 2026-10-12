@@ -1,6 +1,8 @@
 # Phase 2 plan: analysis
 
-Status: draft for review. Nothing here is built yet.
+Status: draft for review. Nothing here is built yet. Updated 2026-10-11 after the
+pipeline audit: followers now come from Games Popularity, with history back to
+2024-03-15, which changes sections 2 and 3.
 
 Phase 2 turns the collected data into two things the website shows:
 
@@ -74,12 +76,13 @@ Left out:
 
 ### Hype weight
 
-Followers are the only hype number that exists for many games, but only for
-the ~11,000 tracked games.
+Followers are the only hype number that exists for most games. They come from
+Games Popularity for every upcoming game with a date or a wishlist rank (about
+20,000), pulled once every 60 days, so a value can be up to about 60 days old.
 
-- Tracked game: weight = followers.
-- Ranked but not yet fetched: estimate followers from wishlist rank, using a
-  curve fitted on games that have both.
+- Game with a follower count: weight = its newest count.
+- Ranked but no count yet (or `null` / `not_in_dataset`): estimate followers
+  from wishlist rank, using a curve fitted on games that have both.
 - Neither: no weight. These show up in "No hype data" instead of being guessed.
 
 Followers are heavily skewed (a few games have 100,000+). The page will show
@@ -90,8 +93,9 @@ each week so one giant does not hide the rest.
 
 Daily snapshots let us measure how often dates slip: what share of
 "November" games really launch in November, and how often exact dates move.
-After about 2 months of snapshots, spread weights can use these rates
-instead of "evenly over the range". Not in the first version.
+The published `release_changes` table already lists every change. After about
+2 months of snapshots, spread weights can use these rates instead of "evenly
+over the range". Not in the first version.
 
 ## 3. What history says (the model)
 
@@ -117,6 +121,13 @@ outcome, `reviews_30d x price` (a revenue proxy), answers "which week earns the
 most". Both are fitted and reported; if they disagree, the page says so.
 
 For the free-game model, only `reviews_30d` is used (price and revenue are zero).
+
+Checks with other outcomes, where the data exists:
+- `reviews_7d`: the first week only, so less affected by what happens after
+  launch (launches from October 2026 on, or all launches after the optional Pi
+  backfill).
+- Peak players in the first week and month, from Games Popularity (launches
+  from about September 2026 on). Useful for free games, where reviews mean less.
 
 39% of launches get zero reviews and a few get tens of thousands, so the model
 is for counts:
@@ -149,22 +160,36 @@ The site shows a free-to-play developer the free-game results.
 | **Early Access** | launch_type = early_access |
 | **Demo** | had a demo before launch |
 | **Publisher reach** | publisher's number of earlier releases in the data; part of a franchise |
+| **Pre-launch followers** | log(1 + followers) 7 days before launch, from Games Popularity history; launches from 2024-06 on (see the caveat below) |
 
-### The big caveat: hype we cannot see
+### The big caveat: hype
 
-The biggest driver of launch reviews is pre-launch hype (wishlists), and we do
-not have it for past launches. Wishlist rank and followers only exist from
-now on. Hype also drives date choice: big games pick their weeks, and small
-games avoid them. So the competition effect is **observational and confounded**.
+The biggest driver of launch reviews is pre-launch hype (wishlists). Wishlist
+counts are never public, and wishlist rank only exists from October 2026. But
+Games Popularity has daily follower history back to 2024-03-15, so launches
+from about mid-2024 have **pre-launch followers**. Hype also drives date choice:
+big games pick their weeks, and small games avoid them. So the competition
+effect is **observational and confounded**.
 
 What we do about it:
-- Control for what we can see: price, publisher reach, franchise, Early Access, demo.
+- **Main sample: launches from 2024-06 on,** with log followers 7 days before
+  launch as a control. The 2022 to mid-2024 launches, without it, are a check.
+- Report the competition effect with and without the follower control. How much
+  it shrinks shows how much of it was hype.
+- Control for what else we can see: price, publisher reach, franchise, Early Access, demo.
 - Report the results again for "small games only" (under $20, no franchise,
   publisher with at most 2 earlier releases), where strategic date choice is weaker.
+- Placebo check: competition in an unrelated week (for example 8 weeks after
+  launch) should show no effect.
 - Use robust standard errors clustered by launch week.
 - Word every result as "launches in busier weeks got X% fewer reviews on
   average, after adjusting for ...", never "busy weeks cause X% fewer reviews".
-- Once a year of snapshots exists, refit with pre-launch followers as a control.
+
+**Tags are today's view.** Tags keep being voted after launch, so a niche built
+from today's tags uses some post-launch information. For launches from October
+2026 on, use the frozen pre-launch row in `upcoming/apps.csv` (`last_seen`
+before launch). For older launches, the top 5 / top 20 check in section 1 shows
+whether this matters.
 
 ### What gets reported
 
@@ -223,12 +248,17 @@ spreading, niche matching and event overlap logic. No Steam requests.
 
 ## Known data limits that feed into this
 
-- History shows today's price, demo and Early Access state, not launch-day state.
+- History shows today's price, demo, tags and Early Access state, not launch-day
+  state. For launches from October 2026 on, the snapshots and the frozen
+  `upcoming/apps.csv` row give the pre-launch state.
 - Hidden Early Access is only checked for games with 50+ reviews (~1.5%
   slip through below that).
-- Delisted games are missing, so older years look a bit better than they were.
-- Followers are only tracked for ~11,000 upcoming games; wishlist rank only
-  covers the top ~5,300.
+- Games delisted before collection started are missing, so older years look a
+  bit better than they were. Rows of games delisted later are kept.
+- Follower history starts 2024-03-15. Some small games have stale or missing
+  series (status `stale`, `null`, `not_in_dataset`). The backfill of past
+  launches takes weeks to months at about 900 requests a day. Wishlist rank only
+  covers the top ~5,300, from October 2026.
 - Upcoming games almost never have a price, so price only enters through history.
 - "Not marked free" before launch is assumed to mean paid; how often that is
   right is only known after a few weeks of snapshots.

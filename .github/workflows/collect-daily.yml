@@ -1,28 +1,31 @@
 name: collect daily
 
-# Daily: snapshot every coming-soon game, then refresh follower counts that
-# are due under the tiered schedule (see pipeline/collect_followers.py).
-# The full first scrape is done outside Actions; this job only does increments.
+# Daily: snapshot every coming-soon game, then pull follower and player history
+# from Games Popularity within its daily budget (see pipeline/collect_gp.py).
+# A second, later schedule is a catch-up: it skips the snapshot if today's is
+# already saved with working wishlist ranks, so a dropped or failed 18:30 run
+# (including a failed wishlist crawl) is retried once.
 #
 # Off by default. Repository variables (Settings > Secrets and variables >
 # Actions > Variables) turn parts on:
 #   COLLECT_DAILY=on      let the schedule run this job
-#   COLLECT_FOLLOWERS=on  include the follower step in scheduled runs
-# A manual run (Run workflow button) always does the snapshot and asks
-# whether to include followers.
+#   COLLECT_GP=on         include the Games Popularity step in scheduled runs
+#   GP_DATASET_REPO       private Hugging Face dataset for that data, e.g. <user>/steam-launch-gp
+#   GP_DAILY_BUDGET       requests per day (default 900)
+# Secrets: GP_API_KEY, HF_TOKEN (write access to GP_DATASET_REPO).
+# A manual run (Run workflow button) does the snapshot and asks whether to
+# include Games Popularity.
 
 on:
   schedule:
     - cron: "30 18 * * *"  # after Steam's 10:00 Pacific store updates
+    - cron: "47 21 * * *"  # catch-up
   workflow_dispatch:
     inputs:
-      followers:
-        description: "Also refresh follower counts"
+      gp:
+        description: "Also pull Games Popularity followers and players"
         type: boolean
         default: false
-      follower_budget_minutes:
-        description: "Time budget for the follower step"
-        default: "200"
 
 permissions:
   contents: write
@@ -30,33 +33,60 @@ permissions:
 concurrency:
   group: data-branch
   cancel-in-progress: false
+  queue: max  # wait in line instead of cancelling a waiting run
 
 jobs:
   collect:
     if: github.event_name == 'workflow_dispatch' || vars.COLLECT_DAILY == 'on'
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 120
+    env:
+      GP_ON: ${{ inputs.gp || (github.event_name == 'schedule' && vars.COLLECT_GP == 'on') }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
           ref: data
           path: _data
+      - name: Is today's snapshot already saved, with wishlist ranks?
+        id: today
+        run: |
+          day=$(date -u +%F)
+          # ranking_ok is the last column of runs.csv
+          if [ -f "_data/upcoming/snapshots/$day.csv.gz" ] && grep -q "^$day,.*,1$" _data/upcoming/runs.csv 2>/dev/null; then
+            echo "done=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
           cache: pip
-      - run: pip install .
+      - run: pip install ".[hf]"
 
       - name: Upcoming snapshot
+        if: steps.today.outputs.done != 'true'
         run: python -m pipeline.collect_upcoming --store-interval 2
       - name: Commit snapshot
-        if: always()  # keep whatever was saved, even if the collector failed
+        if: always() && steps.today.outputs.done != 'true'  # keep whatever was saved, even if the collector failed
         run: scripts/commit_data.sh "upcoming snapshot $(date -u +%F)"
 
-      - name: Follower counts
-        if: inputs.followers || (github.event_name == 'schedule' && vars.COLLECT_FOLLOWERS == 'on')
-        run: python -m pipeline.collect_followers --budget-minutes "${{ inputs.follower_budget_minutes || '200' }}"
-      - name: Commit follower counts
-        if: always() && (inputs.followers || (github.event_name == 'schedule' && vars.COLLECT_FOLLOWERS == 'on'))
-        run: scripts/commit_data.sh "followers $(date -u +%F)"
+      - name: Games Popularity
+        if: ${{ !cancelled() && env.GP_ON == 'true' }}  # runs even if the snapshot failed: it does not need ranks
+        env:
+          GP_API_KEY: ${{ secrets.GP_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          GP_DATASET_REPO: ${{ vars.GP_DATASET_REPO }}
+          GP_DAILY_BUDGET: ${{ vars.GP_DAILY_BUDGET }}
+        run: |
+          day=$(date -u +%F)
+          python -m pipeline.hf_sync pull --repo "$GP_DATASET_REPO" --dest _gp \
+            --file state.csv --file runs.csv --file "followers/$day.csv.gz" --file "players/$day.csv.gz"
+          python -m pipeline.collect_gp --data-dir _data --gp-dir _gp
+      - name: Save Games Popularity data
+        if: always() && env.GP_ON == 'true'  # keep progress even if the collector stopped early
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          GP_DATASET_REPO: ${{ vars.GP_DATASET_REPO }}
+        run: |
+          if [ -d _gp ]; then
+            python -m pipeline.hf_sync push --repo "$GP_DATASET_REPO" --src _gp --message "gp $(date -u +%F)"
+          fi

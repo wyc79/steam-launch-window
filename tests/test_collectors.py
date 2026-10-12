@@ -158,6 +158,7 @@ def test_run_pass_skips_single_errors_and_finishes():
     (HTTPStatusError(404, "u"), True),
     (HTTPStatusError(403, "u"), True),
     (HTTPStatusError(503, "u"), False),
+    (HTTPStatusError(429, "u"), False),  # rate limit that outlasted the retries
     (RateLimited("u"), False),
     (RuntimeError("network"), False),
 ])
@@ -165,9 +166,12 @@ def test_is_gone(err, gone):
     assert ch.is_gone(err) is gone
 
 
-def test_unavailable_rows_are_not_retried():
-    row = {"reviews_30d": "", "reviews_30d_source": "unavailable", "launch_ts": "1000"}
-    assert not ch.needs_reviews(row, 10**10)
+def test_unavailable_rows_are_retried_only_after_90_days():
+    row = {"reviews_30d": "", "reviews_30d_source": "unavailable", "launch_ts": "1000",
+           "reviews_30d_fetched": "2026-07-14"}
+    assert not ch.needs_reviews(row, 10**10, date(2026, 10, 11))  # 89 days ago
+    assert ch.needs_reviews(row, 10**10, date(2026, 10, 12))      # 90 days ago
+    assert not ch.needs_reviews({**row, "reviews_30d_fetched": ""}, 10**10, date(2026, 10, 12))
 
 
 def test_skip_listing_without_file_fails_loudly(tmp_path):
@@ -215,3 +219,152 @@ def test_csv_round_trip_and_deterministic_gzip(tmp_path):
     assert (tmp_path / "t.csv.gz").read_bytes() == first
     assert storage.read_csv(tmp_path / "t.csv.gz") == [{"a": "1", "b": "x,y"}, {"a": "2", "b": ""}]
     assert storage.read_csv(tmp_path / "missing.csv") == []
+
+
+def test_replace_row_keeps_one_row_per_key(tmp_path):
+    path = tmp_path / "runs.csv"
+    storage.replace_row(path, {"date": "2026-10-11", "n": 1}, ["date", "n"], key="date")
+    storage.replace_row(path, {"date": "2026-10-12", "n": 2}, ["date", "n"], key="date")
+    storage.replace_row(path, {"date": "2026-10-11", "n": 3}, ["date", "n"], key="date")
+    assert storage.read_csv(path) == [{"date": "2026-10-11", "n": "3"}, {"date": "2026-10-12", "n": "2"}]
+
+
+def test_merge_apps_records_last_seen():
+    existing = [{"appid": "3", "name": "Old", "first_seen": "2026-01-01", "last_seen": "2026-01-05"},
+                {"appid": "9", "name": "Launched", "first_seen": "2026-01-01", "last_seen": "2026-02-01"}]
+    rows = cu.merge_apps(existing, [{"appid": 3, "name": "New"}], "2026-10-11")
+    assert [(str(r["appid"]), r["last_seen"]) for r in rows] == [("3", "2026-10-11"), ("9", "2026-02-01")]
+
+
+def _fake_upcoming(monkeypatch, ranking):
+    items = [{"appid": 5, "name": "A", "release": {"coming_soon_display": "text_tba"}}]
+    monkeypatch.setattr(steam, "tag_list", lambda client: ("v", {492: "Indie"}))
+    monkeypatch.setattr(steam, "store_query", lambda *a, **k: items)
+    monkeypatch.setattr(steam, "wishlist_ranking", ranking)
+
+
+def test_upcoming_keeps_the_snapshot_when_the_wishlist_crawl_fails(tmp_path, monkeypatch):
+    def broken(client, cache_ttl=None):
+        raise HTTPStatusError(429, "https://store.steampowered.com/search/results/")
+    _fake_upcoming(monkeypatch, broken)
+    code = cu.main(["--data-dir", str(tmp_path), "--cache-dir", str(tmp_path / "c"), "--today", "2026-10-11"])
+    assert code == 1  # the job still fails, so GitHub reports it
+    snap = storage.read_csv(tmp_path / "upcoming/snapshots/2026-10-11.csv.gz")
+    assert [(r["appid"], r["wishlist_rank"]) for r in snap] == [("5", "")]
+    runs = storage.read_csv(tmp_path / "upcoming/runs.csv")
+    assert runs[0]["ranking_ok"] == "0"
+
+
+def test_upcoming_rerun_replaces_the_days_run_row(tmp_path, monkeypatch):
+    _fake_upcoming(monkeypatch, lambda client, cache_ttl=None: [5])
+    args = ["--data-dir", str(tmp_path), "--cache-dir", str(tmp_path / "c"), "--today", "2026-10-11"]
+    assert cu.main(args) == 0 and cu.main(args) == 0
+    runs = storage.read_csv(tmp_path / "upcoming/runs.csv")
+    assert len(runs) == 1 and runs[0]["ranking_ok"] == "1" and runs[0]["ranked"] == "1"
+
+
+# -- history: listing merge and early review windows ---------------------------
+
+def _item(appid, ts, reviews=5):
+    return {"appid": appid, "name": f"G{appid}", "release": {"steam_release_date": ts},
+            "reviews": {"summary_filtered": {"review_count": reviews}}}
+
+
+def _run_history(tmp_path, monkeypatch, listed, existing=(), counts=None, extra=()):
+    monkeypatch.setattr(ch, "list_month", lambda client, month: listed if month.month == 9 else [])
+    monkeypatch.setattr(steam, "get_items", lambda *a, **k: {})
+    calls = []
+
+    def review_counts(client, appid, start, end):
+        calls.append((int(appid), end - start))
+        return (counts or {}).get((int(appid), end - start), {"total": 3, "positive": 2, "negative": 1})
+    monkeypatch.setattr(steam, "review_counts", review_counts)
+    path = tmp_path / "history" / "games.csv"
+    if existing:
+        storage.write_csv(path, list(existing), ch.FIELDS)
+    ch.main(["--data-dir", str(tmp_path), "--cache-dir", str(tmp_path / "c"), "--since", "2026-09-01",
+             "--today", "2026-10-20", *extra])
+    return {r["appid"]: r for r in storage.read_csv(path)}, calls
+
+
+SEP_1 = 1788246000  # 2026-09-01 00:00 Pacific
+SEP_5 = SEP_1 + 4 * 86400
+
+
+def test_history_keeps_rows_that_drop_out_of_the_listing(tmp_path, monkeypatch):
+    gone = {"appid": 99, "name": "Delisted", "launch_date": "2026-09-02", "launch_ts": SEP_1 + 86400,
+            "launch_type": "full", "reviews_total_now": 4, "reviews_30d": 4, "reviews_30d_source": "api",
+            "reviews_30d_fetched": "2026-10-03", "first_listed": "2026-10-01", "last_listed": "2026-10-10"}
+    rows, _ = _run_history(tmp_path, monkeypatch, [_item(7, SEP_5)], existing=[gone])
+    assert rows["99"]["reviews_30d"] == "4" and rows["99"]["last_listed"] == "2026-10-10"
+    assert rows["7"]["first_listed"] == "2026-10-20" and rows["7"]["last_listed"] == "2026-10-20"
+
+
+def test_history_first_listed_survives_relisting(tmp_path, monkeypatch):
+    old = {"appid": 7, "launch_ts": SEP_5, "launch_type": "full", "first_listed": "2026-10-01",
+           "reviews_30d_source": "api", "reviews_30d": 3}
+    rows, _ = _run_history(tmp_path, monkeypatch, [_item(7, SEP_5)], existing=[old])
+    assert rows["7"]["first_listed"] == "2026-10-01" and rows["7"]["last_listed"] == "2026-10-20"
+
+
+def test_early_review_windows_for_new_launches(tmp_path, monkeypatch):
+    counts = {(7, 86400): {"total": 1, "positive": 1, "negative": 0},
+              (7, 7 * 86400): {"total": 2, "positive": 2, "negative": 0}}
+    rows, calls = _run_history(tmp_path, monkeypatch, [_item(7, SEP_5)], counts=counts,
+                               extra=["--early-since", "2026-09-01"])
+    assert (rows["7"]["reviews_1d"], rows["7"]["reviews_7d"]) == ("1", "2")
+    assert rows["7"]["reviews_early_fetched"] == "2026-10-20"
+    assert sorted(w for a, w in calls if a == 7) == [86400, 7 * 86400, 30 * 86400]
+
+
+def test_early_review_windows_skip_requests_when_30_day_count_is_zero(tmp_path, monkeypatch):
+    rows, calls = _run_history(tmp_path, monkeypatch, [_item(7, SEP_5, reviews=0)],
+                               extra=["--early-since", "2026-09-01"])
+    assert (rows["7"]["reviews_1d"], rows["7"]["reviews_7d"]) == ("0", "0")
+    assert calls == []
+
+
+def test_early_review_windows_only_after_early_since(tmp_path, monkeypatch):
+    rows, calls = _run_history(tmp_path, monkeypatch, [_item(7, SEP_5)], extra=["--early-since", "2026-10-01"])
+    assert rows["7"]["reviews_1d"] == "" and [w for _, w in calls] == [30 * 86400]
+
+
+def test_history_reads_an_older_format_file_without_losing_data(tmp_path, monkeypatch):
+    old_header = ("appid,name,launch_date,launch_ts,steam_release_ts,launch_type,early_access_now,price_cents,"
+                  "is_free,tags,developers,publishers,franchises,demo_appids,demo_release_ts,demo_before_launch,"
+                  "reviews_total_now,reviews_30d,reviews_30d_positive,reviews_30d_source,reviews_30d_fetched\n")
+    path = tmp_path / "history" / "games.csv"
+    path.parent.mkdir(parents=True)
+    path.write_text(old_header +
+                    f"7,G7,2026-09-05,{SEP_5},,full,0,,0,,,,,,,,5,4,3,api,2026-10-06\n"
+                    f"99,Gone,2026-09-02,{SEP_1 + 86400},,full,0,,0,,,,,,,,2,2,2,api,2026-10-03\n")
+    rows, calls = _run_history(tmp_path, monkeypatch, [_item(7, SEP_5)])
+    assert (rows["7"]["reviews_30d"], rows["7"]["first_listed"]) == ("4", "2026-10-20")
+    assert (rows["99"]["reviews_30d"], rows["99"]["first_listed"]) == ("2", "")
+    assert [w for _, w in calls] == []  # counts already there, nothing refetched
+    assert set(ch.FIELDS) <= set(rows["7"])
+
+
+def test_run_pass_stops_when_a_429_outlasts_the_retries():
+    calls = []
+
+    def fetch(i):
+        calls.append(i)
+        raise HTTPStatusError(429, "https://api.steampowered.com/x")
+
+    assert run([1, 2, 3], fetch, []) is False
+    assert calls == [1]
+
+
+def test_history_rate_limit_leaves_the_game_due_instead_of_unavailable(tmp_path, monkeypatch):
+    def limited(client, appid, start, end):
+        raise HTTPStatusError(429, "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/")
+
+    monkeypatch.setattr(ch, "list_month", lambda client, month: [_item(7, SEP_5)] if month.month == 9 else [])
+    monkeypatch.setattr(steam, "get_items", lambda *a, **k: {})
+    monkeypatch.setattr(steam, "review_counts", limited)
+    ch.main(["--data-dir", str(tmp_path), "--cache-dir", str(tmp_path / "c"), "--since", "2026-09-01",
+             "--today", "2026-10-20", "--early-since", "2026-09-01"])
+    row = storage.read_csv(tmp_path / "history" / "games.csv")[0]
+    assert (row["reviews_30d_source"], row["reviews_30d_fetched"], row["reviews_early_fetched"]) == ("", "", "")
+    assert ch.needs_reviews(row, ch.pacific_ts(date(2026, 10, 20)), date(2026, 10, 20))

@@ -2,11 +2,15 @@
 
 Outputs (under --data-dir):
   upcoming/snapshots/YYYY-MM-DD.csv.gz  one row per game: release date fields, wishlist rank
-  upcoming/apps.csv                     latest name, developer, tags, demo per game ever seen
-  upcoming/runs.csv                     one line per run, for monitoring
+  upcoming/apps.csv                     latest name, developer, tags, demo per game ever seen;
+                                        last_seen is the last day the game was coming soon,
+                                        so a launched game's row shows its pre-launch metadata
+  upcoming/runs.csv                     one line per day, for monitoring (a rerun replaces it)
   tags.csv                              tag id to name
 
 Rerunning on the same day reuses cached pages, so a failed run can resume.
+If the wishlist crawl fails, the snapshot is still written with empty ranks,
+runs.csv says ranking_ok=0, and the exit code is 1.
 """
 
 from __future__ import annotations
@@ -21,9 +25,9 @@ from .common import base_parser, setup
 SNAPSHOT_FIELDS = ["appid", "release_ts", "display", "raw", "precision", "date", "date_end",
                    "date_ok", "early_access", "wishlist_rank", "price_cents"]
 APP_FIELDS = ["appid", "name", "developers", "publishers", "franchises", "tags",
-              "demo_appids", "is_free", "languages", "audio_languages", "first_seen"]
+              "demo_appids", "is_free", "languages", "audio_languages", "first_seen", "last_seen"]
 RUN_FIELDS = ["date", "games", "dated", "ranked", "ranked_not_listed", "date_mismatch",
-              "requests", "seconds"]
+              "requests", "seconds", "ranking_ok"]
 
 DATA_REQUEST = {"include_release": True, "include_tag_count": 20, "include_basic_info": True,
                 "include_supported_languages": True}
@@ -50,6 +54,7 @@ def merge_apps(existing: list[dict], items: list[dict], today: str) -> list[dict
         by_id[it["appid"]] = {
             "appid": it["appid"], **steam.meta_fields(it),
             "first_seen": old.get("first_seen") or today,
+            "last_seen": today,
         }
     return [by_id[a] for a in sorted(by_id)]
 
@@ -68,8 +73,13 @@ def main(argv=None) -> int:
     items = steam.store_query(client, {"coming_soon_only": True, "type_filters": steam.GAMES_ONLY},
                               DATA_REQUEST, cache_ttl=CACHE_TTL)
     log.info("coming-soon games: %d", len(items))
-    ranking = steam.wishlist_ranking(client, cache_ttl=CACHE_TTL)
-    log.info("wishlist-ranked games: %d", len(ranking))
+    try:
+        ranking = steam.wishlist_ranking(client, cache_ttl=CACHE_TTL)
+        ranking_ok = True
+        log.info("wishlist-ranked games: %d", len(ranking))
+    except Exception as e:  # noqa: BLE001 - keep the day's release dates even without ranks
+        log.error("wishlist crawl failed (%s); writing the snapshot without ranks", e)
+        ranking, ranking_ok = [], False
 
     snapshot = build_snapshot(items, ranking)
     storage.write_csv(out / "upcoming" / "snapshots" / f"{day}.csv.gz", snapshot, SNAPSHOT_FIELDS)
@@ -88,11 +98,12 @@ def main(argv=None) -> int:
         "date_mismatch": sum(1 for r in snapshot if not r["date_ok"]),
         "requests": client.requests_made,
         "seconds": round(time.monotonic() - t0),
+        "ranking_ok": int(ranking_ok),
     }
-    storage.append_csv(out / "upcoming" / "runs.csv", stats, RUN_FIELDS)
+    storage.replace_row(out / "upcoming" / "runs.csv", stats, RUN_FIELDS, key="date")
     log.info("precision counts: %s", dict(precisions))
     log.info("run stats: %s", stats)
-    return 0
+    return 0 if ranking_ok else 1
 
 
 if __name__ == "__main__":

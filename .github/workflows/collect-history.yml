@@ -11,7 +11,7 @@ name: collect history
 
 on:
   schedule:
-    - cron: "0 6 * * 1"  # Mondays
+    - cron: "17 6 * * 1"  # Mondays (off the hour: on-the-hour schedules are the most delayed)
   workflow_dispatch:
     inputs:
       budget_minutes:
@@ -24,6 +24,7 @@ permissions:
 concurrency:
   group: data-branch
   cancel-in-progress: false
+  queue: max  # wait in line instead of cancelling a waiting run
 
 jobs:
   collect:

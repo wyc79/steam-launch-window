@@ -50,3 +50,18 @@ def append_csv(path: str | Path, row: dict, fields: list[str]) -> None:
         if new:
             w.writeheader()
         w.writerow(row)
+
+
+def replace_row(path: str | Path, row: dict, fields: list[str], *, key: str) -> None:
+    """Write `row` into a small CSV log, replacing any row with the same `key` value.
+
+    Used for run logs, so rerunning a day leaves one row for it.
+    """
+    rows = read_csv(path)
+    for i, old in enumerate(rows):
+        if old.get(key) == str(row[key]):
+            rows[i] = row
+            break
+    else:
+        rows.append(row)
+    write_csv(path, rows, fields)

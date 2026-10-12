@@ -148,21 +148,26 @@ def follower_count(client: Client, appid: int) -> int | None:
 
 
 def review_counts(client: Client, appid: int, start_ts: int, end_ts: int) -> dict:
-    """Review totals for reviews written in [start_ts, end_ts] that still exist.
+    """Review totals for reviews written in [start_ts, end_ts] (both ends included) that still exist.
 
     Counts Steam purchases only, with Steam's default off-topic filter,
     which is how the store's own review count works. Reviews from key
     activations (often curator or giveaway copies) are left out.
+
+    Uses IUserReviewsService/GetAppReviews, which replaces store appreviews
+    (retired 2026-10-22). No key: keyless calls share a lower rate limit and
+    get 429 past it. Checked 2026-10-11 on 4 games: totals, positive and
+    negative equal the old endpoint's. The totals only come on the first page,
+    so no cursor is sent; num_per_page=1 keeps the reply small (0 means 20).
     """
-    res = client.get_json(f"{STORE}/appreviews/{appid}", {
-        "json": 1, "filter": "recent", "language": "all", "purchase_type": "steam",
-        "num_per_page": 0,
-        "start_date": start_ts, "end_date": end_ts, "date_range_type": "include",
-    })
-    if res.get("success") != 1:
-        raise Unavailable(f"appreviews has no data for {appid}: {res}")
-    q = res["query_summary"]
-    return {"total": q.get("total_reviews", 0), "positive": q.get("total_positive", 0),
+    res = client.get_json(f"{API}/IUserReviewsService/GetAppReviews/v1/", _input_json({
+        "appid": appid, "filter": 1, "languages": ["all"], "purchase_type": 0, "num_per_page": 1,
+        "date_range_start": start_ts, "date_range_end": end_ts,
+    })).get("response") or {}
+    q = res.get("query_summary")
+    if not q or "total_reviews" not in q:  # unknown or removed apps get an empty response
+        raise Unavailable(f"GetAppReviews has no data for {appid}: {res}")
+    return {"total": q["total_reviews"], "positive": q.get("total_positive", 0),
             "negative": q.get("total_negative", 0)}
 
 
