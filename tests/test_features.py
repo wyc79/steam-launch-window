@@ -155,14 +155,24 @@ def test_tiers():
     assert [F.tier(p) for p in (math.nan, 0, 4.99, 9.99, 10, 25, 25.01)] == [-1, -1, 0, 0, 1, 1, 2]
 
 
-def test_niche_median_price(tmp_path):
-    rows = [row(1, price=2500)] + [row(i, price=p) for i, p in zip(range(2, 8), (100, 200, 300, 400, 500, 600))]
-    rows += [row(20, tags=((PUZZLE, 1),), price=9999), row(21, price=0), row(22, langs="schinese", price=9999)]
+def test_niche_median_price_uses_only_the_year_before(tmp_path):
+    prices = (100, 200, 300, 400, 500, 600)
+    before = [row(i, day=WED - timedelta(days=10 * i), price=p) for i, p in zip(range(2, 8), prices)]
+    rows = [row(1, price=2500)] + before
+    rows += [row(20, day=WED - timedelta(days=1), tags=((PUZZLE, 1),), price=9999),
+             row(21, day=WED - timedelta(days=1), price=0),
+             row(22, day=WED - timedelta(days=1), langs="schinese", price=9999),
+             row(23, day=WED + timedelta(days=1), price=9999),             # later: never counts
+             row(24, day=WED - timedelta(days=400), price=9999)]           # more than a year before
     df = frame(tmp_path, rows)
     med = F.niche_median_price(df, df)
-    assert med[0] == pytest.approx(3.5)        # $1 to $6; itself, the puzzle, the $0 and the Chinese-only game left out
-    assert med[1] == pytest.approx(4.5)        # $2 to $6 and $25
+    assert med[0] == pytest.approx(3.5)        # $1 to $6; the puzzle, $0, Chinese-only, later and old games left out
+    assert med[1] == pytest.approx(4.0)        # game 2: only the five older ones, $2 to $6
+    assert math.isnan(med[6])                  # game 7 is the oldest of the six: no earlier niche
     assert math.isnan(med[7])                  # the puzzle game has no niche
+    market = F.market_median_price(df, df)
+    assert market[0] == pytest.approx(4.5)     # any niche, earlier, within a year: $1 to $6 and $99.99 twice
+    assert math.isnan(market[-1])              # nothing before the oldest game
 
 
 # --- events -----------------------------------------------------------------
@@ -238,6 +248,22 @@ def test_big_competitor_rules(tmp_path):
     for event, big, attention in zip(variants, (0, 0, 0, 0), (1, 1, 0, 0)):
         _, e = events_for(tmp_path, [row(1, day=day)], [event])
         assert (e["big_competitor"].iloc[0], e["attention_release"].iloc[0]) == (big, attention), event["name"]
+
+
+def test_event_windows_match_the_event_columns(tmp_path):
+    fest = ev("Steam Going Rogue Fest 2024", "themed_fest", date(2024, 6, 10), date(2024, 6, 17), tags=["Roguelike"])
+    hol = ev("China Spring Festival holiday 2024", "regional_holiday", date(2024, 2, 10), date(2024, 2, 17))
+    nat = ev("China National Day holiday 2024", "regional_holiday", date(2024, 10, 1), date(2024, 10, 7))
+    events = [SALE, fest, hol, nat]
+    days = [date(2024, 2, 12), date(2024, 6, 12), date(2024, 6, 28), date(2024, 10, 2), date(2024, 8, 1)]
+    rows = [row(i, day=d, tags=((ROGUE, 100),) if i % 2 else ((PUZZLE, 100),)) for i, d in enumerate(days, 1)]
+    df, e = events_for(tmp_path, rows, events)
+    names = F.top_tag_names(df, NAMES)
+    ts = df["launch_ts"].to_numpy(dtype=float)
+    for col in ("sale", "themed_fest", "cn_spring", "cn_national"):
+        windows = F.event_windows(events, col)
+        assert len(windows) == 1
+        assert list(F.window_indicator(ts, windows, names).astype(int)) == list(e[col]), col
 
 
 def test_holidays_cover_whole_pacific_days(tmp_path):

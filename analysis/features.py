@@ -9,8 +9,8 @@ Every launch gets one row. The main pieces:
   tag, the same price tier, or another week (the placebo).
 - Steam events from events.yaml, with the windows of `pipeline.events.window`
   (Steam events run 10:00 to 10:00 Pacific; holidays cover whole days).
-- Price against the niche: the game's price over the median price of all other
-  paid launches in its niche (any week).
+- The niche's price: the median price of the paid launches in the game's niche
+  in the year before it (earlier launches only).
 - Pre-launch followers: Games Popularity's count 7 days before launch,
   interpolated between the nearest observations.
 
@@ -35,6 +35,7 @@ from .heatmap import PANEL_TYPES
 from .site_data import is_free
 
 SAMPLE_START = date(2022, 1, 1)
+REACH_FULL_FROM = date(2023, 1, 1)  # publisher reach has a full year of history behind it from here
 GAP_DAYS = 31           # the 30-day review window must have closed
 SIMILAR = 0.3           # cosine similarity that counts as the same niche
 TOP = 10
@@ -45,6 +46,7 @@ PRE_SALE_DAYS = 7
 FOLLOWER_DAYS = 7       # followers are read this many days before launch
 ONE_SIDED_DAYS = 2      # without observations on both sides, the nearest one counts only this close
 MIN_NICHE = 5           # fewer other games in the niche: compare with the median of all paid games
+PRICE_DAYS = 365        # niche prices come from launches in this many days before the game
 TIERS = (10, 25)        # price tiers: under $10, $10 to $25, over $25
 HOLIDAYS = {"China Spring Festival holiday": "cn_spring", "China National Day holiday": "cn_national",
             "US Thanksgiving to Cyber Monday": "us_thanksgiving", "Christmas to New Year": "xmas_newyear"}
@@ -193,14 +195,24 @@ def similar_counts(targets: pd.DataFrame, pool: pd.DataFrame, top: int = TOP, th
     return out
 
 
+def _price_window(targets: pd.DataFrame, days: int) -> tuple[np.ndarray, np.ndarray]:
+    """Per target, the [start, end) launch times (UTC seconds) of the pool games that count
+    for its price comparison: launched in the `days` before it."""
+    t_ts = targets["launch_ts"].to_numpy(dtype=np.int64)
+    return t_ts - days * DAY, t_ts
+
+
 def niche_median_price(targets: pd.DataFrame, pool: pd.DataFrame, top: int = TOP, threshold: float = SIMILAR,
-                       chunk: int = 500) -> np.ndarray:
-    """Median price of the other pool games in each target's niche (any week; same
-    cosine and language rule as `similar_counts`). NaN with fewer than MIN_NICHE."""
+                       days: int = PRICE_DAYS, chunk: int = 500) -> np.ndarray:
+    """Median price of the paid pool games in each target's niche (same cosine and
+    language rule as `similar_counts`) that launched in the `days` before it, so no
+    later launch is used. NaN with fewer than MIN_NICHE."""
     pool = pool[pool["price"] > 0]
     order = np.argsort(pool["price"].to_numpy(), kind="stable")
     pool = pool.iloc[order]
     prices = pool["price"].to_numpy()
+    p_ts = pool["launch_ts"].to_numpy(dtype=np.int64)
+    lo_ts, hi_ts = _price_window(targets, days)
     index = _index(targets, pool)
     tv = tag_vectors(list(targets["tags"]), top, index).astype(np.float32)
     pv = tag_vectors(list(pool["tags"]), top, index).astype(np.float32).T.toarray()
@@ -210,13 +222,30 @@ def niche_median_price(targets: pd.DataFrame, pool: pd.DataFrame, top: int = TOP
     for start in range(0, len(targets), chunk):
         s = slice(start, start + chunk)
         ok = (tv[s] @ pv >= threshold - 1e-6) & (tl[s] @ pl > 0) & (t_app[s][:, None] != p_app[None, :])
-        run = np.cumsum(ok, axis=1, dtype=np.int32)
-        n = run[:, -1] if run.shape[1] else np.zeros(ok.shape[0], dtype=np.int32)
-        lo = np.argmax(run >= np.maximum((n + 1) // 2, 1)[:, None], axis=1)
-        hi = np.argmax(run >= (n // 2 + 1)[:, None], axis=1)
-        med = (prices[lo] + prices[hi]) / 2 if len(prices) else np.full(len(n), np.nan)
-        out[s] = np.where(n >= MIN_NICHE, med, np.nan)
+        ok &= (p_ts[None, :] >= lo_ts[s][:, None]) & (p_ts[None, :] < hi_ts[s][:, None])
+        out[s] = _sorted_median(ok, prices)
     return out
+
+
+def _sorted_median(ok: np.ndarray, prices: np.ndarray) -> np.ndarray:
+    """Row-wise median of `prices` (sorted ascending) where `ok`; NaN with fewer than MIN_NICHE."""
+    run = np.cumsum(ok, axis=1, dtype=np.int32)
+    n = run[:, -1] if run.shape[1] else np.zeros(ok.shape[0], dtype=np.int32)
+    if not len(prices):
+        return np.full(len(n), np.nan)
+    lo = np.argmax(run >= np.maximum((n + 1) // 2, 1)[:, None], axis=1)
+    hi = np.argmax(run >= (n // 2 + 1)[:, None], axis=1)
+    return np.where(n >= MIN_NICHE, (prices[lo] + prices[hi]) / 2, np.nan)
+
+
+def market_median_price(targets: pd.DataFrame, pool: pd.DataFrame, days: int = PRICE_DAYS) -> np.ndarray:
+    """Median price of all paid pool games that launched in the `days` before each
+    target (the fallback for small niches). NaN with fewer than MIN_NICHE."""
+    pool = pool[pool["price"] > 0].sort_values("launch_ts", kind="stable")
+    p_ts, prices = pool["launch_ts"].to_numpy(dtype=np.int64), pool["price"].to_numpy()
+    lo_ts, hi_ts = _price_window(targets, days)
+    a, b = np.searchsorted(p_ts, lo_ts, side="left"), np.searchsorted(p_ts, hi_ts, side="left")
+    return np.array([np.median(prices[i:j]) if j - i >= MIN_NICHE else np.nan for i, j in zip(a, b)])
 
 
 def _ts(dt: datetime) -> float:
@@ -229,7 +258,7 @@ def event_features(df: pd.DataFrame, events: list[dict], tag_names: dict[int, st
     days = np.array([d.toordinal() for d in df["launch_date"]])
     appids = df["appid"].to_numpy()
     out = {c: np.zeros(len(df), dtype=bool) for c in EVENT_COLUMNS}
-    top_names = [{tag_names.get(t) for t, _ in pairs[:TOP]} for pairs in df["tags"]]
+    top_names = top_tag_names(df, tag_names)
     fest_ends = []
     for e in events:
         start, end = (_ts(x) for x in event_data.window(e))
@@ -266,9 +295,48 @@ def event_features(df: pd.DataFrame, events: list[dict], tag_names: dict[int, st
     return pd.DataFrame({c: v.astype(int) for c, v in out.items()}, index=df.index)
 
 
+WINDOW_KINDS = {"sale": "seasonal_sale", "next_fest": "next_fest", "themed_fest": "themed_fest",
+                **{c: "regional_holiday" for c in HOLIDAYS.values()}}
+
+
+def event_windows(events: list[dict], column: str) -> list[dict]:
+    """The windows behind one window indicator of `event_features` (a key of
+    WINDOW_KINDS), as {"name", "start", "end" (UTC seconds), "tags" (a set, or None
+    for any game)}, in time order."""
+    kind = WINDOW_KINDS[column]
+    out = []
+    for e in events:
+        if e["type"] != kind or (kind == "themed_fest" and not e.get("tags")):
+            continue
+        holiday = next((c for n, c in HOLIDAYS.items() if e["name"].startswith(n)), None)
+        if kind == "regional_holiday" and holiday != column:
+            continue
+        start, end = (_ts(x) for x in event_data.window(e))
+        out.append({"name": e["name"], "start": start, "end": end,
+                    "tags": set(e["tags"]) if kind == "themed_fest" else None})
+    return sorted(out, key=lambda w: w["start"])
+
+
+def window_indicator(ts: np.ndarray, windows: list[dict], top_names: list[set] | None = None) -> np.ndarray:
+    """1 where the launch time falls in one of the windows (and, for a window with
+    tags, one of the game's top tags is among them)."""
+    out = np.zeros(len(ts), dtype=bool)
+    for w in windows:
+        inside = np.flatnonzero((ts >= w["start"]) & (ts < w["end"]))
+        if w["tags"] is not None:
+            inside = inside[np.array([bool(w["tags"] & top_names[i]) for i in inside], dtype=bool)]
+        out[inside] = True
+    return out
+
+
+def top_tag_names(df: pd.DataFrame, tag_names: dict[int, str]) -> list[set]:
+    return [{tag_names.get(t) for t, _ in pairs[:TOP]} for pairs in df["tags"]]
+
+
 def publisher_reach(df: pd.DataFrame) -> pd.Series:
     """Each game's publishers' earlier launches in the data (the most of any of its
-    publishers), counting any launch type with an earlier launch time."""
+    publishers), counting any launch type with an earlier launch time. The data
+    starts 2022-01-01, so for 2022 launches this undercounts (REACH_FULL_FROM)."""
     ts, pubs = df["launch_ts"].to_numpy(), list(df["publishers"])
     order = np.argsort(ts, kind="stable")
     seen: Counter = Counter()

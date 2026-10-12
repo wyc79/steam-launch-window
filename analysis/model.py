@@ -9,10 +9,11 @@ clustered by launch week. Writes model.json (effects as rate ratios with 95%
 intervals, sample sizes, checks, caveats) and prints a summary.
 
 Checks: a hurdle model; the revenue proxy (reviews x price, paid games);
-small games only; a placebo (competition 8 weeks after launch); top 5 and
-top 20 tags; the same primary tag; same price tier; with and without the
-pre-launch follower control; and 2026 launches held out against a baseline of
-genre, year and price.
+small games only; a placebo (the same competition measure, 8 weeks after
+launch); top 5 and top 20 tags; the same primary tag; same price tier; with and
+without the pre-launch follower control; 2026 launches held out against a
+baseline of genre, year and price; and a chance test for the event indicators
+(fake event windows on random weeks).
 
 Needs the `analysis` extra (pandas, statsmodels). Reads only local files.
 """
@@ -39,8 +40,8 @@ from . import features as F
 GENRES = 30
 HELD_OUT_FROM = date(2026, 1, 1)
 PLACEBO_WEEKS = 8
-SMALL_PRICE = 20        # small games: under $20, no franchise, publisher with at most 2 earlier launches
-SMALL_REACH = 2
+SMALL_PRICE = 20        # small games: under $20, no franchise, publisher with at most 2 earlier launches,
+SMALL_REACH = 2         # launched from F.REACH_FULL_FROM (earlier, publisher reach is undercounted)
 MIN_FIT = 100           # fewer games: a model is not fitted
 MIN_WEEKS = 20          # fewer launch weeks: no clustering, and the result is marked preliminary
 FOLLOWER_FROM = date(2024, 6, 1)  # follower history starts 2024-03-15
@@ -49,7 +50,12 @@ HEADLINE_WEEKS = 52
 MAX_ZERO_SHARE = 0.8     # a group where more launches than this have no reviews is marked unreliable
 HOUR_BANDS = ((0, "0_5"), (6, "6_9"), (10, "10_12"), (13, "13_17"), (18, "18_23"))
 HOUR_BASE = "10_12"
-COMPETITION = ("competition", "comp_tier", "comp_top5", "comp_top20", "comp_primary", "comp_placebo")
+COMPETITION = ("competition", "comp_tier", "comp_top5", "comp_top20", "comp_primary", "comp_placebo",
+               "comp_tier_placebo")
+PLACEBO = {"competition": "comp_placebo", "comp_tier": "comp_tier_placebo"}  # the same rule, 8 weeks later
+PERMUTED = ("sale", "next_fest", "themed_fest", "cn_spring", "cn_national", "us_thanksgiving", "xmas_newyear")
+PERMUTATIONS = 1000     # fake window sets per event indicator in the chance test
+CN_HOLIDAYS = ("cn_spring", "cn_national")
 LOG2 = math.log(2)
 
 LABELS = {
@@ -59,6 +65,7 @@ LABELS = {
     "comp_top20": "one more same-niche launch that week (niche from the top 20 tags)",
     "comp_primary": "one more launch with the same primary tag that week",
     "comp_placebo": "one more same-niche launch 8 weeks after launch (placebo)",
+    "comp_tier_placebo": "one more same-niche, same-tier launch 8 weeks after launch (placebo)",
     "big_competitor": "a big paid release on Steam within 3 days",
     "attention_release": "a big free-to-play or console-only release within 3 days",
     "sale": "launch during a seasonal sale",
@@ -76,9 +83,9 @@ LABELS = {
     "demo": "had a demo before launch",
     "franchise": "part of a franchise",
     "log_reach": "publisher's earlier launches, per doubling (of 1 + count)",
-    "log_price": "price, per doubling",
+    "log_price": "own price, per doubling, with the niche's price held fixed",
     "under_5": "price under $5",
-    "price_vs_niche": "price against the niche's median price, per doubling",
+    "log_niche_price": "the niche's median price (launches in the year before), per doubling, own price held fixed",
     "n_languages": "one more supported language",
     "en_audio": "English audio",
     "log_followers": "pre-launch followers, per doubling (of 1 + count)",
@@ -86,10 +93,10 @@ LABELS = {
     **{f"hour_{b}": f"launch hour {b.replace('_', ' to ')} Pacific (against 10 to 12)" for _, b in HOUR_BANDS
        if b != HOUR_BASE},
 }
-DOUBLING = {"log_reach", "log_price", "price_vs_niche", "log_followers"}
+DOUBLING = {"log_reach", "log_price", "log_niche_price", "log_followers"}
 KEY_EFFECTS = ("competition", "big_competitor", "sale", "pre_sale", "next_fest", "demo_last_fest", "themed_fest",
                "cn_spring", "cn_national", "us_thanksgiving", "xmas_newyear", "early_access", "demo",
-               "log_price", "under_5", "price_vs_niche")
+               "log_price", "under_5", "log_niche_price")
 
 log = logging.getLogger("model")
 
@@ -101,6 +108,8 @@ def build_frames(data_dir: Path, events_path: Path, gp_dir: Path | None = None,
     """The paid and free model frames, with every predictor, and counts for the report."""
     df = F.load_history(data_dir / "history" / "games.csv")
     info = {"prelaunch_tags": F.prelaunch_tags(df, data_dir / "upcoming" / "apps.csv")}
+    if today is not None:  # as the data stood on `today`: later launches are neither competition nor placebo
+        df = df[df["launch_date"] <= today].copy()
     data_end = max(df["launch_date"])
     today = today or data_end
     df["reach"] = F.publisher_reach(df)
@@ -108,7 +117,8 @@ def build_frames(data_dir: Path, events_path: Path, gp_dir: Path | None = None,
     info["sample"] = counts
     tag_names = {int(r["tagid"]): r["name"] for r in storage.read_csv(data_dir / "tags.csv")}
     info["tag_names"] = tag_names
-    sample = sample.join(F.event_features(sample, event_data.load(events_path), tag_names))
+    info["events"] = event_data.load(events_path)
+    sample = sample.join(F.event_features(sample, info["events"], tag_names))
     series = F.load_followers(gp_dir)
     sample["log_followers"] = F.prelaunch_followers(sample, series)
     sample["placebo_ok"] = F.placebo_ok(sample, data_end, PLACEBO_WEEKS)
@@ -129,14 +139,26 @@ def build_frames(data_dir: Path, events_path: Path, gp_dir: Path | None = None,
         s["comp_placebo"] = F.similar_counts(s, pool, offset_weeks=PLACEBO_WEEKS)
         if not free:
             s["comp_tier"] = F.similar_counts(s, pool, same_tier=True)
-            median = F.niche_median_price(s, pool)
-            info["sample"]["paid_niche_median_fallback"] = int(np.isnan(median).sum())
-            median = np.where(np.isnan(median), np.median(pool["price"][pool["price"] > 0]), median)
-            s["price_vs_niche"] = np.log(s["price"].to_numpy() / median)
+            s["comp_tier_placebo"] = F.similar_counts(s, pool, offset_weeks=PLACEBO_WEEKS, same_tier=True)
+            s["log_niche_price"] = np.log(niche_price(s, pool, info["sample"]))
         add_columns(s, free)
         frames[group] = s
         info["sample"][group] = len(s)
     return frames, info
+
+
+def niche_price(s: pd.DataFrame, pool: pd.DataFrame, counts: dict) -> np.ndarray:
+    """The niche's median price from launches in the year before each game. Small
+    niches fall back to all paid launches in that year; the first days of the data,
+    with too few of those, to the median of all paid launches."""
+    median = F.niche_median_price(s, pool)
+    small = np.isnan(median)
+    counts["paid_niche_median_fallback"] = int(small.sum())
+    median[small] = F.market_median_price(s[small], pool)
+    left = np.isnan(median)
+    counts["paid_niche_median_overall"] = int(left.sum())
+    median[left] = np.median(pool["price"][pool["price"] > 0])
+    return median
 
 
 def add_columns(s: pd.DataFrame, free: bool) -> None:
@@ -165,14 +187,24 @@ def add_columns(s: pd.DataFrame, free: bool) -> None:
         s[f"year_{y}"] = [int(v == y) for v in years]
     for m in range(2, 13):
         s[f"month_{m}"] = [int(d.month == m) for d in s["launch_date"]]
-    tops = pd.Series([t for pairs in s["tags"] for t, _ in pairs[:F.TOP]]).value_counts()
-    s.attrs["genres"] = [int(t) for t in tops.index[:GENRES]]
-    for t in s.attrs["genres"]:
-        s[f"tag_{t}"] = [int(any(x == t for x, _ in pairs[:F.TOP])) for pairs in s["tags"]]
+    s.attrs["genres"] = top_genres(s)
+    add_genres(s, s.attrs["genres"])
     if not free:
         s["log_price"] = np.log(s["price"])
         s["under_5"] = (s["price"] < 5).astype(int)
         s["revenue"] = (s["reviews_30d"] * s["price"]).round()
+
+
+def top_genres(s: pd.DataFrame) -> list[int]:
+    """The GENRES most common tags among the games' top 10 tags."""
+    tops = pd.Series([t for pairs in s["tags"] for t, _ in pairs[:F.TOP]], dtype="int64").value_counts()
+    return [int(t) for t in tops.index[:GENRES]]
+
+
+def add_genres(s: pd.DataFrame, genres: list[int]) -> None:
+    for t in genres:
+        if f"tag_{t}" not in s:
+            s[f"tag_{t}"] = [int(any(x == t for x, _ in pairs[:F.TOP])) for pairs in s["tags"]]
 
 
 def hour_band(hour: int) -> str:
@@ -180,26 +212,28 @@ def hour_band(hour: int) -> str:
 
 
 def predictors(s: pd.DataFrame, free: bool, competition: str = "competition", years: str = "fe",
-               followers: bool = False) -> list[str]:
+               followers: bool = False, genres: list[int] | None = None) -> list[str]:
     """The model's columns: `years` "fe" for year and month fixed effects, "trend" for a
-    linear year trend with month effects (held-out fits, where the test year is new)."""
+    linear year trend with month effects (held-out fits, where the test year is new).
+    `genres`: the tag indicators (default: the sample's most common tags)."""
     cols = [competition, "big_competitor", "attention_release", "sale", "pre_sale", "next_fest",
             "demo_last_fest", "themed_fest", "cn_spring", "cn_national", "cn_spring_x_schinese",
             "cn_national_x_schinese", "us_thanksgiving", "xmas_newyear", "early_access", "demo", "franchise",
             "log_reach", *(f"lang_{x}" for x in F.LANG_FLAGS), "n_languages", "en_audio"]
     if not free:
-        cols += ["log_price", "under_5", "price_vs_niche"]
+        cols += ["log_price", "under_5", "log_niche_price"]
     if followers:
         cols.append("log_followers")
     cols += [c for c in s.columns if c.startswith(("hour_", "dow_", "month_"))]
-    cols += [f"tag_{t}" for t in s.attrs["genres"]]
+    cols += [f"tag_{t}" for t in (s.attrs["genres"] if genres is None else genres)]
     cols += ["trend"] if years == "trend" else [c for c in s.columns if c.startswith("year_")]
     return cols
 
 
-def baseline(s: pd.DataFrame, free: bool) -> list[str]:
+def baseline(s: pd.DataFrame, free: bool, genres: list[int] | None = None) -> list[str]:
     """Genre, year (as a trend) and price only."""
-    return ["trend", *(f"tag_{t}" for t in s.attrs["genres"])] + ([] if free else ["log_price", "under_5"])
+    genres = s.attrs["genres"] if genres is None else genres
+    return ["trend", *(f"tag_{t}" for t in genres)] + ([] if free else ["log_price", "under_5"])
 
 
 # --- fitting ----------------------------------------------------------------
@@ -228,9 +262,10 @@ def _independent(X: pd.DataFrame) -> pd.DataFrame:
     return X.iloc[:, keep]
 
 
-def fit_nb(s: pd.DataFrame, cols: list[str], y: str = "y"):
+def fit_nb(s: pd.DataFrame, cols: list[str], y: str = "y", start: pd.Series | None = None):
     """Negative binomial (NB2, log link). Clustered by launch week with at least
-    MIN_WEEKS weeks, else heteroskedasticity-robust (HC1) and marked preliminary."""
+    MIN_WEEKS weeks, else heteroskedasticity-robust (HC1) and marked preliminary.
+    `start`: parameters of a similar fit to start from (by column name)."""
     import statsmodels.api as sm
 
     X = _matrix(s, cols)
@@ -239,7 +274,10 @@ def fit_nb(s: pd.DataFrame, cols: list[str], y: str = "y"):
         else {"cov_type": "HC1"}
     began = time.monotonic()
     model = sm.NegativeBinomial(s[y].to_numpy(dtype=float), X)
-    start = _start(s[y].to_numpy(dtype=float), X)
+    if start is not None and set(X.columns) <= set(start.index):
+        start = start.reindex([*X.columns, "alpha"]).to_numpy()
+    else:
+        start = _start(s[y].to_numpy(dtype=float), X)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         res = model.fit(start_params=start, method="newton", maxiter=100, disp=0, **robust)
@@ -254,7 +292,8 @@ def fit_nb(s: pd.DataFrame, cols: list[str], y: str = "y"):
 
 
 def _ok(res) -> bool:
-    return bool(res.mle_retvals.get("converged", True)) and bool(np.isfinite(res.params).all())         and bool(np.isfinite(res.bse).all())
+    return (bool(res.mle_retvals.get("converged", True)) and bool(np.isfinite(res.params).all())
+            and bool(np.isfinite(res.bse).all()))
 
 
 def _start(y: np.ndarray, X: pd.DataFrame) -> np.ndarray:
@@ -267,9 +306,10 @@ def _start(y: np.ndarray, X: pd.DataFrame) -> np.ndarray:
 
 def fit_hurdle(s: pd.DataFrame, cols: list[str]) -> dict:
     """Hurdle check: a logit for any reviews at all, and a zero-truncated negative
-    binomial for how many, given some."""
+    binomial for how many, given some. The truncated part starts from a plain
+    negative binomial on the games with reviews (also reported, as a rough check);
+    if it does not converge it is marked failed and has no effects."""
     import statsmodels.api as sm
-    from statsmodels.discrete.truncated_model import TruncatedLFNegativeBinomialP
 
     X = _matrix(s, cols)
     weeks = pd.factorize(s["week"])[0]
@@ -278,16 +318,132 @@ def fit_hurdle(s: pd.DataFrame, cols: list[str]) -> dict:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         logit = sm.Logit(any_, X).fit(disp=0, maxiter=200, cov_type="cluster", cov_kwds={"groups": weeks})
-        Xp = X[pos].loc[:, X[pos].std() > 0].copy()
-        Xp.insert(0, "const", 1.0)
-        yp = s["y"].to_numpy(dtype=float)[pos]
-        start = _start(yp, Xp)
-        count = TruncatedLFNegativeBinomialP(yp, Xp, truncation=0, p=2).fit(
-            start_params=start, method="bfgs", maxiter=3000, disp=0, cov_type="cluster",
-            cov_kwds={"groups": weeks[pos]})
+    sp = s[pos]
+    plain = fit_nb(sp, [c for c in X.columns if c != "const"])
+    count, method, failure = fit_truncated_nb(sp["y"].to_numpy(dtype=float), _matrix(sp, list(X.columns[1:])),
+                                              pd.factorize(sp["week"])[0], plain.params)
+    part = {"n": int(pos.sum()), "converged": count is not None}
+    if count is None:
+        part.update(status=f"failed: {failure}; left out", effects=[])
+    else:
+        part.update(method=method, alpha=_r(float(count.params["alpha"])), effects=effects(count, sp))
     return {"any_reviews": {"n": int(len(s)), "share_with_reviews": round(float(any_.mean()), 3),
                             "effects": effects(logit, s, ratio="odds")},
-            "count_given_some": {"n": int(pos.sum()), "effects": effects(count, s[pos])}}
+            "count_given_some": part,
+            "count_given_some_plain_nb": {"n": int(pos.sum()), "converged": _ok(plain),
+                                          "note": "plain negative binomial on games with reviews (not truncated)",
+                                          "effects": effects(plain, sp) if _ok(plain) else []}}
+
+
+def fit_truncated_nb(y: np.ndarray, X: pd.DataFrame, groups: np.ndarray, start: pd.Series):
+    """Zero-truncated NB2 by maximum likelihood, from `start` (a plain NB fit, alpha
+    included): BFGS with the exact gradient, then Newton steps (Hessian from the
+    gradient). Standard errors clustered by `groups`. Returns (result, method, None),
+    or (None, None, why) when it fails: the gradient does not reach zero, alpha runs
+    off past TRUNC_MAX_ALPHA (no finite maximum), or the standard errors are not finite."""
+    from scipy import optimize
+
+    A = X.to_numpy(dtype=float)
+    k = A.shape[1]
+    x0 = np.array(start.reindex(X.columns).fillna(0.0), dtype=float)
+    x0 = np.append(x0, math.log(max(float(start.get("alpha", 1.0)), 1e-3)))  # log alpha
+    n = len(y)
+
+    def nll(theta):
+        ll, _ = _truncated_nb(theta, y, A)
+        return -ll.sum() / n
+
+    def grad(theta):
+        return -_truncated_nb(theta, y, A)[1].sum(axis=0) / n
+
+    def hess(theta, h=1e-5):
+        H = np.empty((k + 1, k + 1))
+        for j in range(k + 1):
+            e = np.zeros(k + 1)
+            e[j] = h
+            H[:, j] = (grad(theta + e) - grad(theta - e)) / (2 * h)
+        return (H + H.T) / 2
+
+    with warnings.catch_warnings(), np.errstate(all="ignore"):
+        warnings.simplefilter("ignore")
+        theta = optimize.minimize(nll, x0, jac=grad, method="BFGS", options={"maxiter": 2000, "gtol": 1e-7}).x
+        method = "bfgs"
+        for _ in range(20):
+            g = grad(theta)
+            if np.isfinite(g).all() and np.abs(g).max() < TRUNC_TOL:
+                break
+            method = "bfgs+newton"
+            H = hess(theta)
+            try:
+                step = np.linalg.solve(H, g)
+            except np.linalg.LinAlgError:
+                break
+            t, f0 = 1.0, nll(theta)
+            while t > 1e-4 and not nll(theta - t * step) < f0:
+                t /= 2
+            theta = theta - t * step
+        g = grad(theta)
+        failure = None
+        if not (np.isfinite(theta).all() and np.isfinite(g).all() and np.abs(g).max() < TRUNC_TOL):
+            failure = f"did not converge (largest gradient {float(np.nanmax(np.abs(g))):.2g})"
+        elif math.exp(theta[-1]) > TRUNC_MAX_ALPHA:
+            failure = f"no finite maximum (alpha ran off to {math.exp(theta[-1]):.2g})"
+        else:
+            H = hess(theta) * n  # Hessian of the negative log-likelihood
+            S = _truncated_nb(theta, y, A)[1]
+            Sg = pd.DataFrame(S).groupby(groups).sum().to_numpy()
+            G = Sg.shape[0]
+            try:
+                Hi = np.linalg.inv(H)
+            except np.linalg.LinAlgError:
+                Hi = np.full_like(H, np.nan)
+            se = np.sqrt(np.diag(Hi @ (Sg.T @ Sg) @ Hi) * (G / (G - 1)) * ((n - 1) / (n - k - 1)))
+            if not np.isfinite(se).all():
+                failure = "standard errors are not finite"
+    if failure:
+        log.warning("truncated negative binomial failed (%d games): %s", n, failure)
+        return None, None, failure
+    names = [*X.columns, "alpha"]
+    params = pd.Series(theta, index=names)
+    params["alpha"] = math.exp(theta[-1])
+    se[-1] *= params["alpha"]  # delta method: the fit was on log alpha
+    return _Fitted(params, pd.Series(se, index=names)), method, None
+
+
+TRUNC_TOL = 1e-6        # largest gradient (per game) that counts as converged
+TRUNC_MAX_ALPHA = 100   # a larger alpha means the likelihood has no finite maximum
+
+
+class _Fitted:
+    """Parameters, standard errors, intervals and p-values, the parts `effects` reads."""
+
+    def __init__(self, params: pd.Series, bse: pd.Series):
+        from scipy import stats
+
+        self.params, self.bse = params, bse
+        self.pvalues = pd.Series(2 * stats.norm.sf(np.abs(params / bse)), index=params.index)
+
+    def conf_int(self) -> pd.DataFrame:
+        return pd.DataFrame({0: self.params - 1.959964 * self.bse, 1: self.params + 1.959964 * self.bse})
+
+
+def _truncated_nb(theta: np.ndarray, y: np.ndarray, A: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Per game: the zero-truncated NB2 log-likelihood and its gradient in (beta, log alpha)."""
+    from scipy.special import digamma, gammaln
+
+    beta, a = theta[:-1], math.exp(theta[-1])
+    r = 1 / a
+    mu = np.exp(A @ beta)
+    am = a * mu
+    l1 = np.log1p(am)
+    log_p0 = -r * l1
+    p0 = np.exp(log_p0)
+    ll = gammaln(y + r) - gammaln(r) - gammaln(y + 1) - r * l1 + y * np.log(am) - y * l1 - np.log1p(-p0)
+    odds0 = p0 / -np.expm1(log_p0)                      # p0 / (1 - p0)
+    d_eta = (y - mu) / (1 + am) - odds0 * mu / (1 + am)
+    d_a = (-(r * r) * (digamma(y + r) - digamma(r) - l1) - r * mu / (1 + am) + y / a - y * mu / (1 + am)
+           + odds0 * ((r * r) * l1 - r * mu / (1 + am)))
+    return ll, np.column_stack([A * d_eta[:, None], d_a * a])
 
 
 def effects(res, s: pd.DataFrame, keys=None, ratio: str = "rate") -> list[dict]:
@@ -355,28 +511,29 @@ def _competition_check(s: pd.DataFrame, free: bool, competition: str, key: str =
     return summary(res, s, [key or competition])
 
 
-def run_group(s: pd.DataFrame, free: bool) -> dict:
+def run_group(s: pd.DataFrame, free: bool, events: list[dict] | None = None, tag_names: dict | None = None,
+              permutations: int = PERMUTATIONS) -> dict:
     out: dict = {}
     competition = "competition"
+    # the held-out fits pick their genres from the fitting years only
+    genres = top_genres(s[s["launch_date"] < HELD_OUT_FROM])
+    add_genres(s, genres)
+    ho_cols = {"model": predictors(s, free, years="trend", genres=genres)}
     if not free:
-        trend = {"model": predictors(s, free, years="trend"),
-                 "same_tier": predictors(s, free, "comp_tier", years="trend"),
-                 "baseline": baseline(s, free)}
-        out["held_out"] = held_out(s, trend)
-        ho = out["held_out"]
-        if "same_tier" in ho and ho["same_tier"]["loglik_per_game"] > ho["model"]["loglik_per_game"]:
-            competition = "comp_tier"
-        out["competition_measure"] = competition
-    else:
-        out["held_out"] = held_out(s, {"model": predictors(s, free, years="trend"), "baseline": baseline(s, free)})
-        out["competition_measure"] = competition
+        ho_cols["same_tier"] = predictors(s, free, "comp_tier", years="trend", genres=genres)
+    ho_cols["baseline"] = baseline(s, free, genres)
+    out["held_out"] = ho = held_out(s, ho_cols)
+    if "same_tier" in ho and ho["same_tier"]["loglik_per_game"] > ho["model"]["loglik_per_game"]:
+        competition = "comp_tier"
+    out["competition_measure"] = competition
+    out["competition_chosen_by"] = "held-out log-likelihood per game" if not free else "the only measure"
     cols = predictors(s, free, competition)
     log.info("%s: main fit, %d games", "free" if free else "paid", len(s))
     main = fit_nb(s, cols)
     out["reviews"] = summary(main, s)
     out["genre"] = [{"tag": int(e["key"][4:]), **e} for e in effects(main, s, [f"tag_{t}" for t in s.attrs["genres"]])]
     if not free:
-        out["revenue"] = summary(fit_nb(s, cols, y="revenue"), s)
+        out["revenue"] = summary(fit_nb(s, cols, y="revenue", start=main.params), s)
     out["hurdle"] = fit_hurdle(s, cols)
     checks = {}
     other = "competition" if competition == "comp_tier" else ("comp_tier" if not free else None)
@@ -384,22 +541,185 @@ def run_group(s: pd.DataFrame, free: bool) -> dict:
                        ("same_tier" if other == "comp_tier" else "plain", other)):
         if comp:
             checks[name] = _competition_check(s, free, comp)
-    small = s[(s["reach"] <= SMALL_REACH) & (s["franchise"] == 0)]
+    small = s[(s["reach"] <= SMALL_REACH) & (s["franchise"] == 0) & (s["launch_date"] >= F.REACH_FULL_FROM)]
     if not free:
         small = small[small["price"] < SMALL_PRICE]
-    checks["small_games"] = summary(fit_nb(small, predictors(small, free, competition)), small,
-                                    list(dict.fromkeys([competition, *KEY_EFFECTS])))
-    pl = s[s["placebo_ok"]]
-    checks["placebo"] = {"placebo": _competition_check(pl, free, "comp_placebo"),
-                         "real_same_sample": _competition_check(pl, free, competition),
-                         "together": summary(fit_nb(pl, predictors(pl, free, competition) + ["comp_placebo"]), pl,
-                                             [competition, "comp_placebo"])}
+    checks["small_games"] = {**summary(fit_nb(small, predictors(small, free, competition)), small,
+                                       list(dict.fromkeys([competition, *KEY_EFFECTS]))),
+                             "launches_from": F.REACH_FULL_FROM.isoformat()}
+    checks["placebo"] = placebo_check(s[s["placebo_ok"]], free, competition)
     out["checks"] = checks
     out["followers"] = follower_fits(s, free, competition)
+    if events is not None:
+        out["chance_test"] = chance_tests(s, free, competition, events, tag_names or {}, permutations, main.params)
+        for e in out["reviews"]["effects"]:
+            t = out["chance_test"].get(e["key"])
+            if t and "p_value" in t:
+                e["chance_p"], e["windows"] = t["p_value"], t["windows"]
+        out["holidays"] = holiday_summary(s, out, events)
     zero = float((s["y"] == 0).mean())
     out["status"] = "unreliable" if zero > MAX_ZERO_SHARE else "ok"
     out["headline"] = "with_followers" if out["followers"].get("headline") else "reviews"
     return out
+
+
+def placebo_check(pl: pd.DataFrame, free: bool, competition: str) -> dict:
+    """The competition measure 8 weeks after launch, built with the same rule; alone,
+    the real measure on the same games, and both together."""
+    placebo = PLACEBO[competition]
+    return {"measure": placebo, "placebo": _competition_check(pl, free, placebo),
+            "real_same_sample": _competition_check(pl, free, competition),
+            "together": summary(fit_nb(pl, predictors(pl, free, competition) + [placebo]), pl,
+                                [competition, placebo])}
+
+
+# --- chance test for the event indicators -----------------------------------
+
+def chance_tests(s: pd.DataFrame, free: bool, competition: str, events: list[dict], tag_names: dict,
+                 draws: int, start: pd.Series | None = None, seed: int = 0) -> dict:
+    """For each event indicator in PERMUTED: how often fake windows on random weeks give
+    an effect at least as far from 1 as the real windows (a permutation p-value).
+
+    The main model is refitted without the indicator (and its Simplified Chinese
+    extra). Holding that fit fixed, the indicator's own coefficient is estimated
+    alone (one parameter, alpha fixed), for the real windows and for `draws` sets of
+    fake ones. Each fake set moves every real window by a random whole number of
+    weeks (same length, weekday and hour; themed fests keep their tags), inside the
+    sample period, not overlapping a real window or another fake one."""
+    rng = np.random.default_rng(seed)
+    ts = s["launch_ts"].to_numpy(dtype=float)
+    first, last = float(ts.min()), float(ts.max())
+    y = s["y"].to_numpy(dtype=float)
+    names = F.top_tag_names(s, tag_names)
+    cols = predictors(s, free, competition)
+    out = {"method": "refit without the indicator, then its coefficient alone against fake windows "
+                     "moved by whole weeks", "draws": draws}
+    for col in PERMUTED:
+        windows = [w for w in F.event_windows(events, col) if w["start"] <= last and w["end"] > first]
+        real = s[col].to_numpy() > 0
+        if not real.any() or not windows or col not in cols:
+            continue
+        drop = {col, f"{col}_x_schinese"}
+        base = fit_nb(s, [c for c in cols if c not in drop], start=start)
+        eta = np.log(base.predict())
+        alpha = float(base.params["alpha"])
+        b_real = one_coefficient(y, eta, alpha, real)
+        fake = []
+        for _ in range(draws):
+            moved = move_windows(windows, rng, first, last)
+            if moved is None:
+                continue
+            d = F.window_indicator(ts, moved, names)
+            if d.any():
+                fake.append(one_coefficient(y, eta, alpha, d))
+        fake = np.array(fake)
+        row = {"windows": len(windows), "games_with": int(real.sum()), "ratio_alone": _r(math.exp(b_real)),
+               "draws_used": int(len(fake))}
+        if len(fake):
+            row["p_value"] = _r((1 + int((np.abs(fake) >= abs(b_real) - 1e-12).sum())) / (1 + len(fake)))
+            row["fake_ratio_5_95"] = [_r(math.exp(np.quantile(fake, 0.05))), _r(math.exp(np.quantile(fake, 0.95)))]
+        out[col] = row
+    return out
+
+
+def one_coefficient(y: np.ndarray, eta: np.ndarray, alpha: float, d: np.ndarray, steps: int = 50) -> float:
+    """The NB2 coefficient of indicator `d` with the linear predictor `eta` and alpha held
+    fixed (Newton on one parameter)."""
+    y, eta = y[d], eta[d]
+    b = 0.0
+    for _ in range(steps):
+        mu = np.exp(eta + b)
+        score = ((y - mu) / (1 + alpha * mu)).sum()
+        info = (mu * (1 + alpha * y) / (1 + alpha * mu) ** 2).sum()
+        if info <= 0:
+            break
+        step = float(np.clip(score / info, -2, 2))
+        b += step
+        if abs(step) < 1e-8:
+            break
+    return b
+
+
+def move_windows(windows: list[dict], rng: np.random.Generator, first: float, last: float,
+                 tries: int = 200) -> list[dict] | None:
+    """Each window moved by a random whole number of weeks into [first, last], clear of
+    every real window and of the other moved ones (windows with tags only clash when
+    their tags overlap). None if no such placement is found."""
+    week = 7 * F.DAY
+    placed: list[dict] = []
+    for w in windows:
+        lo = math.ceil((first - w["start"]) / week)
+        hi = math.floor((last - w["end"]) / week)
+        if hi < lo:
+            return None
+        for _ in range(tries):
+            k = int(rng.integers(lo, hi + 1))
+            m = {**w, "start": w["start"] + k * week, "end": w["end"] + k * week}
+            if not any(_clash(m, o) for o in (*windows, *placed)):
+                placed.append(m)
+                break
+        else:
+            return None
+    return placed
+
+
+def _clash(a: dict, b: dict) -> bool:
+    overlap = a["start"] < b["end"] and b["start"] < a["end"]
+    return overlap and (a["tags"] is None or b["tags"] is None or bool(a["tags"] & b["tags"]))
+
+
+def holiday_summary(s: pd.DataFrame, g: dict, events: list[dict]) -> dict:
+    """The Chinese holidays: windows in the sample, the Steam events each one
+    overlapped, the extra effect for games with Simplified Chinese, and a note."""
+    first, last = float(s["launch_ts"].min()), float(s["launch_ts"].max())
+    steam = [w for c in ("sale", "next_fest", "themed_fest") for w in F.event_windows(events, c)]
+    out: dict = {}
+    for col in CN_HOLIDAYS:
+        rows = []
+        for w in F.event_windows(events, col):
+            if w["start"] <= last and w["end"] > first:
+                rows.append({"name": w["name"],
+                             "overlaps": [o["name"] for o in steam if o["start"] < w["end"] and w["start"] < o["end"]]})
+        out[col] = rows
+    out["note"] = holiday_note(g, out)
+    out["site_use"] = ("Show Chinese holidays only as calendar context for games that support Simplified Chinese, "
+                       "marked unconfirmed. Not advice for other games.")
+    return out
+
+
+def _effect(g: dict, key: str) -> dict | None:
+    return next((e for e in g["reviews"]["effects"] if e["key"] == key), None)
+
+
+def _ci(e: dict) -> str:
+    return f"{e['rate_ratio']:.2f} ({e['low']:.2f} to {e['high']:.2f})"
+
+
+def holiday_note(g: dict, windows: dict) -> str:
+    """The caveat for the Chinese holidays, from the numbers."""
+    parts, extras, counts, overlapped = [], [], [], 0
+    for col, name in (("cn_spring", "Spring Festival"), ("cn_national", "National Day")):
+        e, x = _effect(g, col), _effect(g, f"{col}_x_schinese")
+        if e is None:
+            continue
+        p = f", chance test p = {e['chance_p']:.2g}" if "chance_p" in e else ""
+        parts.append(f"{name} {_ci(e)}{p}")
+        if x is not None:
+            extras.append(f"{x['rate_ratio']:.2f} ({x['low']:.2f} to {x['high']:.2f})")
+        counts.append(f"{len(windows[col])} {name}")
+        overlapped += sum(bool(w["overlaps"]) for w in windows[col])
+    if not parts:
+        return ""
+    total = sum(len(windows[c]) for c in CN_HOLIDAYS)
+    clear = [x for x in (_effect(g, f"{c}_x_schinese") for c in CN_HOLIDAYS) if x and (x["low"] > 1 or x["high"] < 1)]
+    text = f"Chinese holidays (rate ratios): {'; '.join(parts)}."
+    if extras:
+        text += (f" The extra effect for games with Simplified Chinese is {' and '.join(extras)}, "
+                 + ("so the dip is not about Chinese players." if not clear else "so it differs for them."))
+    text += (f" {overlapped} of the {total} holiday windows overlapped another Steam event (a sale, Next Fest or a "
+             f"themed fest), and there are only {' and '.join(counts)} windows, so the week-clustered intervals "
+             "overstate how sure this is. Not a general rule.")
+    return text
 
 
 def follower_fits(s: pd.DataFrame, free: bool, competition: str) -> dict:
@@ -442,26 +762,69 @@ CAVEATS = [
 FREE_CAVEAT = ("The review counts are Steam purchases only, so a free game's reviews from players who did not "
                "buy anything are left out: most free launches show 0 reviews in their first 30 days although "
                "they have reviews. Do not read the free model until free games are counted with all purchase types.")
-PLACEBO_CAVEAT = ("The placebo (same-niche launches 8 weeks after launch) goes with fewer reviews too, about as "
-                  "much as the launch week's own competition. So the competition number mostly reflects how "
-                  "crowded the niche and the period are in general, not the chosen week.")
+def _per_launch(e: dict) -> str:
+    """'0.9% fewer' or '1.2% more' for a per-launch rate ratio."""
+    r = e["rate_ratio"]
+    return f"{abs(r - 1) * 100:.1f}% {'fewer' if r < 1 else 'more'}"
+
+
+def _clarity(e: dict) -> str:
+    return "clear" if e["p"] < 0.01 else "at the edge of noise" if e["p"] < 0.1 else "within noise"
+
+
+def placebo_caveat(check: dict) -> str | None:
+    """The placebo's caveat, built from its numbers; None when the placebo alone is within noise."""
+    measure, placebo = None, check["measure"]
+    alone = next(iter(check["placebo"]["effects"]), None)
+    real = next(iter(check["real_same_sample"]["effects"]), None)
+    if alone is None or real is None or alone["low"] <= 1 <= alone["high"]:
+        return None
+    measure = real["key"]
+    together = {e["key"]: e for e in check["together"]["effects"]}
+    text = (f"Placebo: the same competition measure 8 weeks after launch goes with {_per_launch(alone)} reviews per "
+            f"launch (rate ratio {alone['rate_ratio']:.3f}, {alone['low']:.3f} to {alone['high']:.3f}), against "
+            f"{_per_launch(real)} for the launch week itself ({real['rate_ratio']:.3f}) on the same "
+            f"{check['placebo']['n']:,} games.")
+    same_way = (alone["rate_ratio"] < 1) == (real["rate_ratio"] < 1)
+    size = abs(math.log(alone["rate_ratio"])) / max(abs(math.log(real["rate_ratio"])), 1e-12)
+    if not same_way:
+        text += " It goes the other way from the launch week's number, so the measure is not clean."
+    elif size >= 0.67:
+        text += (" It is about as large as the real effect or larger, so general crowding of the niche and the "
+                 "period explains a lot of the competition number.")
+    else:
+        text += " It is smaller than the real effect, so part of the competition number is general crowding."
+    t_real, t_placebo = together.get(measure), together.get(placebo)
+    if t_real and t_placebo:
+        text += (f" With both in one model, the launch week gives {t_real['rate_ratio']:.3f} ({t_real['low']:.3f} to "
+                 f"{t_real['high']:.3f}, {_clarity(t_real)}) and the placebo {t_placebo['rate_ratio']:.3f}.")
+        if t_real["p"] >= 0.01 and t_real["rate_ratio"] < 1:
+            text += " So the launch week's own effect is small at most."
+    return text
 
 
 def group_caveats(g: dict, free: bool) -> list[str]:
     out = [FREE_CAVEAT] if free and g["status"] == "unreliable" else []
-    placebo = g["checks"]["placebo"]["placebo"]["effects"]
-    if placebo and (placebo[0]["high"] < 1 or placebo[0]["low"] > 1):
-        out.append(PLACEBO_CAVEAT)
+    text = placebo_caveat(g["checks"]["placebo"])
+    if text:
+        out.append(text)
+    note = g.get("holidays", {}).get("note")
+    if note:
+        out.append(note + " " + g["holidays"]["site_use"])
+    if g["hurdle"]["count_given_some"].get("converged") is False:
+        out.append("The hurdle model's count part did not converge and is left out.")
     return out
 
 
-def run(data_dir: Path, events_path: Path, gp_dir: Path | None, today: date | None = None) -> dict:
+def run(data_dir: Path, events_path: Path, gp_dir: Path | None, today: date | None = None,
+        permutations: int = PERMUTATIONS) -> dict:
     frames, info = build_frames(data_dir, events_path, gp_dir, today)
     result = {"sample": info["sample"], "followers": info["followers"], "prelaunch_tags": info["prelaunch_tags"],
               "caveats": CAVEATS}
     for group, s in frames.items():
         log.info("fitting the %s model (%d games)", group, len(s))
-        result[group] = {"outcome": "reviews_30d", **run_group(s, group == "free")}
+        result[group] = {"outcome": "reviews_30d", **run_group(s, group == "free", info["events"], info["tag_names"],
+                                                                permutations)}
         result[group]["genre_names"] = {str(t): info["tag_names"].get(t) for t in s.attrs["genres"]}
         result[group]["caveats"] = group_caveats(result[group], group == "free")
     return result
@@ -475,31 +838,40 @@ def report(result: dict) -> str:
         lines.append(f"\n== {group}: {g['reviews']['n']} games, {g['reviews']['weeks']} weeks, "
                      f"competition measure {g['competition_measure']}")
         for e in g["reviews"]["effects"]:
+            chance = f"  chance p {e['chance_p']} ({e['windows']} windows)" if "chance_p" in e else ""
             lines.append(f"  {e['key']:24s} {e['rate_ratio']:.3f} [{e['low']:.3f}, {e['high']:.3f}]"
-                         f"  {e.get('games_with', e.get('mean'))}")
+                         f"  {e.get('games_with', e.get('mean'))}{chance}")
         if "revenue" in g:
             lines.append("  revenue: " + _brief(g["revenue"]["effects"]))
         lines.append("  hurdle any: " + _brief(g["hurdle"]["any_reviews"]["effects"], "odds_ratio"))
-        lines.append("  hurdle count: " + _brief(g["hurdle"]["count_given_some"]["effects"]))
+        count = g["hurdle"]["count_given_some"]
+        lines.append(f"  hurdle count (converged {count['converged']}): " + _brief(count["effects"]))
+        plain = g["hurdle"]["count_given_some_plain_nb"]
+        lines.append("  plain NB on games with reviews: " + _brief(plain["effects"]))
         for name, c in g["checks"].items():
             if name == "placebo":
-                lines.append(f"  placebo (n {c['placebo']['n']}): {_brief(c['placebo']['effects'])} | real: "
-                             f"{_brief(c['real_same_sample']['effects'])} | together: {_brief(c['together']['effects'])}")
+                lines.append(f"  placebo {c['measure']} (n {c['placebo']['n']}): {_brief(c['placebo']['effects'])}"
+                             f" | real: {_brief(c['real_same_sample']['effects'])}"
+                             f" | together: {_brief(c['together']['effects'])}")
             else:
                 lines.append(f"  {name} (n {c['n']}): {_brief(c['effects'])}")
         lines.append(f"  held out: {g['held_out']}")
+        if "chance_test" in g:
+            lines.append(f"  chance test: {g['chance_test']}")
         fo = g["followers"]
         lines.append(f"  followers: {', '.join(f'{k} {v}' for k, v in fo.items() if not isinstance(v, dict))}")
         for name in ("without_followers", "with_followers"):
             if name in fo:
-                lines.append(f"    {name} (n {fo[name]['n']}, weeks {fo[name]['weeks']}): {_brief(fo[name]['effects'])}")
+                lines.append(f"    {name} (n {fo[name]['n']}, weeks {fo[name]['weeks']}): "
+                             f"{_brief(fo[name]['effects'])}")
         lines.extend(f"  caveat: {c}" for c in g["caveats"])
     return "\n".join(lines)
 
 
 def _brief(effects: list[dict], ratio: str = "rate_ratio") -> str:
     return ", ".join(f"{e['key']} {e[ratio]:.3f} [{e['low']:.3f}, {e['high']:.3f}]" for e in effects
-                     if e["key"] in KEY_EFFECTS or e["key"] in COMPETITION or e["key"] == "log_followers")
+                     if e["key"] in KEY_EFFECTS or e["key"] in COMPETITION or e["key"] == "log_followers"
+                     or e["key"].endswith("_x_schinese"))
 
 
 def main(argv=None) -> int:
@@ -510,12 +882,14 @@ def main(argv=None) -> int:
     p.add_argument("--events", type=Path, default=Path("data/events.yaml"))
     p.add_argument("--out", type=Path, default=Path("site/data"))
     p.add_argument("--today", type=date.fromisoformat, default=None,
-                   help="the data's date (default: the newest launch date in history)")
+                   help="the data's date (default: the newest launch date in history); later launches are ignored")
+    p.add_argument("--permutations", type=int, default=PERMUTATIONS,
+                   help="fake window sets per event indicator in the chance test (default %(default)s)")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     if args.out.resolve() == args.data_dir.resolve():
         raise SystemExit("--out must not be the data folder")
-    result = run(args.data_dir, args.events, args.gp_dir, args.today)
+    result = run(args.data_dir, args.events, args.gp_dir, args.today, args.permutations)
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / "model.json").write_text(json.dumps(result, separators=(",", ":"), ensure_ascii=False),
                                          encoding="utf-8")
