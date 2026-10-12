@@ -90,6 +90,47 @@ English-language paid shooters (39 launches in a usual week) read 1.8 this week,
 snapshots exist, a fairer baseline compares with how full weeks the same
 distance ahead usually were.
 
+**Near weeks read high, far weeks low** (found 2026-10-12): normalized against a
+usual week of real launches, all paid English games read 1.8 this week and about
+0.4 thirteen weeks out. Split up, exact dates are accurate up close (1.02 this
+week) but thin out with distance (0.06 by week 13, as developers set the day
+late), and vague dates add a flat 0.76 to each remaining week of Q4, many of
+which will slip. So the page:
+- shows exact and vague dates as two visible parts of each week;
+- fades weeks more than 4 weeks out, labeled "dates still being set";
+- later, once enough snapshots exist, compares each week with how full weeks
+  the same distance ahead usually were (about 12 weeks ahead by mid-January,
+  26 by April), and says which baseline is in use.
+
+**Typical for this time of year** (decided 2026-10-12): for every week shown,
+what past launches say about that time of year, from history only
+(`analysis/season.py`). Each past week's ratio is its launches over the average
+week in the 13 weeks before it. Two estimates:
+- calendar: the same week of the year in past years;
+- events: recurring events move from year to year (the Autumn Sale moved to
+  early October in 2025), so for each Next Fest, seasonal sale or holiday within
+  4 weeks, the ratios at the same distance from it in past years.
+
+They are combined, each weighted by how steady it was across years (years /
+SD squared), and shown with the spread across years. A backtest predicting
+2025 and 2026 weeks from earlier years only (mean absolute error, lower is
+better):
+
+| Selection | No pattern | Calendar | Events | Combined |
+|---|---|---|---|---|
+| All paid English games | 0.210 | 0.168 | 0.156 | 0.154 |
+| Roguelike | 0.307 | 0.283 | 0.239 | 0.248 |
+| Shooter | 0.255 | 0.257 | 0.253 | 0.260 |
+| Cozy | 0.454 | 0.502 | 0.528 | 0.508 |
+
+A niche's own pattern is noisy, and worse than nothing for small niches. The
+all-games pattern predicted every niche tried at least as well as its own
+(shooter 0.232, cozy 0.400, shooter AND roguelike 0.434 against 0.451 with no
+pattern), so the site shows the all-games pattern for the user's languages,
+paid or free, whatever tags are picked. On 2026-10-12 it gave 1.34 for the week
+after Next Fest October, 0.49 for Christmas week and 1.37 for the week after
+Next Fest February.
+
 **Date changes:** every number uses each game's date in the newest snapshot, so
 a game that moves (say from "October 2026" to "May 2027") leaves its old week
 and appears in the new one in the next daily build. Older dates stay in the
