@@ -27,7 +27,7 @@ GROUPS = ("paid", "free")
 CELL = ("exact", "spread", "year", "hype", "year_hype", "no_hype")
 PANEL_TYPES = ("full", "early_access")
 MIN_GROUP = 30
-RELATIVE_WEEKS = 13  # the relative busy measure compares a week with this many weeks before and after
+RELATIVE_WEEKS = 13  # the relative busy measure compares a week with this many weeks before it
 TYPICAL_WEEKS = 52  # the heatmap's normalized view compares with launches over this many weeks
 LATER_AFTER = 2  # year-only dates more than this many years ahead ("2099") are summed as "later"
 
@@ -140,31 +140,31 @@ def history_panel(history, selection=(), mode: str = "and", languages=(), min_gr
     Busy, for launches of the same group in the selection (weeks Monday to Sunday):
     - measure "raw" (the site's "raw counts" toggle, off by default): how many
       other launches that week;
-    - measure "relative" (the default): launches that week divided by the average week in the
-      RELATIVE_WEEKS before and after (inside the data's span; an average of 0
-      counts as 1), rounded to 2 decimals. Steam grows every year, so raw counts
-      make "busy" partly mean "recent"; this compares a week with its own time.
-      Near the start and end of the data the window is one-sided, so in a fast
-      growing niche the first weeks read a little low and the last a little high."""
+    - measure "relative" (the default): launches that week divided by the average
+      week in the RELATIVE_WEEKS before it (an average of 0 counts as 1), rounded
+      to 2 decimals. Steam grows every year, so raw counts make "busy" partly mean
+      "recent"; this compares a week with what was usual just before it, which is
+      what a developer could know when picking the date. Launches in the data's
+      first RELATIVE_WEEKS weeks have no such baseline and are left out. In a
+      fast-growing niche the past lags, so its weeks read a little high."""
     chosen = [h for h in selected(history, selection, mode, languages) if h["launch_type"] in PANEL_TYPES]
     group_of = {id(h): "free" if h["free"] else "paid" for h in chosen}
     week_of = {id(h): week_start(date.fromisoformat(h["launch_date"])) for h in chosen}
     per_week = Counter((group_of[id(h)], week_of[id(h)]) for h in chosen)
     span = [week_start(date.fromisoformat(h["launch_date"])) for h in history]
-    first, last = (min(span), max(span)) if span else (None, None)
+    baseline_from = min(span) + timedelta(weeks=RELATIVE_WEEKS) if span else None
 
     def busy(group, week):
         if measure == "raw":
             return per_week[group, week] - 1
-        around = [week + timedelta(weeks=k) for k in range(-RELATIVE_WEEKS, RELATIVE_WEEKS + 1)
-                  if k and first <= week + timedelta(weeks=k) <= last]
-        usual = sum(per_week[group, w] for w in around) / len(around) if around else 0
+        usual = sum(per_week[group, week - timedelta(weeks=k)] for k in range(1, RELATIVE_WEEKS + 1)) / RELATIVE_WEEKS
         return round(per_week[group, week] / (usual or 1), 2)
 
     out = {"measure": measure}
     for group in GROUPS:
         sample = [(busy(group, week_of[id(h)]), h["reviews_30d"])
-                  for h in chosen if group_of[id(h)] == group and h["reviews_30d"] is not None]
+                  for h in chosen if group_of[id(h)] == group and h["reviews_30d"] is not None
+                  and (measure == "raw" or week_of[id(h)] >= baseline_from)]
         out[group] = _terciles(sample, min_group)
     out["matched"] = len(chosen)
     out["total"] = sum(h["launch_type"] in PANEL_TYPES for h in history)

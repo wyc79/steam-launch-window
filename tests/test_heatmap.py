@@ -170,20 +170,25 @@ def weekly(counts, start=date(2024, 1, 1)):
     return rows
 
 
-def test_relative_busy_compares_a_week_with_the_weeks_around_it():
+def test_relative_busy_compares_a_week_with_the_weeks_before_it():
     counts = [2] * 27
     counts[13] = 6
     panel = hm.history_panel(weekly(counts), [SHOOTER], min_group=1)  # relative is the default
     assert panel["measure"] == "relative"
-    assert max(p.get("busy_max", 0) for p in panel["paid"]["parts"].values()) == 3.0  # 6 against 2 around it
+    parts = panel["paid"]["parts"].values()
+    assert max(p.get("busy_max", 0) for p in parts) == 3.0   # 6 against 2 in the 13 weeks before
+    assert min(p.get("busy_min", 9) for p in parts) == 0.87  # later weeks have the spike in their past
+    assert sum(p["games"] for p in parts) == 2 * 13 + 6      # the first 13 weeks have no baseline
     raw = hm.history_panel(weekly(counts), [SHOOTER], min_group=1, measure="raw")
     assert raw["measure"] == "raw" and max(p.get("busy_max", 0) for p in raw["paid"]["parts"].values()) == 5
+    assert sum(p["games"] for p in raw["paid"]["parts"].values()) == sum(counts)
 
 
 def test_relative_busy_removes_slow_growth():
     counts = [5 + i // 4 for i in range(104)]  # launches grow from 5 to 30 a week over two years
-    panel = hm.history_panel(weekly(counts), [SHOOTER], min_group=1, measure="relative")
-    parts = panel["paid"]["parts"].values()
-    interior = [p for p in parts if p["games"]]
-    # every week is about usual; the first weeks see only later, bigger weeks (0.74 here)
-    assert all(0.7 <= p["busy_min"] and p["busy_max"] <= 1.25 for p in interior)
+    raw = hm.history_panel(weekly(counts), [SHOOTER], min_group=1, measure="raw")
+    assert max(p["busy_max"] for p in raw["paid"]["parts"].values()) == 29
+    panel = hm.history_panel(weekly(counts), [SHOOTER], min_group=1)
+    interior = [p for p in panel["paid"]["parts"].values() if p["games"]]
+    # every week is about usual; the past lags behind growth, so weeks read a little high (up to 1.3 here)
+    assert all(0.9 <= p["busy_min"] and p["busy_max"] <= 1.35 for p in interior)

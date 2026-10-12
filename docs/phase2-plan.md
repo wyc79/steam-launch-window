@@ -290,12 +290,19 @@ from `history.json`, so the panel and the heatmap tell one story. The model
 (section 3) keeps its own tag-weight similarity measure.
 
 **Normalized busy, the default** (decided 2026-10-12; the heatmap's "raw counts"
-toggle switches both): the week's
-launches divided by the average week in the 13 weeks before and after. Raw
-counts put mostly recent launches in the busy group (shooters: 40% from 2026 in
-busy, 5% in quiet); normalized, each group has a similar mix of years (busy:
-14 to 25% per year). Near the start and end of the data the window is one-sided,
-so in a fast-growing niche those weeks read a little low or high.
+toggle switches both): the week's launches divided by the average week in the
+**13 weeks before it**. Only the past is used, since that is what a developer
+could know when picking the date; it also matches the heatmap, whose baseline
+is past launches. Launches in the data's first 13 weeks (January to March 2022)
+have no baseline and are left out of the normalized panel.
+
+Why: raw counts put mostly recent launches in the busy group (shooters: 40% of
+the busy group from 2026, 5% of the quiet group). Normalized, the mix evens out
+(2026 share: quiet 14%, normal 21%, busy 26%). A centered window (13 weeks before
+and after) gave about the same split (16%, 16%, 29%) but uses weeks the
+developer could not see. In a fast-growing niche the past lags, so its weeks
+read a little high (cozy games in 2026 average 1.56); the panel ranks weeks in
+thirds, so a niche-wide lean like that mostly cancels.
 
 Hide a group with fewer than 30 games; hide the panel if any group is hidden
 (the match count warns about this, section 1).
