@@ -324,7 +324,7 @@ def fit_hurdle(s: pd.DataFrame, cols: list[str]) -> dict:
                                               pd.factorize(sp["week"])[0], plain.params)
     part = {"n": int(pos.sum()), "converged": count is not None}
     if count is None:
-        part.update(status=f"failed: {failure}; left out", effects=[])
+        part.update(status=f"failed: {failure}; left out", failure=failure, effects=[])
     else:
         part.update(method=method, alpha=_r(float(count.params["alpha"])), effects=effects(count, sp))
     return {"any_reviews": {"n": int(len(s)), "share_with_reviews": round(float(any_.mean()), 3),
@@ -812,7 +812,9 @@ def group_caveats(g: dict, free: bool) -> list[str]:
     if note:
         out.append(note + " " + g["holidays"]["site_use"])
     if g["hurdle"]["count_given_some"].get("converged") is False:
-        out.append("The hurdle model's count part did not converge and is left out.")
+        why = g["hurdle"]["count_given_some"]["failure"]
+        out.append(f"The hurdle model's count part (zero-truncated negative binomial) failed: {why}. It is left "
+                   "out; a plain negative binomial on the games with reviews is reported instead.")
     return out
 
 
