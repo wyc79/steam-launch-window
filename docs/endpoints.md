@@ -294,8 +294,9 @@ which "takes the same filters and returns the same fields"
 - `purchase_type=steam` with the default off-topic filter matches the store's
   own review count (checked on 3 games: 101 = 101, 33 = 33, 1,584 vs 1,568).
   `purchase_type=all` adds key activations (curator and giveaway copies),
-  about 5 to 10% more. The pipeline uses `steam`, so the 30-day count can be
-  compared with the summary count, and a summary count of 0 means 0.
+  about 5 to 10% more. The pipeline uses `steam` for paid games, so their
+  30-day count can be compared with the summary count, and a summary count of
+  0 means 0. Free games use `all` (see 7a).
 
 ### 7c. Review histogram
 

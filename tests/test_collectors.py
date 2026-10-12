@@ -407,3 +407,38 @@ def test_history_recounts_free_games_counted_with_purchases_only(tmp_path, monke
     # and a second run does not count the free game again
     _, again = _run_history(tmp_path, monkeypatch, [_free_item(7, SEP_5, 900), _item(9, SEP_5, 900)])
     assert not [c for c in again if c[0] == 7]
+
+
+OCT_2 = SEP_1 + 31 * 86400  # 2026-10-02 00:00 Pacific
+
+
+def test_history_fixes_free_games_whose_30_day_window_is_still_open(tmp_path, monkeypatch):
+    # counted on the old basis before its 30-day window closed: only the first-week counts exist
+    young = {"appid": 7, "name": "G7", "launch_date": "2026-10-02", "launch_ts": OCT_2, "launch_type": "full",
+             "is_free": 1, "reviews_total_now": 40, "reviews_1d": 0, "reviews_7d": 0,
+             "reviews_early_fetched": "2026-10-12", "first_listed": "2026-10-03", "last_listed": "2026-10-12"}
+    monkeypatch.setattr(ch, "list_month", lambda client, month: [])
+    rows, calls = _run_history(tmp_path, monkeypatch, [], existing=[young],
+                               extra=["--skip-listing", "--early-since", "2026-09-01"])
+    row = rows["7"]
+    assert calls == [(7, 86400, "all"), (7, 7 * 86400, "all")]  # no 30-day count yet: its window is open
+    assert (row["reviews_7d"], row["reviews_purchase"], row["reviews_30d_source"]) == ("3", "all", "")
+
+
+def test_history_keeps_a_free_games_nonzero_prelaunch_count_and_its_label(tmp_path, monkeypatch):
+    relabeled = {"appid": 7, "name": "G7", "launch_date": "2026-09-05", "launch_ts": SEP_5, "launch_type": "ea_exit",
+                 "is_free": 1, "reviews_total_now": 900, "reviews_30d": 1, "reviews_30d_positive": 1,
+                 "reviews_30d_source": "api", "reviews_30d_fetched": "2026-10-10", "reviews_before_launch": 12,
+                 "prior_check_fetched": "2026-10-10", "first_listed": "2026-10-01", "last_listed": "2026-10-10"}
+    rows, calls = _run_history(tmp_path, monkeypatch, [], existing=[relabeled], extra=["--skip-listing"])
+    row = rows["7"]
+    assert calls == [(7, ch.WINDOW, "all")]  # counting everyone can only raise 12: no new check
+    assert (row["launch_type"], row["reviews_before_launch"], row["reviews_30d"]) == ("ea_exit", "12", "3")
+
+
+def test_free_game_uses_the_heaviest_tags_with_ties_by_id():
+    assert steam.tag_ids("5:1|113:1|9:2") == [9, 5, 113]
+    many = "|".join(f"{t}:10" for t in range(1, 11)) + "|113:10"  # 113 is 11th once ties go by id
+    assert not steam.free_game(0, steam.tag_ids(many))
+    assert steam.free_game(1, []) and steam.free_game("1", [])
+    assert ch.is_free({"is_free": "0", "tags": "113:50|492:10"})

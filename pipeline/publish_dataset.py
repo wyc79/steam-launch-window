@@ -342,8 +342,10 @@ history = load_dataset("<this repo>", "history")
 - **Reviews** of paid games are from people who bought the game on Steam (key
   activations excluded), like the store's own count. Free games count all
   reviews, since nobody buys them; `reviews_purchase` says which (`steam` or
-  `all`; empty means `steam`). Delisted games that left before collection
-  started are missing.
+  `all`; empty means `steam`). "Free" is the game's status today, so a game
+  that was paid at launch and went free later counts all reviews, including
+  key activations. Delisted games that left before collection started are
+  missing.
 - **`launch_type`**: `full`, `early_access`, or `ea_exit` (a 1.0 launch of a
   game that was already on sale in Early Access; treat these apart).
 - **Wishlist rank** only covers Steam's top ~5,300 wishlisted games.

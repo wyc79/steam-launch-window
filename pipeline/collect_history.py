@@ -28,8 +28,11 @@ reviews_purchase says whose reviews the counts include: "steam" (bought on
 Steam, the store's own count) for paid games, "all" for free games (Steam's
 free flag or "Free to Play" in the top 10 tags), whose players buy nothing.
 Rows counted before this column existed have it empty, which means "steam".
-Free games among them are counted again, with their first-week counts and
-hidden Early Access check.
+At the start of each run, a free game whose counts are on the "steam" basis
+loses them (its 30-day count, its first-week counts, and a pre-launch count of
+0; a pre-launch count above 0 stays, since counting everyone can only add) and
+is marked "all", so the normal passes count it again; an interrupted run goes
+on where it stopped.
 
 Rows are never dropped. A game that is no longer listed (delisted, or missed
 by one listing) keeps its row; last_listed says when it was last seen, and
@@ -72,7 +75,6 @@ FIELDS = [
 COUNT_FIELDS = ("reviews_30d", "reviews_30d_positive", "reviews_30d_source", "reviews_30d_fetched",
                 "reviews_before_launch", "prior_check_fetched",
                 "reviews_1d", "reviews_7d", "reviews_early_fetched", "reviews_purchase")
-FREE_TO_PLAY = "113"  # Steam tag id
 PRIOR_GAP = 7 * 86400  # reviews this long before launch mean the game was already on sale
 DATA_REQUEST = {"include_release": True, "include_tag_count": 20, "include_basic_info": True,
                 "include_supported_languages": True,
@@ -166,13 +168,29 @@ def merge(old: dict | None, new: dict, today: str = "") -> dict:
 
 
 def is_free(row: dict) -> bool:
-    top = [t.partition(":")[0] for t in (row.get("tags") or "").split("|") if t][:10]
-    return str(row.get("is_free")) == "1" or FREE_TO_PLAY in top
+    return steam.free_game(row.get("is_free"), steam.tag_ids(row.get("tags")))
 
 
 def purchase(row: dict) -> tuple[int, str]:
     """Whose reviews to count for this game, as (API value, reviews_purchase label)."""
     return (steam.PURCHASE_ALL, "all") if is_free(row) else (steam.PURCHASE_STEAM, "steam")
+
+
+def to_all_reviews(row: dict) -> bool:
+    """For a free game still counted on the "steam" basis: drop the counts that basis got
+    wrong, so the passes count them again with everyone's reviews, and mark the row "all".
+    A pre-launch count above 0 stays (counting everyone can only raise it), and so does
+    the launch type it set. True if the row changed."""
+    if not is_free(row) or row.get("reviews_purchase") == "all":
+        return False
+    if row.get("reviews_30d_source") == "api":
+        row.update(reviews_30d="", reviews_30d_positive="", reviews_30d_source="", reviews_30d_fetched="")
+    if row.get("reviews_early_fetched"):
+        row.update(reviews_1d="", reviews_7d="", reviews_early_fetched="")
+    if row.get("prior_check_fetched") and str(row.get("reviews_before_launch") or "0") == "0":
+        row.update(reviews_before_launch="", prior_check_fetched="")
+    row["reviews_purchase"] = "all"
+    return True
 
 
 def needs_reviews(row: dict, cutoff_ts: int, today: date | None = None) -> bool:
@@ -181,8 +199,6 @@ def needs_reviews(row: dict, cutoff_ts: int, today: date | None = None) -> bool:
     source = row.get("reviews_30d_source", "")
     if source == "":
         return True
-    if source == "api" and is_free(row) and row.get("reviews_purchase") != "all":
-        return True  # counted with purchases only, which misses nearly all of a free game's reviews
     fetched = row.get("reviews_30d_fetched")
     return (source == "unavailable" and today is not None and bool(fetched)
             and (today - date.fromisoformat(fetched)).days >= UNAVAILABLE_RETRY_DAYS)
@@ -257,17 +273,15 @@ def main(argv=None) -> int:
 
     cutoff_ts = pacific_ts(today)
     stamp = today.isoformat()
+    moved = sum(to_all_reviews(r) for r in rows.values())
+    if moved:
+        log.info("%d free games counted with Steam purchases only: counting them again with all reviews", moved)
 
     def save():
         storage.write_csv(path, [rows[a] for a in sorted(rows)], FIELDS)
 
     def thirty_day(row):
         kind, label = purchase(row)
-        if row.get("reviews_30d_source") == "api" and row.get("reviews_purchase") != label:
-            # counted on another basis: the first-week counts and the hidden Early Access
-            # check were too, so they are redone by the later passes of this run
-            row.update(reviews_1d="", reviews_7d="", reviews_early_fetched="",
-                       reviews_before_launch="", prior_check_fetched="")
         if int(row["reviews_total_now"] or 0) == 0:
             row.update(reviews_30d=0, reviews_30d_positive=0, reviews_30d_source="zero_total",
                        reviews_30d_fetched=stamp, reviews_purchase=label)

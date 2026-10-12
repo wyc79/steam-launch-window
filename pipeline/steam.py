@@ -147,6 +147,21 @@ def follower_count(client: Client, appid: int) -> int | None:
     return int(m.group(1)) if m else None
 
 
+FREE_TO_PLAY = 113  # Steam tag id
+
+
+def tag_ids(raw: str) -> list[int]:
+    """'id:weight|...' as ids, heaviest first (ties by id)."""
+    pairs = [(int(t), int(w or 0)) for t, _, w in (p.partition(":") for p in (raw or "").split("|") if p)]
+    return [t for t, _ in sorted(pairs, key=lambda p: (-p[1], p[0]))]
+
+
+def free_game(flag, tags: list[int]) -> bool:
+    """Free if Steam flags it, or "Free to Play" is among its 10 heaviest tags (the tag
+    catches free games that have not set the flag). This is today's status."""
+    return str(flag) == "1" or FREE_TO_PLAY in tags[:10]
+
+
 PURCHASE_STEAM = 0  # reviewers who bought the game on Steam (the store's own count)
 PURCHASE_ALL = 1    # everyone, including key activations and free-to-play players
 # (2 is "not bought on Steam"; checked 2026-10-12: Balatro's first 30 days 19,248 + 2,260 = 21,508,
