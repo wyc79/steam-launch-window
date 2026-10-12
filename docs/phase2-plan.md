@@ -1,7 +1,6 @@
 # Phase 2 plan: analysis
 
-Status: building (2026-10-12). Questions 1 to 4 answered, question 5 open
-(section 7). The site data files and the reference numbers are built; the model
+Status: building (2026-10-12). All questions answered (section 7). The site data files and the reference numbers are built; the model
 is next. Updated 2026-10-11 after the pipeline audit: followers now come from Games Popularity, with history back to
 2024-03-15, which changes sections 2 and 3.
 
@@ -78,6 +77,17 @@ For each week and tag:
 | **No hype data** | how much of the total comes from games with no follower count and no wishlist rank |
 
 Exact and spread are always shown separately.
+
+**Raw or normalized** (decided 2026-10-12): raw counts are the default; a switch
+shows each week compared with a usual week of real launches for the same
+selection (its average over the last 52 weeks of history). Steam grows every
+year, so this reads better than raw counts across tags and years. Announced
+dates are not launches, and the page says so: near weeks run high because some
+will slip, far weeks low because many dates are not set yet. On 2026-10-12,
+English-language paid shooters (39 launches in a usual week) read 1.8 this week,
+2.6 in the week of October 26, and about 0.3 six months out. Once a few months of
+snapshots exist, a fairer baseline compares with how full weeks the same
+distance ahead usually were.
 
 **Date changes:** every number uses each game's date in the newest snapshot, so
 a game that moves (say from "October 2026" to "May 2027") leaves its old week
@@ -278,6 +288,13 @@ launches in the same week that match the user's selection. The browser counts it
 from `history.json`, so the panel and the heatmap tell one story. The model
 (section 3) keeps its own tag-weight similarity measure.
 
+**Normalized busy** (decided 2026-10-12, same switch as the heatmap): the week's
+launches divided by the average week in the 13 weeks before and after. Raw
+counts put mostly recent launches in the busy group (shooters: 40% from 2026 in
+busy, 5% in quiet); normalized, each group has a similar mix of years (busy:
+14 to 25% per year). Near the start and end of the data the window is one-sided,
+so in a fast-growing niche those weeks read a little low or high.
+
 Hide a group with fewer than 30 games; hide the panel if any group is hidden
 (the match count warns about this, section 1).
 
@@ -342,14 +359,11 @@ Steam requests.
    language filter. Used to check whether Chinese localization raises reviews
    more than sales.
 
-5. **Busy compared with what?** (found while building, 2026-10-12) Counted as
-   plain launches per week, "busy" mostly means "recent": English-language paid
-   shooters averaged 23.7 other shooter launches a week in 2022 and 41.1 in 2026.
-   So the panel's busy group is mostly 2025 to 2026 launches and quiet mostly
-   2022 to 2023, and any difference mixes competition with how Steam changed.
-   Proposal: compare each week with the selection's usual level around it (the
-   average over the 13 weeks before and after), and split by that ratio. It
-   keeps short peaks (Next Fest, holidays) and removes the slow growth.
+5. ~~**Busy compared with what?**~~ Decided: both. Raw counts by default, and a
+   normalized switch on the heatmap (section 2) and the panel (section 4).
+   Found while building: counted raw, "busy" mostly meant "recent"
+   (English-language paid shooters averaged 23.7 other shooter launches a week
+   in 2022 and 41.1 in 2026).
 
 ## Known data limits that feed into this
 

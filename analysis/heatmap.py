@@ -27,6 +27,8 @@ GROUPS = ("paid", "free")
 CELL = ("exact", "spread", "year", "hype", "year_hype", "no_hype")
 PANEL_TYPES = ("full", "early_access")
 MIN_GROUP = 30
+RELATIVE_WEEKS = 13  # the relative busy measure compares a week with this many weeks before and after
+TYPICAL_WEEKS = 52  # the heatmap's normalized view compares with launches over this many weeks
 LATER_AFTER = 2  # year-only dates more than this many years ahead ("2099") are summed as "later"
 
 
@@ -60,11 +62,16 @@ def _overlap(start: date, end: date, week: date) -> int:
     return max(0, (min(end, week + timedelta(days=6)) - max(start, week)).days + 1)
 
 
-def heatmap(games, today: date, selection=(), mode: str = "and", languages=()) -> dict:
+def heatmap(games, today: date, selection=(), mode: str = "and", languages=(), history=None) -> dict:
     """Per week and group: exact, spread, year (games), hype and year_hype
     (followers), no_hype (games with no follower number, exact and spread only).
     `sometime` sums the year-only games per year (years more than LATER_AFTER
-    ahead together, as "later"). `matched` and `total` are the
+    ahead together, as "later"). `typical` (with `history`) is each group's
+    average week of real launches in the selection over the TYPICAL_WEEKS before
+    `today`: the normalized view shows (exact + spread) / typical, "compared with
+    a usual week of launches" (none when it is 0). Announced dates are not
+    launches: near weeks run high (some will slip) and far weeks low (dates not
+    set yet), and the page says so. `matched` and `total` are the
     match count for upcoming games."""
     weeks = [week_start(today) + timedelta(weeks=i) for i in range(WEEKS)]
     grid = {g: [dict.fromkeys(CELL, 0.0) for _ in weeks] for g in GROUPS}
@@ -103,8 +110,14 @@ def heatmap(games, today: date, selection=(), mode: str = "and", languages=()) -
             year[group]["games"] += 1
             year[group]["hype"] += followers or 0
             year[group]["no_hype"] += followers is None
-    return {"weeks": [w.isoformat() for w in weeks], **grid, "sometime": dict(sorted(sometime.items())),
-            "matched": len(chosen), "total": len(games)}
+    typical = None
+    if history is not None:
+        since = (today - timedelta(weeks=TYPICAL_WEEKS)).isoformat()
+        recent = [h for h in selected(history, selection, mode, languages)
+                  if h["launch_type"] in PANEL_TYPES and since <= h["launch_date"] < today.isoformat()]
+        typical = {g: sum((h["free"]) == (g == "free") for h in recent) / TYPICAL_WEEKS for g in GROUPS}
+    return {"weeks": [w.isoformat() for w in weeks], **grid, "typical": typical,
+            "sometime": dict(sorted(sometime.items())), "matched": len(chosen), "total": len(games)}
 
 
 def percentile(values: list[float], q: float) -> float:
@@ -116,27 +129,48 @@ def percentile(values: list[float], q: float) -> float:
     return v[lo] + (v[hi] - v[lo]) * (pos - lo)
 
 
-def history_panel(history, selection=(), mode: str = "and", languages=(), min_group: int = MIN_GROUP) -> dict:
+def history_panel(history, selection=(), mode: str = "and", languages=(), min_group: int = MIN_GROUP,
+                  measure: str = "raw") -> dict:
     """Past launches in the selection, per group (paid, free), split into quiet,
-    normal and busy launch weeks by tercile of "busy": how many other launches of
-    the same group in the selection launched that week (Monday to Sunday). Each
-    part gives games, its busy range, and median, 75th and 90th percentile of
-    30-day reviews. A part with fewer than `min_group` games is hidden, and then
-    the whole group is (`shown` false)."""
+    normal and busy launch weeks by tercile of "busy". Each part gives games, its
+    busy range, and median, 75th and 90th percentile of 30-day reviews. A part
+    with fewer than `min_group` games is hidden, and then the whole group is
+    (`shown` false).
+
+    Busy, for launches of the same group in the selection (weeks Monday to Sunday):
+    - measure "raw": how many other launches that week;
+    - measure "relative": launches that week divided by the average week in the
+      RELATIVE_WEEKS before and after (inside the data's span; an average of 0
+      counts as 1), rounded to 2 decimals. Steam grows every year, so raw counts
+      make "busy" partly mean "recent"; this compares a week with its own time.
+      Near the start and end of the data the window is one-sided, so in a fast
+      growing niche the first weeks read a little low and the last a little high."""
     chosen = [h for h in selected(history, selection, mode, languages) if h["launch_type"] in PANEL_TYPES]
-    per_week = Counter(("free" if h["free"] else "paid", week_start(date.fromisoformat(h["launch_date"])))
-                       for h in chosen)
-    out = {}
+    group_of = {id(h): "free" if h["free"] else "paid" for h in chosen}
+    week_of = {id(h): week_start(date.fromisoformat(h["launch_date"])) for h in chosen}
+    per_week = Counter((group_of[id(h)], week_of[id(h)]) for h in chosen)
+    span = [week_start(date.fromisoformat(h["launch_date"])) for h in history]
+    first, last = (min(span), max(span)) if span else (None, None)
+
+    def busy(group, week):
+        if measure == "raw":
+            return per_week[group, week] - 1
+        around = [week + timedelta(weeks=k) for k in range(-RELATIVE_WEEKS, RELATIVE_WEEKS + 1)
+                  if k and first <= week + timedelta(weeks=k) <= last]
+        usual = sum(per_week[group, w] for w in around) / len(around) if around else 0
+        return round(per_week[group, week] / (usual or 1), 2)
+
+    out = {"measure": measure}
     for group in GROUPS:
-        sample = [(per_week[group, week_start(date.fromisoformat(h["launch_date"]))] - 1, h["reviews_30d"])
-                  for h in chosen if ("free" if h["free"] else "paid") == group and h["reviews_30d"] is not None]
+        sample = [(busy(group, week_of[id(h)]), h["reviews_30d"])
+                  for h in chosen if group_of[id(h)] == group and h["reviews_30d"] is not None]
         out[group] = _terciles(sample, min_group)
     out["matched"] = len(chosen)
     out["total"] = sum(h["launch_type"] in PANEL_TYPES for h in history)
     return out
 
 
-def cut_points(busy: list[int]) -> tuple[int, int] | None:
+def cut_points(busy: list[float]) -> tuple[float, float] | None:
     """Where quiet ends and normal ends: games with the same busy count stay in one
     part, and each cut is the value whose running total is closest to a third
     (then two thirds) of the games; ties go to the lower value. With many equal
@@ -154,7 +188,7 @@ def cut_points(busy: list[int]) -> tuple[int, int] | None:
     return c1, c2
 
 
-def _terciles(sample: list[tuple[int, int]], min_group: int) -> dict:
+def _terciles(sample: list[tuple[float, int]], min_group: int) -> dict:
     parts = defaultdict(list)
     cuts = cut_points([b for b, _ in sample])
     if cuts:

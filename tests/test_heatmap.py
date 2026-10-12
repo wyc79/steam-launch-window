@@ -150,3 +150,40 @@ def test_panel_reports_review_percentiles_per_part():
     assert [parts[n]["games"] for n in ("quiet", "normal", "busy")] == [40, 40, 40]
     assert [parts[n]["median"] for n in ("quiet", "normal", "busy")] == [100, 50, 20]
     assert (parts["busy"]["busy_min"], parts["busy"]["busy_max"]) == (3, 3)
+
+
+def test_typical_week_is_the_average_week_of_real_launches_last_year():
+    history = ([past("2026-01-05", 10)] * 104 + [past("2026-03-02", 10, free=True)] * 26
+               + [past("2025-10-01", 10)] * 50          # more than 52 weeks before TODAY: not counted
+               + [past("2026-10-12", 10)]                 # TODAY itself: not counted
+               + [past("2026-02-02", 10, launch_type="ea_exit")] + [past("2026-02-02", 10, tags=(COZY,))])
+    h = hm.heatmap([game("day", "2026-10-14")], TODAY, [SHOOTER], history=history)
+    assert h["typical"] == {"paid": 2.0, "free": 0.5}
+    assert hm.heatmap([game("day", "2026-10-14")], TODAY)["typical"] is None
+
+
+def weekly(counts, start=date(2024, 1, 1)):
+    from datetime import timedelta
+    rows = []
+    for i, n in enumerate(counts):
+        rows += [past((start + timedelta(weeks=i)).isoformat(), 10)] * n
+    return rows
+
+
+def test_relative_busy_compares_a_week_with_the_weeks_around_it():
+    counts = [2] * 27
+    counts[13] = 6
+    panel = hm.history_panel(weekly(counts), [SHOOTER], min_group=1, measure="relative")
+    assert panel["measure"] == "relative"
+    assert max(p.get("busy_max", 0) for p in panel["paid"]["parts"].values()) == 3.0  # 6 against 2 around it
+    raw = hm.history_panel(weekly(counts), [SHOOTER], min_group=1)
+    assert raw["measure"] == "raw" and max(p.get("busy_max", 0) for p in raw["paid"]["parts"].values()) == 5
+
+
+def test_relative_busy_removes_slow_growth():
+    counts = [5 + i // 4 for i in range(104)]  # launches grow from 5 to 30 a week over two years
+    panel = hm.history_panel(weekly(counts), [SHOOTER], min_group=1, measure="relative")
+    parts = panel["paid"]["parts"].values()
+    interior = [p for p in parts if p["games"]]
+    # every week is about usual; the first weeks see only later, bigger weeks (0.74 here)
+    assert all(0.7 <= p["busy_min"] and p["busy_max"] <= 1.25 for p in interior)
