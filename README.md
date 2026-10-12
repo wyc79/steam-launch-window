@@ -82,8 +82,9 @@ returns a game's whole daily follower series, so how often a game is pulled
 only decides how fresh its newest value is. Their free API allows about 1,000
 requests a day. The daily job uses up to 900, in this order:
 
-1. followers about 8 days after each launch (the whole pre-launch series)
-2. players 35 to 42 days after each launch (hourly counts for the first month)
+1. players 35 to 60 days after each launch (hourly counts for the first month;
+   first, because a game missed by day 60 loses them for good)
+2. followers about 8 days after each launch (the whole pre-launch series)
 3. every upcoming game with a date or a wishlist rank, once every 60 days
 4. the rest backfills games launched since 2024-03-15, paid games with 10+ reviews first
 

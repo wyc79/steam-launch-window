@@ -2,12 +2,14 @@
 
 One request returns a game's whole daily follower series, so how often a game
 is pulled only decides how fresh its newest value is. Jobs, most urgent first:
-  0. followers, about 8 days after launch (whole pre-launch series plus launch week);
-     missed ones are caught up for 60 days
-  1. players, 35 to 42 days after launch (hourly counts for the first month, one page)
+  0. players, 35 to 60 days after launch (hourly counts for the first month: one page
+     until about day 41, two after); first, because a game missed by day 60 loses its
+     first month for good
+  1. followers, about 8 days after launch (whole pre-launch series plus launch week);
+     missed ones are caught up for 60 days, then by the backfill
   2. followers for every upcoming game with a date or a wishlist rank, every 60 days
   3. backfill: followers for games launched since 2024-03-15 (and more than 60 days
-     ago; newer ones get job 0) that were never pulled;
+     ago; newer ones get job 1) that were never pulled;
      paid launches with 10+ reviews first, then 1+, then the rest; newest first
 
 Before all of these, a pull that stopped at the page cap (or the budget) is resumed
@@ -20,8 +22,9 @@ requests early for job 2 (the rest wait for its 60-day refresh). After 5 such pu
 in a row a game is left alone by jobs 0, 1 and 3.
 
 The run stops when the day's budget is used (requests already made today, from
-runs.csv, count too), at the first 429, or after too many errors in a row. A run
-on a UTC day that already ended with a 429 does not start.
+runs.csv, count too), at the first 429 that outlasts the retries (the daily ceiling;
+a pull it cuts short keeps its pages and is resumed; exit code 0), or after too many
+errors in a row. A run on a UTC day that already ended with a 429 does not start.
 
 Reads (under --data-dir): the newest upcoming snapshot and history/games.csv.
 Writes (under --gp-dir; the daily job syncs it with a private Hugging Face dataset):
@@ -68,7 +71,8 @@ class Policy:
     post_launch_days: int = 8
     post_launch_window: int = 60
     players_days: int = 35
-    players_window: int = 42     # one page of hourly points covers about 41 days
+    players_window: int = 60     # one page of hourly points covers about 41 days, so usually
+                                 # day 35 costs one request; later catch-ups cost two
     refresh_days: int = 60
     stale_page_days: int = 30      # upcoming dates this far past are stale store pages, not tracked
     stale_days: int = 14
@@ -168,15 +172,13 @@ def plan(snapshot: list[dict], history: list[dict], state: dict, today: date, po
             tried = _last_tried(followers) if followers else None
             first_try = tried is None or tried.date() < launch + timedelta(days=policy.post_launch_days - 1)
             if not seen_week and (first_try or retry(followers)):
-                add(Job(0, (launch.toordinal(), appid), "followers", appid, since))
+                add(Job(1, (launch.toordinal(), appid), "followers", appid, since))
         if ("players", appid) not in resuming:
             players_since = _midnight(launch - timedelta(days=1))
-            if players is None and policy.players_days <= age <= policy.players_window:
-                add(Job(1, (launch.toordinal(), appid), "players", appid, players_since))
-            elif (players is not None and _tries(players) > 0
-                  and policy.players_days <= age <= policy.post_launch_window and retry(players)):
-                # nothing came back last time; a later retry may cost a second page
-                add(Job(1, (launch.toordinal(), appid), "players", appid, players_since))
+            # never pulled, or nothing came back last time; oldest launch first, nearest the cutoff
+            if policy.players_days <= age <= policy.players_window and (
+                    players is None or (_tries(players) > 0 and retry(players))):
+                add(Job(0, (launch.toordinal(), appid), "players", appid, players_since))
         if (launch >= policy.backfill_since and age > policy.post_launch_window
                 and ("followers", appid) not in resuming
                 and (followers is None or (followers["status"] == "error" and retry(followers)))):
@@ -284,11 +286,16 @@ def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datet
     stamp = now.replace(microsecond=0).isoformat()
     points: dict[str, list[dict]] = {k: [] for k in gp.KINDS}
     stats = collections.Counter()
-    stopped, consecutive = "done", 0
+    stopped, consecutive = "running", 0  # what a killed run leaves in runs.csv
 
     def save():
         _save_points(gp_dir, day, points)
         save_state(gp_dir, state)
+        # the run's row too, so a killed run still counts its requests toward today's budget
+        row = {"date": day, "started_at": stamp, "requests": client.requests_made - start,
+               "stopped": stopped, **{f: stats[f] for f in RUN_FIELDS if f in stats}}
+        storage.replace_row(gp_dir / "runs.csv", {f: row.get(f, 0) for f in RUN_FIELDS}, RUN_FIELDS,
+                            key="started_at")
 
     try:
         for i, job in enumerate(todo):
@@ -319,23 +326,27 @@ def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datet
             row = state[(job.kind, job.appid)] = pulled_row(job, state.get((job.kind, job.appid), {}), res,
                                                             stamp, now, policy)
             status = row["status"]
+            if res.rate_limited:
+                log.error("rate limited on a later page of %s %s; kept the pages before it, stopping",
+                          job.kind, job.appid)
+                stopped = "rate_limited"
             points[job.kind].extend({"appid": job.appid, job.kind: v, "observed_at": t.isoformat(),
                                      "fetched_at": stamp} for t, v in res.points)
             stats["jobs"] += 1
             stats[status] += 1
             stats["points"] += len(res.points)
+            if stopped == "rate_limited":
+                break
             if (i + 1) % checkpoint == 0:
                 save()
                 log.info("%d jobs, %d requests", stats["jobs"], client.requests_made - start)
+        else:
+            stopped = "done"
     except KeyboardInterrupt:
         stopped = "interrupted"
         log.info("interrupted, saving progress")
     finally:
         save()
-        row = {"date": day, "started_at": stamp, "requests": client.requests_made - start,
-               "stopped": stopped, **{f: stats[f] for f in RUN_FIELDS if f in stats}}
-        storage.replace_row(gp_dir / "runs.csv", {f: row.get(f, 0) for f in RUN_FIELDS}, RUN_FIELDS,
-                            key="started_at")
     result = {"requests": client.requests_made - start, "stopped": stopped, **stats}
     log.info("run: %s", result)
     return result
@@ -360,7 +371,7 @@ def main(argv=None) -> int:
     state = load_state(args.gp_dir)
     todo = plan(snapshot, history, state, now.date(), Policy())
     by_priority = collections.Counter(j.priority for j in todo)
-    log.info("%d jobs due: %s (0 post-launch followers, 1 players, 2 upcoming, 3 backfill); budget %d, used today %d",
+    log.info("%d jobs due: %s (0 players, 1 post-launch followers, 2 upcoming, 3 backfill); budget %d, used today %d",
              len(todo), dict(sorted(by_priority.items())), args.budget, used_today(args.gp_dir, now.date().isoformat()))
     if args.dry_run:
         return 0
@@ -370,7 +381,9 @@ def main(argv=None) -> int:
     # A single 429 can be passing (seen 2026-10-11), so the client retries twice before giving up.
     client = Client(host_intervals={gp.HOST: args.gp_interval}, host_max_retries={gp.HOST: 2})
     stats = run(todo, client, key, state, args.gp_dir, now, args.budget)
-    return 0 if stats["stopped"] in ("done", "budget") else 1
+    # Hitting the daily ceiling is an expected stop (progress is saved, the rest waits for
+    # tomorrow), not a failure; errors and interruptions still fail the step.
+    return 0 if stats["stopped"] in ("done", "budget", "rate_limited") else 1
 
 
 if __name__ == "__main__":

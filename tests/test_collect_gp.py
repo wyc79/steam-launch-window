@@ -34,7 +34,7 @@ def jobs(snapshot=(), history=(), state=None):
 
 def test_post_launch_followers_pull_after_8_days():
     assert jobs(history=[launched(1, "2026-10-13")]) == []                  # day 7
-    assert jobs(history=[launched(1, "2026-10-12")]) == [(0, "followers", 1)]  # day 8
+    assert jobs(history=[launched(1, "2026-10-12")]) == [(1, "followers", 1)]  # day 8
 
 
 def test_post_launch_pull_happens_once_and_catches_up_for_60_days():
@@ -43,15 +43,15 @@ def test_post_launch_pull_happens_once_and_catches_up_for_60_days():
     before_launch = pulled(1, "followers", "2026-08-01T19:00:00+00:00")
     def followers(history, state):
         return [j for j in jobs(history=history, state=state) if j[1] == "followers"]
-    assert followers([launched(1, "2026-08-25")], before_launch) == [(0, "followers", 1)]  # day 56
+    assert followers([launched(1, "2026-08-25")], before_launch) == [(1, "followers", 1)]  # day 56
     assert followers([launched(1, "2026-08-20")], before_launch) == []  # day 61: past the window
 
 
 def test_players_pull_once_after_35_days():
-    assert (1, "players", 1) not in jobs(history=[launched(1, "2026-09-16")])  # day 34
-    assert (1, "players", 1) in jobs(history=[launched(1, "2026-09-15")])      # day 35
+    assert (0, "players", 1) not in jobs(history=[launched(1, "2026-09-16")])  # day 34
+    assert (0, "players", 1) in jobs(history=[launched(1, "2026-09-15")])      # day 35
     done = pulled(1, "players", "2026-10-19T19:00:00+00:00")
-    assert (1, "players", 1) not in jobs(history=[launched(1, "2026-09-15")], state=done)
+    assert (0, "players", 1) not in jobs(history=[launched(1, "2026-09-15")], state=done)
 
 
 def test_upcoming_games_with_a_date_or_rank_refresh_every_60_days():
@@ -84,7 +84,7 @@ def test_backfill_order_and_cutoff():
 def test_priorities_are_ordered_and_each_game_appears_once_per_kind():
     hist = [launched(1, "2026-10-12"), launched(2, "2025-06-01")]
     got = jobs(snapshot=[upcoming(3)], history=hist)
-    assert got == [(0, "followers", 1), (2, "followers", 3), (3, "followers", 2)]
+    assert got == [(1, "followers", 1), (2, "followers", 3), (3, "followers", 2)]
 
 
 # -- running -----------------------------------------------------------------
@@ -215,7 +215,7 @@ def test_state_written_before_the_retry_columns_still_loads_and_plans(tmp_path):
     state = cg.load_state(tmp_path)
     assert cg._tries(state[("followers", 1)]) == 1 and cg._tries(state[("followers", 2)]) == 0
     got = cg.plan([], [launched(1, "2026-10-04"), launched(2, "2026-10-04")], state, TODAY, POLICY)
-    assert [(j.priority, j.appid) for j in got] == [(0, 1)]  # 2 already has its launch week
+    assert [(j.priority, j.appid) for j in got] == [(1, 1)]  # 2 already has its launch week
     cg.save_state(tmp_path, state)
     assert list(storage.read_csv(tmp_path / "state.csv")[0]) == cg.STATE_FIELDS
 
@@ -238,9 +238,10 @@ def test_main_without_key_fails_loudly(tmp_path, monkeypatch):
         cg.main(["--data-dir", str(data), "--gp-dir", str(tmp_path / "gp"), "--today", "2026-10-20"])
 
 
-def test_players_pull_is_skipped_after_42_days():
-    assert (1, "players", 1) in jobs(history=[launched(1, "2026-09-08")])      # day 42
-    assert (1, "players", 1) not in jobs(history=[launched(1, "2026-09-07")])  # day 43: more than one page
+def test_players_never_pulled_are_caught_up_until_day_60():
+    assert (0, "players", 1) in jobs(history=[launched(1, "2026-09-08")])      # day 42
+    assert (0, "players", 1) in jobs(history=[launched(1, "2026-08-21")])      # day 60: two pages
+    assert (0, "players", 1) not in jobs(history=[launched(1, "2026-08-20")])  # day 61
 
 
 def test_run_stops_when_429s_persist_after_the_clients_retries(tmp_path):
@@ -277,13 +278,13 @@ def test_post_launch_followers_missing_then_available_is_retried_and_recovered(t
     cg.run(cg.plan([], hist, state, day8.date(), POLICY), FakeGP({1: [HTTPStatusError(404, "u")]}), "KEY",
            state, tmp_path, day8, 900)
     assert state[("followers", 1)]["status"] == "not_in_dataset"
-    assert _plan(state, history=hist, today=date(2026, 10, 21)) == [(0, "followers", 1)]  # 1 day later
+    assert _plan(state, history=hist, today=date(2026, 10, 21)) == [(1, "followers", 1)]  # 1 day later
     day9 = datetime(2026, 10, 21, 19, tzinfo=timezone.utc)
     cg.run(cg.plan([], hist, state, day9.date(), POLICY), FakeGP({1: [page("followers")]}), "KEY",
            state, tmp_path, day9, 900)
     assert (state[("followers", 1)]["status"], state[("followers", 1)]["tries"]) == ("null", "2")
     assert _plan(state, history=hist, today=date(2026, 10, 22)) == []                    # waits 2 days
-    assert _plan(state, history=hist, today=date(2026, 10, 23)) == [(0, "followers", 1)]
+    assert _plan(state, history=hist, today=date(2026, 10, 23)) == [(1, "followers", 1)]
     day11 = datetime(2026, 10, 23, 19, tzinfo=timezone.utc)
     reply = page("followers", ("2026-10-23T08:00:00", 120), ("2026-10-11T08:00:00", 40))
     cg.run(cg.plan([], hist, state, day11.date(), POLICY), FakeGP({1: [reply]}), "KEY", state, tmp_path, day11, 900)
@@ -297,7 +298,7 @@ def test_post_launch_retries_give_up_after_max_tries():
     row = {"appid": "1", "kind": "followers", "last_pulled": "2026-10-12T19:00:00+00:00",
            "last_tried": "2026-10-12T19:00:00+00:00", "status": "null", "last_observed_at": "", "points": "0",
            "tries": "4"}
-    assert _plan({("followers", 1): row}, history=hist) == [(0, "followers", 1)]   # 8 days after try 4
+    assert _plan({("followers", 1): row}, history=hist) == [(1, "followers", 1)]   # 8 days after try 4
     assert _plan({("followers", 1): {**row, "tries": "5"}}, history=hist) == []    # confirmed unavailable
 
 
@@ -306,7 +307,7 @@ def test_launch_week_that_gp_has_not_reached_yet_is_pulled_again():
     row = {"appid": "1", "kind": "followers", "last_pulled": "2026-10-18T19:00:00+00:00",
            "last_tried": "2026-10-18T19:00:00+00:00", "status": "ok",
            "last_observed_at": "2026-10-13T08:00:00+00:00", "points": "200", "tries": "0"}
-    assert _plan({("followers", 1): row}, history=hist) == [(0, "followers", 1)]
+    assert _plan({("followers", 1): row}, history=hist) == [(1, "followers", 1)]
     seen = {**row, "last_observed_at": "2026-10-16T08:00:00+00:00"}
     assert _plan({("followers", 1): seen}, history=hist) == []
 
@@ -315,10 +316,10 @@ def test_players_with_no_data_are_retried_inside_the_post_launch_window():
     row = {"appid": "1", "kind": "players", "last_pulled": "2026-10-10T19:00:00+00:00",
            "last_tried": "2026-10-10T19:00:00+00:00", "status": "null", "last_observed_at": "", "points": "0",
            "tries": "1"}
-    assert (1, "players", 1) in _plan({("players", 1): row}, history=[launched(1, "2026-09-05")])     # day 45
-    assert (1, "players", 1) not in _plan({("players", 1): row}, history=[launched(1, "2026-08-20")])  # day 61
+    assert (0, "players", 1) in _plan({("players", 1): row}, history=[launched(1, "2026-09-05")])     # day 45
+    assert (0, "players", 1) not in _plan({("players", 1): row}, history=[launched(1, "2026-08-20")])  # day 61
     got = {**row, "status": "ok", "tries": "0", "points": "900"}
-    assert (1, "players", 1) not in _plan({("players", 1): got}, history=[launched(1, "2026-09-05")])
+    assert (0, "players", 1) not in _plan({("players", 1): got}, history=[launched(1, "2026-09-05")])
 
 
 def test_backfill_retries_failed_requests_but_not_confirmed_missing_data():
@@ -425,3 +426,50 @@ def test_a_refresh_after_a_partial_pull_does_not_skip_the_gap(tmp_path):
     # an upcoming-game refresh is held back until the older pages are in
     assert [(j.priority, j.cursor is not None) for j in cg.plan([upcoming(1)], hist, state, date(2026, 10, 21),
                                                                  POLICY)] == [(0, True)]
+
+
+def test_players_come_before_follower_catch_up():
+    # a game on day 41 must get its players pull before any followers catch-up uses the budget
+    hist = [launched(1, "2026-10-12"), launched(2, "2026-09-09"), launched(3, "2026-09-15")]
+    assert jobs(history=hist)[:3] == [(0, "players", 2), (0, "players", 3), (1, "followers", 2)]
+
+
+def test_a_killed_run_has_already_counted_its_requests(tmp_path):
+    seen = {}
+
+    class Killed(FakeGP):
+        def get_json(self, url, params=None):
+            if self.requests_made == 3:  # what a run killed now would leave behind
+                seen["runs"] = storage.read_csv(tmp_path / "runs.csv")
+            return super().get_json(url, params)
+
+    client = Killed({i: [page("followers", ("2026-10-20T10:00:00", i))] for i in range(1, 5)})
+    cg.run([job(i) for i in range(1, 5)], client, "KEY", {}, tmp_path, NOW, 900, checkpoint=2)
+    assert [(r["requests"], r["stopped"]) for r in seen["runs"]] == [("2", "running")]
+    assert cg.used_today(tmp_path, "2026-10-20") == 4  # the finished run replaced its own row
+    assert storage.read_csv(tmp_path / "runs.csv")[0]["stopped"] == "done"
+
+
+
+def test_hitting_the_ceiling_mid_pull_keeps_its_pages_and_resumes_tomorrow(tmp_path):
+    first = page("players", ("2026-10-20T10:00:00", 50), cursor="2026-09-01T00:00:00")
+    client = FakeGP({1: [first, HTTPStatusError(429, "u")], 2: [page("players", ("2026-10-20T10:00:00", 9))]})
+    state = {}
+    stats = run(tmp_path, client, [job(1, kind="players"), job(2, kind="players")], state)
+    assert stats["stopped"] == "rate_limited" and set(state) == {("players", 1)}  # game 2 not tried
+    assert state[("players", 1)]["resume_cursor"] == "2026-09-01T00:00:00"
+    assert storage.read_csv(tmp_path / "players" / "2026-10-20.csv.gz")[0]["players"] == "50"
+    assert storage.read_csv(tmp_path / "runs.csv")[0]["stopped"] == "rate_limited"
+    assert cg.rate_limited_today(tmp_path, "2026-10-20")
+
+
+def test_main_exits_0_when_the_daily_ceiling_stops_the_run(tmp_path, monkeypatch):
+    monkeypatch.setenv("GP_API_KEY", "KEY")
+    monkeypatch.setattr(cg, "run", lambda *a, **k: {"stopped": "rate_limited", "requests": 270})
+    data = tmp_path / "data"
+    storage.write_csv(data / "upcoming" / "snapshots" / "2026-10-20.csv.gz", [upcoming(1)],
+                      ["appid", "precision", "date_end", "wishlist_rank"])
+    args = ["--data-dir", str(data), "--gp-dir", str(tmp_path / "gp"), "--today", "2026-10-20"]
+    assert cg.main(args) == 0
+    monkeypatch.setattr(cg, "run", lambda *a, **k: {"stopped": "errors", "requests": 10})
+    assert cg.main(args) == 1

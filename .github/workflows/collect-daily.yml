@@ -64,7 +64,7 @@ jobs:
 
       - name: Upcoming snapshot
         if: steps.today.outputs.done != 'true'
-        run: python -m pipeline.collect_upcoming --store-interval 2
+        run: exec python -m pipeline.collect_upcoming --store-interval 2
       - name: Commit snapshot
         if: always() && steps.today.outputs.done != 'true'  # keep whatever was saved, even if the collector failed
         run: scripts/commit_data.sh "upcoming snapshot $(date -u +%F)"
@@ -80,7 +80,9 @@ jobs:
           day=$(date -u +%F)
           python -m pipeline.hf_sync pull --repo "$GP_DATASET_REPO" --dest _gp \
             --file state.csv --file runs.csv --file "followers/$day.csv.gz" --file "players/$day.csv.gz"
-          python -m pipeline.collect_gp --data-dir _data --gp-dir _gp
+          # exec: a cancel or timeout signals the step's shell; this way it reaches the collector,
+          # which then saves its progress and today's request count before exiting
+          exec python -m pipeline.collect_gp --data-dir _data --gp-dir _gp
       - name: Save Games Popularity data
         if: always() && env.GP_ON == 'true'  # keep progress even if the collector stopped early
         env:

@@ -151,3 +151,15 @@ def test_zero_followers_is_a_value():
     client = FakeClient({"history": [{"followers": 0, "added": "2026-10-01T00:00:00"}], "nextCursor": None})
     res = gp.history(client, "followers", 1, "KEY")
     assert (res.status, res.points) == ("ok", [(utc(2026, 10, 1), 0)])
+
+
+def test_a_429_on_a_later_page_keeps_the_pages_before_it():
+    client = FakeClient(fixture("gp_followers_light_no_fire_page1.json"), HTTPStatusError(429, "u"))
+    res = gp.history(client, "followers", 2719590, "KEY")
+    assert (res.rate_limited, res.complete, res.requests, len(res.points)) == (True, False, 2, 3)
+    assert res.next_cursor == "2026-01-09T08:00:30.0800000"
+
+
+def test_a_429_on_the_first_page_is_raised():
+    with pytest.raises(HTTPStatusError):
+        gp.history(FakeClient(HTTPStatusError(429, "u")), "followers", 1, "KEY")
