@@ -442,3 +442,30 @@ def test_free_game_uses_the_heaviest_tags_with_ties_by_id():
     assert not steam.free_game(0, steam.tag_ids(many))
     assert steam.free_game(1, []) and steam.free_game("1", [])
     assert ch.is_free({"is_free": "0", "tags": "113:50|492:10"})
+
+
+def test_history_recount_with_no_data_leaves_no_old_number(tmp_path, monkeypatch):
+    old = {"appid": 7, "name": "G7", "launch_date": "2026-09-05", "launch_ts": SEP_5, "launch_type": "full",
+           "is_free": 1, "reviews_total_now": 900, "reviews_30d": 0, "reviews_30d_positive": 0,
+           "reviews_30d_source": "api", "reviews_30d_fetched": "2026-10-10", "reviews_before_launch": 4,
+           "prior_check_fetched": "2026-10-10", "first_listed": "2026-10-01", "last_listed": "2026-10-10"}
+
+    def gone(client, appid, start, end, purchase_type=steam.PURCHASE_STEAM):
+        raise steam.Unavailable("no data")
+    monkeypatch.setattr(steam, "get_items", lambda *a, **k: {})
+    monkeypatch.setattr(steam, "review_counts", gone)
+    path = tmp_path / "history" / "games.csv"
+    storage.write_csv(path, [old], ch.FIELDS)
+    ch.main(["--data-dir", str(tmp_path), "--cache-dir", str(tmp_path / "c"), "--skip-listing",
+             "--today", "2026-10-20"])
+    row = storage.read_csv(path)[0]
+    assert (row["reviews_30d"], row["reviews_30d_source"], row["reviews_purchase"]) == ("", "unavailable", "all")
+
+
+def test_counts_no_pass_would_redo_are_kept():
+    # an old launch's first-week counts (outside --early-since) and a check below the review minimum
+    row = {"launch_ts": SEP_5, "launch_type": "full", "is_free": "1", "reviews_total_now": 20,
+           "reviews_30d_source": "zero_total", "reviews_1d": "2", "reviews_7d": "5",
+           "reviews_early_fetched": "2026-10-01", "reviews_before_launch": "0", "prior_check_fetched": "2026-10-01"}
+    assert ch.to_all_reviews(row, early_since_ts=OCT_2, prior_min=50) is False
+    assert (row["reviews_7d"], row["prior_check_fetched"], row["reviews_purchase"]) == ("5", "2026-10-01", "all")

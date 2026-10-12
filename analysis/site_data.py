@@ -34,7 +34,6 @@ from pathlib import Path
 from pipeline import events as event_data
 from pipeline import steam, storage
 
-TOP = 10
 STALE_DAYS = 30
 MOVED_DAYS = 30
 MIN_FIT = 30

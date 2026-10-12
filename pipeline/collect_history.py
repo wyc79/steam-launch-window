@@ -29,10 +29,12 @@ Steam, the store's own count) for paid games, "all" for free games (Steam's
 free flag or "Free to Play" in the top 10 tags), whose players buy nothing.
 Rows counted before this column existed have it empty, which means "steam".
 At the start of each run, a free game whose counts are on the "steam" basis
-loses them (its 30-day count, its first-week counts, and a pre-launch count of
-0; a pre-launch count above 0 stays, since counting everyone can only add) and
-is marked "all", so the normal passes count it again; an interrupted run goes
-on where it stopped.
+loses the ones a pass of this run will count again (its 30-day count, its
+first-week counts, and a pre-launch count of 0) and is marked "all"; an
+interrupted run goes on where it stopped. A pre-launch count above 0 stays as a
+lower bound (counting everyone can only add), and so does its ea_exit label.
+The column is set per row when it is counted, so trust it over is_free: a game
+that turns paid later keeps "all" counts from its free days.
 
 Rows are never dropped. A game that is no longer listed (delisted, or missed
 by one listing) keeps its row; last_listed says when it was last seen, and
@@ -176,21 +178,28 @@ def purchase(row: dict) -> tuple[int, str]:
     return (steam.PURCHASE_ALL, "all") if is_free(row) else (steam.PURCHASE_STEAM, "steam")
 
 
-def to_all_reviews(row: dict) -> bool:
+def to_all_reviews(row: dict, early_since_ts: int, prior_min: int) -> bool:
     """For a free game still counted on the "steam" basis: drop the counts that basis got
-    wrong, so the passes count them again with everyone's reviews, and mark the row "all".
-    A pre-launch count above 0 stays (counting everyone can only raise it), and so does
-    the launch type it set. True if the row changed."""
+    wrong and that a pass of this run will count again with everyone's reviews, and mark
+    the row "all". First-week counts are only redone from early_since_ts on, and the
+    hidden Early Access check only for full launches with prior_min reviews, so other
+    rows keep theirs. A pre-launch count above 0 stays (counting everyone can only raise
+    it), and so does the launch type it set. True if a count was dropped."""
     if not is_free(row) or row.get("reviews_purchase") == "all":
         return False
+    dropped = False
     if row.get("reviews_30d_source") == "api":
         row.update(reviews_30d="", reviews_30d_positive="", reviews_30d_source="", reviews_30d_fetched="")
-    if row.get("reviews_early_fetched"):
+        dropped = True
+    if row.get("reviews_early_fetched") and int(row["launch_ts"]) >= early_since_ts:
         row.update(reviews_1d="", reviews_7d="", reviews_early_fetched="")
-    if row.get("prior_check_fetched") and str(row.get("reviews_before_launch") or "0") == "0":
+        dropped = True
+    if (row.get("prior_check_fetched") and str(row.get("reviews_before_launch") or "0") == "0"
+            and row.get("launch_type") == "full" and int(row.get("reviews_total_now") or 0) >= prior_min):
         row.update(reviews_before_launch="", prior_check_fetched="")
+        dropped = True
     row["reviews_purchase"] = "all"
-    return True
+    return dropped
 
 
 def needs_reviews(row: dict, cutoff_ts: int, today: date | None = None) -> bool:
@@ -273,9 +282,9 @@ def main(argv=None) -> int:
 
     cutoff_ts = pacific_ts(today)
     stamp = today.isoformat()
-    moved = sum(to_all_reviews(r) for r in rows.values())
+    moved = sum(to_all_reviews(r, pacific_ts(args.early_since), args.prior_min_reviews) for r in rows.values())
     if moved:
-        log.info("%d free games counted with Steam purchases only: counting them again with all reviews", moved)
+        log.info("%d free games were counted with Steam purchases only: counting them again with all reviews", moved)
 
     def save():
         storage.write_csv(path, [rows[a] for a in sorted(rows)], FIELDS)
