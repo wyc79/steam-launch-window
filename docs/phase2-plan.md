@@ -240,7 +240,8 @@ Games launched from 2022-01-01 until 31 days ago, from `history/games.csv`.
 
 ### Outcome
 
-`reviews_30d`: Steam-purchase reviews written in the first 30 days. A proxy for
+`reviews_30d`: reviews written in the first 30 days (paid games: Steam
+purchases only; free games: all reviews, since nobody buys them). A proxy for
 sales (the common rule of thumb is one review per 30 to 60 sales, but it varies
 by genre and price, so we only claim "more reviews", not "more sales").
 

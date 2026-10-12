@@ -32,10 +32,8 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from pipeline import events as event_data
-from pipeline import storage
+from pipeline import steam, storage
 
-FREE_TO_PLAY = 113  # Steam tag id
-TOP = 10
 STALE_DAYS = 30
 MOVED_DAYS = 30
 MIN_FIT = 30
@@ -47,14 +45,8 @@ DATE_FIELDS = ("precision", "date", "date_end")  # a change in these is a move; 
 log = logging.getLogger("site_data")
 
 
-def tag_ids(raw: str) -> list[int]:
-    """'id:weight|...' as ids, heaviest first (ties by id)."""
-    pairs = [(int(t), int(w or 0)) for t, _, w in (p.partition(":") for p in (raw or "").split("|") if p)]
-    return [t for t, _ in sorted(pairs, key=lambda p: (-p[1], p[0]))]
-
-
-def is_free(flag: str, tags: list[int]) -> bool:
-    return flag == "1" or FREE_TO_PLAY in tags[:TOP]
+tag_ids = steam.tag_ids
+is_free = steam.free_game
 
 
 def _int(raw: str | None) -> int | None:

@@ -24,6 +24,17 @@ Steps:
 Output: history/games.csv under --data-dir, one row per game.
 reviews_30d_source is api, zero_total (no reviews at all, no call made), or
 unavailable (Steam has no review data for the app; retried after 90 days).
+reviews_purchase says whose reviews the counts include: "steam" (bought on
+Steam, the store's own count) for paid games, "all" for free games (Steam's
+free flag or "Free to Play" in the top 10 tags), whose players buy nothing.
+Rows counted before this column existed have it empty, which means "steam".
+At the start of each run, a free game whose counts are on the "steam" basis
+loses the ones a pass of this run will count again (its 30-day count, its
+first-week counts, and a pre-launch count of 0) and is marked "all"; an
+interrupted run goes on where it stopped. A pre-launch count above 0 stays as a
+lower bound (counting everyone can only add), and so does its ea_exit label.
+The column is set per row when it is counted, so trust it over is_free: a game
+that turns paid later keeps "all" counts from its free days.
 
 Rows are never dropped. A game that is no longer listed (delisted, or missed
 by one listing) keeps its row; last_listed says when it was last seen, and
@@ -61,10 +72,11 @@ FIELDS = [
     "reviews_total_now", "reviews_30d", "reviews_30d_positive", "reviews_30d_source",
     "reviews_30d_fetched", "reviews_before_launch", "prior_check_fetched",
     "reviews_1d", "reviews_7d", "reviews_early_fetched", "first_listed", "last_listed",
+    "reviews_purchase",
 ]
 COUNT_FIELDS = ("reviews_30d", "reviews_30d_positive", "reviews_30d_source", "reviews_30d_fetched",
                 "reviews_before_launch", "prior_check_fetched",
-                "reviews_1d", "reviews_7d", "reviews_early_fetched")
+                "reviews_1d", "reviews_7d", "reviews_early_fetched", "reviews_purchase")
 PRIOR_GAP = 7 * 86400  # reviews this long before launch mean the game was already on sale
 DATA_REQUEST = {"include_release": True, "include_tag_count": 20, "include_basic_info": True,
                 "include_supported_languages": True,
@@ -157,6 +169,39 @@ def merge(old: dict | None, new: dict, today: str = "") -> dict:
     return {**new, **{k: "" for k in COUNT_FIELDS}, **listed}
 
 
+def is_free(row: dict) -> bool:
+    return steam.free_game(row.get("is_free"), steam.tag_ids(row.get("tags")))
+
+
+def purchase(row: dict) -> tuple[int, str]:
+    """Whose reviews to count for this game, as (API value, reviews_purchase label)."""
+    return (steam.PURCHASE_ALL, "all") if is_free(row) else (steam.PURCHASE_STEAM, "steam")
+
+
+def to_all_reviews(row: dict, early_since_ts: int, prior_min: int) -> bool:
+    """For a free game still counted on the "steam" basis: drop the counts that basis got
+    wrong and that a pass of this run will count again with everyone's reviews, and mark
+    the row "all". First-week counts are only redone from early_since_ts on, and the
+    hidden Early Access check only for full launches with prior_min reviews, so other
+    rows keep theirs. A pre-launch count above 0 stays (counting everyone can only raise
+    it), and so does the launch type it set. True if a count was dropped."""
+    if not is_free(row) or row.get("reviews_purchase") == "all":
+        return False
+    dropped = False
+    if row.get("reviews_30d_source") == "api":
+        row.update(reviews_30d="", reviews_30d_positive="", reviews_30d_source="", reviews_30d_fetched="")
+        dropped = True
+    if row.get("reviews_early_fetched") and int(row["launch_ts"]) >= early_since_ts:
+        row.update(reviews_1d="", reviews_7d="", reviews_early_fetched="")
+        dropped = True
+    if (row.get("prior_check_fetched") and str(row.get("reviews_before_launch") or "0") == "0"
+            and row.get("launch_type") == "full" and int(row.get("reviews_total_now") or 0) >= prior_min):
+        row.update(reviews_before_launch="", prior_check_fetched="")
+        dropped = True
+    row["reviews_purchase"] = "all"
+    return dropped
+
+
 def needs_reviews(row: dict, cutoff_ts: int, today: date | None = None) -> bool:
     if int(row["launch_ts"]) + WINDOW > cutoff_ts:
         return False
@@ -237,18 +282,22 @@ def main(argv=None) -> int:
 
     cutoff_ts = pacific_ts(today)
     stamp = today.isoformat()
+    moved = sum(to_all_reviews(r, pacific_ts(args.early_since), args.prior_min_reviews) for r in rows.values())
+    if moved:
+        log.info("%d free games were counted with Steam purchases only: counting them again with all reviews", moved)
 
     def save():
         storage.write_csv(path, [rows[a] for a in sorted(rows)], FIELDS)
 
     def thirty_day(row):
+        kind, label = purchase(row)
         if int(row["reviews_total_now"] or 0) == 0:
             row.update(reviews_30d=0, reviews_30d_positive=0, reviews_30d_source="zero_total",
-                       reviews_30d_fetched=stamp)
+                       reviews_30d_fetched=stamp, reviews_purchase=label)
             return False
         start = int(row["launch_ts"])
         try:
-            counts = steam.review_counts(client, row["appid"], start, start + WINDOW)
+            counts = steam.review_counts(client, row["appid"], start, start + WINDOW, kind)
         except Exception as e:
             if not is_gone(e):
                 raise
@@ -256,7 +305,7 @@ def main(argv=None) -> int:
             row.update(reviews_30d_source="unavailable", reviews_30d_fetched=stamp)
             return True
         row.update(reviews_30d=counts["total"], reviews_30d_positive=counts["positive"],
-                   reviews_30d_source="api", reviews_30d_fetched=stamp)
+                   reviews_30d_source="api", reviews_30d_fetched=stamp, reviews_purchase=label)
         return True
 
     def early(row):
@@ -266,7 +315,7 @@ def main(argv=None) -> int:
             return False
         start = int(row["launch_ts"])
         try:
-            got = {field: steam.review_counts(client, row["appid"], start, start + span)["total"]
+            got = {field: steam.review_counts(client, row["appid"], start, start + span, purchase(row)[0])["total"]
                    for field, span in EARLY_WINDOWS.items()}
         except Exception as e:
             if not is_gone(e):
@@ -278,7 +327,7 @@ def main(argv=None) -> int:
 
     def prior(row):
         try:
-            counts = steam.review_counts(client, row["appid"], 1, int(row["launch_ts"]) - PRIOR_GAP)
+            counts = steam.review_counts(client, row["appid"], 1, int(row["launch_ts"]) - PRIOR_GAP, purchase(row)[0])
         except Exception as e:
             if not is_gone(e):
                 raise

@@ -275,8 +275,9 @@ def _run_history(tmp_path, monkeypatch, listed, existing=(), counts=None, extra=
     monkeypatch.setattr(steam, "get_items", lambda *a, **k: {})
     calls = []
 
-    def review_counts(client, appid, start, end):
-        calls.append((int(appid), end - start))
+    def review_counts(client, appid, start, end, purchase_type=steam.PURCHASE_STEAM):
+        calls.append((int(appid), end - start) if purchase_type == steam.PURCHASE_STEAM
+                     else (int(appid), end - start, "all"))
         return (counts or {}).get((int(appid), end - start), {"total": 3, "positive": 2, "negative": 1})
     monkeypatch.setattr(steam, "review_counts", review_counts)
     path = tmp_path / "history" / "games.csv"
@@ -357,7 +358,7 @@ def test_run_pass_stops_when_a_429_outlasts_the_retries():
 
 
 def test_history_rate_limit_leaves_the_game_due_instead_of_unavailable(tmp_path, monkeypatch):
-    def limited(client, appid, start, end):
+    def limited(client, appid, start, end, purchase_type=steam.PURCHASE_STEAM):
         raise HTTPStatusError(429, "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/")
 
     monkeypatch.setattr(ch, "list_month", lambda client, month: [_item(7, SEP_5)] if month.month == 9 else [])
@@ -368,3 +369,103 @@ def test_history_rate_limit_leaves_the_game_due_instead_of_unavailable(tmp_path,
     row = storage.read_csv(tmp_path / "history" / "games.csv")[0]
     assert (row["reviews_30d_source"], row["reviews_30d_fetched"], row["reviews_early_fetched"]) == ("", "", "")
     assert ch.needs_reviews(row, ch.pacific_ts(date(2026, 10, 20)), date(2026, 10, 20))
+
+
+def _free_item(appid, ts, reviews=5, flag=True, tags=None):
+    item = _item(appid, ts, reviews)
+    item["is_free"] = flag
+    if tags:
+        item["tags"] = [{"tagid": t, "weight": 10 - i} for i, t in enumerate(tags)]
+    return item
+
+
+def test_history_counts_all_reviews_for_free_games(tmp_path, monkeypatch):
+    listed = [_free_item(7, SEP_5), _free_item(8, SEP_5, flag=False, tags=[492, 113]), _item(9, SEP_5)]
+    rows, calls = _run_history(tmp_path, monkeypatch, listed)
+    window = ch.WINDOW
+    assert (7, window, "all") in calls and (8, window, "all") in calls  # Steam's flag, or the Free to Play tag
+    assert (9, window) in calls                                          # paid: Steam purchases only
+    assert [rows[a]["reviews_purchase"] for a in ("7", "8", "9")] == ["all", "all", "steam"]
+
+
+def test_history_recounts_free_games_counted_with_purchases_only(tmp_path, monkeypatch):
+    old = {"appid": 7, "name": "G7", "launch_date": "2026-09-05", "launch_ts": SEP_5, "launch_type": "full",
+           "is_free": 1, "reviews_total_now": 900, "reviews_30d": 0, "reviews_30d_positive": 0,
+           "reviews_30d_source": "api", "reviews_30d_fetched": "2026-10-10", "reviews_before_launch": 0,
+           "prior_check_fetched": "2026-10-10", "reviews_1d": 0, "reviews_7d": 0,
+           "reviews_early_fetched": "2026-10-10", "first_listed": "2026-10-01", "last_listed": "2026-10-10"}
+    paid = {**old, "appid": 9, "name": "G9", "is_free": 0}
+    rows, calls = _run_history(tmp_path, monkeypatch, [_free_item(7, SEP_5, 900), _item(9, SEP_5, 900)],
+                               existing=[old, paid], extra=["--early-since", "2026-09-01"])
+    free = rows["7"]
+    assert (free["reviews_30d"], free["reviews_purchase"], free["reviews_30d_fetched"]) == ("3", "all", "2026-10-20")
+    assert [c for c in calls if c[0] == 7] == [(7, ch.WINDOW, "all"), (7, 86400, "all"), (7, 7 * 86400, "all"),
+                                               (7, SEP_5 - ch.PRIOR_GAP - 1, "all")]
+    assert free["reviews_7d"] == "3" and free["reviews_before_launch"] == "3"
+    assert not [c for c in calls if c[0] == 9]   # paid rows counted before the column existed stay as they are
+    assert rows["9"]["reviews_purchase"] == "" and rows["9"]["reviews_30d"] == "0"
+    # and a second run does not count the free game again
+    _, again = _run_history(tmp_path, monkeypatch, [_free_item(7, SEP_5, 900), _item(9, SEP_5, 900)])
+    assert not [c for c in again if c[0] == 7]
+
+
+OCT_2 = SEP_1 + 31 * 86400  # 2026-10-02 00:00 Pacific
+
+
+def test_history_fixes_free_games_whose_30_day_window_is_still_open(tmp_path, monkeypatch):
+    # counted on the old basis before its 30-day window closed: only the first-week counts exist
+    young = {"appid": 7, "name": "G7", "launch_date": "2026-10-02", "launch_ts": OCT_2, "launch_type": "full",
+             "is_free": 1, "reviews_total_now": 40, "reviews_1d": 0, "reviews_7d": 0,
+             "reviews_early_fetched": "2026-10-12", "first_listed": "2026-10-03", "last_listed": "2026-10-12"}
+    monkeypatch.setattr(ch, "list_month", lambda client, month: [])
+    rows, calls = _run_history(tmp_path, monkeypatch, [], existing=[young],
+                               extra=["--skip-listing", "--early-since", "2026-09-01"])
+    row = rows["7"]
+    assert calls == [(7, 86400, "all"), (7, 7 * 86400, "all")]  # no 30-day count yet: its window is open
+    assert (row["reviews_7d"], row["reviews_purchase"], row["reviews_30d_source"]) == ("3", "all", "")
+
+
+def test_history_keeps_a_free_games_nonzero_prelaunch_count_and_its_label(tmp_path, monkeypatch):
+    relabeled = {"appid": 7, "name": "G7", "launch_date": "2026-09-05", "launch_ts": SEP_5, "launch_type": "ea_exit",
+                 "is_free": 1, "reviews_total_now": 900, "reviews_30d": 1, "reviews_30d_positive": 1,
+                 "reviews_30d_source": "api", "reviews_30d_fetched": "2026-10-10", "reviews_before_launch": 12,
+                 "prior_check_fetched": "2026-10-10", "first_listed": "2026-10-01", "last_listed": "2026-10-10"}
+    rows, calls = _run_history(tmp_path, monkeypatch, [], existing=[relabeled], extra=["--skip-listing"])
+    row = rows["7"]
+    assert calls == [(7, ch.WINDOW, "all")]  # counting everyone can only raise 12: no new check
+    assert (row["launch_type"], row["reviews_before_launch"], row["reviews_30d"]) == ("ea_exit", "12", "3")
+
+
+def test_free_game_uses_the_heaviest_tags_with_ties_by_id():
+    assert steam.tag_ids("5:1|113:1|9:2") == [9, 5, 113]
+    many = "|".join(f"{t}:10" for t in range(1, 11)) + "|113:10"  # 113 is 11th once ties go by id
+    assert not steam.free_game(0, steam.tag_ids(many))
+    assert steam.free_game(1, []) and steam.free_game("1", [])
+    assert ch.is_free({"is_free": "0", "tags": "113:50|492:10"})
+
+
+def test_history_recount_with_no_data_leaves_no_old_number(tmp_path, monkeypatch):
+    old = {"appid": 7, "name": "G7", "launch_date": "2026-09-05", "launch_ts": SEP_5, "launch_type": "full",
+           "is_free": 1, "reviews_total_now": 900, "reviews_30d": 0, "reviews_30d_positive": 0,
+           "reviews_30d_source": "api", "reviews_30d_fetched": "2026-10-10", "reviews_before_launch": 4,
+           "prior_check_fetched": "2026-10-10", "first_listed": "2026-10-01", "last_listed": "2026-10-10"}
+
+    def gone(client, appid, start, end, purchase_type=steam.PURCHASE_STEAM):
+        raise steam.Unavailable("no data")
+    monkeypatch.setattr(steam, "get_items", lambda *a, **k: {})
+    monkeypatch.setattr(steam, "review_counts", gone)
+    path = tmp_path / "history" / "games.csv"
+    storage.write_csv(path, [old], ch.FIELDS)
+    ch.main(["--data-dir", str(tmp_path), "--cache-dir", str(tmp_path / "c"), "--skip-listing",
+             "--today", "2026-10-20"])
+    row = storage.read_csv(path)[0]
+    assert (row["reviews_30d"], row["reviews_30d_source"], row["reviews_purchase"]) == ("", "unavailable", "all")
+
+
+def test_counts_no_pass_would_redo_are_kept():
+    # an old launch's first-week counts (outside --early-since) and a check below the review minimum
+    row = {"launch_ts": SEP_5, "launch_type": "full", "is_free": "1", "reviews_total_now": 20,
+           "reviews_30d_source": "zero_total", "reviews_1d": "2", "reviews_7d": "5",
+           "reviews_early_fetched": "2026-10-01", "reviews_before_launch": "0", "prior_check_fetched": "2026-10-01"}
+    assert ch.to_all_reviews(row, early_since_ts=OCT_2, prior_min=50) is False
+    assert (row["reviews_7d"], row["prior_check_fetched"], row["reviews_purchase"]) == ("5", "2026-10-01", "all")
