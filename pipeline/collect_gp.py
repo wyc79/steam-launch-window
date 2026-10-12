@@ -22,8 +22,9 @@ requests early for job 2 (the rest wait for its 60-day refresh). After 5 such pu
 in a row a game is left alone by jobs 0, 1 and 3.
 
 The run stops when the day's budget is used (requests already made today, from
-runs.csv, count too), at the first 429, or after too many errors in a row. A run
-on a UTC day that already ended with a 429 does not start.
+runs.csv, count too), at the first 429 that outlasts the retries (the daily ceiling;
+a pull it cuts short keeps its pages and is resumed; exit code 0), or after too many
+errors in a row. A run on a UTC day that already ended with a 429 does not start.
 
 Reads (under --data-dir): the newest upcoming snapshot and history/games.csv.
 Writes (under --gp-dir; the daily job syncs it with a private Hugging Face dataset):
@@ -325,11 +326,17 @@ def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datet
             row = state[(job.kind, job.appid)] = pulled_row(job, state.get((job.kind, job.appid), {}), res,
                                                             stamp, now, policy)
             status = row["status"]
+            if res.rate_limited:
+                log.error("rate limited on a later page of %s %s; kept the pages before it, stopping",
+                          job.kind, job.appid)
+                stopped = "rate_limited"
             points[job.kind].extend({"appid": job.appid, job.kind: v, "observed_at": t.isoformat(),
                                      "fetched_at": stamp} for t, v in res.points)
             stats["jobs"] += 1
             stats[status] += 1
             stats["points"] += len(res.points)
+            if stopped == "rate_limited":
+                break
             if (i + 1) % checkpoint == 0:
                 save()
                 log.info("%d jobs, %d requests", stats["jobs"], client.requests_made - start)
@@ -374,7 +381,9 @@ def main(argv=None) -> int:
     # A single 429 can be passing (seen 2026-10-11), so the client retries twice before giving up.
     client = Client(host_intervals={gp.HOST: args.gp_interval}, host_max_retries={gp.HOST: 2})
     stats = run(todo, client, key, state, args.gp_dir, now, args.budget)
-    return 0 if stats["stopped"] in ("done", "budget") else 1
+    # Hitting the daily ceiling is an expected stop (progress is saved, the rest waits for
+    # tomorrow), not a failure; errors and interruptions still fail the step.
+    return 0 if stats["stopped"] in ("done", "budget", "rate_limited") else 1
 
 
 if __name__ == "__main__":

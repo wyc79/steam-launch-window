@@ -448,3 +448,28 @@ def test_a_killed_run_has_already_counted_its_requests(tmp_path):
     assert [(r["requests"], r["stopped"]) for r in seen["runs"]] == [("2", "running")]
     assert cg.used_today(tmp_path, "2026-10-20") == 4  # the finished run replaced its own row
     assert storage.read_csv(tmp_path / "runs.csv")[0]["stopped"] == "done"
+
+
+
+def test_hitting_the_ceiling_mid_pull_keeps_its_pages_and_resumes_tomorrow(tmp_path):
+    first = page("players", ("2026-10-20T10:00:00", 50), cursor="2026-09-01T00:00:00")
+    client = FakeGP({1: [first, HTTPStatusError(429, "u")], 2: [page("players", ("2026-10-20T10:00:00", 9))]})
+    state = {}
+    stats = run(tmp_path, client, [job(1, kind="players"), job(2, kind="players")], state)
+    assert stats["stopped"] == "rate_limited" and set(state) == {("players", 1)}  # game 2 not tried
+    assert state[("players", 1)]["resume_cursor"] == "2026-09-01T00:00:00"
+    assert storage.read_csv(tmp_path / "players" / "2026-10-20.csv.gz")[0]["players"] == "50"
+    assert storage.read_csv(tmp_path / "runs.csv")[0]["stopped"] == "rate_limited"
+    assert cg.rate_limited_today(tmp_path, "2026-10-20")
+
+
+def test_main_exits_0_when_the_daily_ceiling_stops_the_run(tmp_path, monkeypatch):
+    monkeypatch.setenv("GP_API_KEY", "KEY")
+    monkeypatch.setattr(cg, "run", lambda *a, **k: {"stopped": "rate_limited", "requests": 270})
+    data = tmp_path / "data"
+    storage.write_csv(data / "upcoming" / "snapshots" / "2026-10-20.csv.gz", [upcoming(1)],
+                      ["appid", "precision", "date_end", "wishlist_rank"])
+    args = ["--data-dir", str(data), "--gp-dir", str(tmp_path / "gp"), "--today", "2026-10-20"]
+    assert cg.main(args) == 0
+    monkeypatch.setattr(cg, "run", lambda *a, **k: {"stopped": "errors", "requests": 10})
+    assert cg.main(args) == 1

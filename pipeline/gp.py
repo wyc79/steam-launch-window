@@ -37,6 +37,7 @@ class History:
     complete: bool = True            # False if max_pages stopped it early
     next_cursor: str | None = None   # when not complete: the older page to resume from
     oldest: datetime | None = None   # oldest point seen (with or without a value)
+    rate_limited: bool = False       # a later page got 429: the pages before it are kept
 
 
 def history(client: Client, kind: str, appid: int, key: str, *, since: datetime | None = None,
@@ -56,6 +57,10 @@ def history(client: Client, kind: str, appid: int, key: str, *, since: datetime 
         try:
             page = client.get_json(url, params)
         except HTTPStatusError as e:
+            if e.status == 429 and res.requests:  # out of quota mid-pull: keep the pages already fetched
+                res.requests += 1
+                res.complete, res.next_cursor, res.rate_limited = False, params["cursor"], True
+                return res
             if e.status != 404:
                 raise
             res.requests += 1

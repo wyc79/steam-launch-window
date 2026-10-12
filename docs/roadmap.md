@@ -48,7 +48,9 @@ points. It showed three problems, fixed in PR #14: players came after about 6 da
 follower catch-up, so games past day 42 would lose their first month; a cancel killed the
 collector before it saved, so the run's requests were never counted; and games launched
 43 to 60 days ago never got a players pull. The 730 requests are not in `runs.csv`, so
-**do not run Games Popularity again before 2026-10-13 UTC**.
+another run on 2026-10-12 (UTC) thinks it has 900 left and stops at their ceiling after
+about 270. With PR #14 that is a clean stop: pages already fetched are kept, the step
+passes, and no other run starts that day.
 
 **Raspberry Pi:**
 - The history backfill finished on Oct 11 (9:22 pm) and is on the data branch. Its
@@ -115,8 +117,8 @@ One report covering what was built, verified, and still open. Then the switches 
 at a time, checking each for a few days:
 1. `COLLECT_DAILY`
 2. `COLLECT_HISTORY` (`games.csv` is on the data branch)
-3. `COLLECT_GP`, after PR #14 and not before 2026-10-13 UTC (the first manual run is done;
-   the first days go to about 2,600 players pulls, oldest launch first)
+3. `COLLECT_GP`, after PR #14 (the first manual run is done; the first days go to about
+   2,600 players pulls, oldest launch first)
 4. `PUBLISH_DATASET`, after you approve a dry-run artifact
 5. `ENDPOINT_CHECK`, once the community block has certainly lifted (it requests one
    follower page)
