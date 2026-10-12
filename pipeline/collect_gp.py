@@ -2,12 +2,13 @@
 
 One request returns a game's whole daily follower series, so how often a game
 is pulled only decides how fresh its newest value is. Jobs, most urgent first:
-  0. followers, about 8 days after launch (whole pre-launch series plus launch week);
-     missed ones are caught up for 60 days
-  1. players, 35 to 42 days after launch (hourly counts for the first month, one page)
+  0. players, 35 to 42 days after launch (hourly counts for the first month, one page);
+     first, because a game missed by day 42 loses its first month for good
+  1. followers, about 8 days after launch (whole pre-launch series plus launch week);
+     missed ones are caught up for 60 days, then by the backfill
   2. followers for every upcoming game with a date or a wishlist rank, every 60 days
   3. backfill: followers for games launched since 2024-03-15 (and more than 60 days
-     ago; newer ones get job 0) that were never pulled;
+     ago; newer ones get job 1) that were never pulled;
      paid launches with 10+ reviews first, then 1+, then the rest; newest first
 
 Before all of these, a pull that stopped at the page cap (or the budget) is resumed
@@ -168,15 +169,15 @@ def plan(snapshot: list[dict], history: list[dict], state: dict, today: date, po
             tried = _last_tried(followers) if followers else None
             first_try = tried is None or tried.date() < launch + timedelta(days=policy.post_launch_days - 1)
             if not seen_week and (first_try or retry(followers)):
-                add(Job(0, (launch.toordinal(), appid), "followers", appid, since))
+                add(Job(1, (launch.toordinal(), appid), "followers", appid, since))
         if ("players", appid) not in resuming:
             players_since = _midnight(launch - timedelta(days=1))
             if players is None and policy.players_days <= age <= policy.players_window:
-                add(Job(1, (launch.toordinal(), appid), "players", appid, players_since))
+                add(Job(0, (launch.toordinal(), appid), "players", appid, players_since))
             elif (players is not None and _tries(players) > 0
                   and policy.players_days <= age <= policy.post_launch_window and retry(players)):
                 # nothing came back last time; a later retry may cost a second page
-                add(Job(1, (launch.toordinal(), appid), "players", appid, players_since))
+                add(Job(0, (launch.toordinal(), appid), "players", appid, players_since))
         if (launch >= policy.backfill_since and age > policy.post_launch_window
                 and ("followers", appid) not in resuming
                 and (followers is None or (followers["status"] == "error" and retry(followers)))):
@@ -360,7 +361,7 @@ def main(argv=None) -> int:
     state = load_state(args.gp_dir)
     todo = plan(snapshot, history, state, now.date(), Policy())
     by_priority = collections.Counter(j.priority for j in todo)
-    log.info("%d jobs due: %s (0 post-launch followers, 1 players, 2 upcoming, 3 backfill); budget %d, used today %d",
+    log.info("%d jobs due: %s (0 players, 1 post-launch followers, 2 upcoming, 3 backfill); budget %d, used today %d",
              len(todo), dict(sorted(by_priority.items())), args.budget, used_today(args.gp_dir, now.date().isoformat()))
     if args.dry_run:
         return 0

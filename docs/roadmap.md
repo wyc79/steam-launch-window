@@ -74,8 +74,9 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 - Wishlist rank is the main hype signal. Followers are second.
 - Followers need not be fresh. Trend and history matter more, since this is not a tracking tool.
 - Games Popularity policy (900 requests a day, setting `GP_DAILY_BUDGET`), in this order:
-  1. followers about 8 days after each launch (whole pre-launch series plus launch week);
-  2. players 35 to 42 days after each launch (hourly, first month, one request);
+  1. players 35 to 42 days after each launch (hourly, first month, one request; first,
+     because a missed game loses its first month for good);
+  2. followers about 8 days after each launch (whole pre-launch series plus launch week);
   3. every upcoming game with a date or a wishlist rank, once every 60 days;
   4. the rest backfills games launched since 2024-03-15, paid games with 10+ reviews first.
   The first weeks clear catch-up queues: about 5,300 recent launches and 20,000 upcoming
