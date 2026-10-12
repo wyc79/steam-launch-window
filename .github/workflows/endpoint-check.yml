@@ -1,7 +1,8 @@
 name: endpoint check
 
-# Weekly smoke test: do the Steam endpoints still look the way we expect?
-# About 10 requests. Off by default: set the repository variable
+# Weekly smoke test: do the Steam endpoints and the Games Popularity API still
+# look the way we expect? About 10 requests (1 to Games Popularity, skipped
+# without the GP_API_KEY secret). Off by default: set the repository variable
 # ENDPOINT_CHECK=on to let the schedule run it.
 
 on:
@@ -21,3 +22,5 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev]"
       - run: pytest -m live -v
+        env:
+          GP_API_KEY: ${{ secrets.GP_API_KEY }}
