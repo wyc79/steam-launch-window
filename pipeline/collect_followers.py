@@ -1,5 +1,10 @@
 """Follower counts for upcoming games, refreshed on a tiered schedule.
 
+Retired from the daily job on 2026-10-11: steamcommunity.com blocked the IP for
+8+ hours after about 60 requests, and the tiers below need about 5,900 requests
+a day. Followers now come from Games Popularity (pipeline/collect_gp.py). This
+script is kept for occasional manual checks of a few games.
+
 steamcommunity.com rate-limits hard (see docs/endpoints.md), so only games
 that matter for the heatmap or have hype are tracked:
 - games on Steam's Top Wishlisted list, and

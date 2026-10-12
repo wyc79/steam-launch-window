@@ -46,7 +46,7 @@ The history backfill is a long one-off job (about a day at 1 request per
 second). It runs outside Actions, on an always-on server
 ([scripts/server](scripts/server/README.md)). Actions only do the small daily
 and weekly increments. The daily job has a second, later run that redoes the
-snapshot if the first one was missed.
+snapshot if the first one was missed or its wishlist crawl failed.
 
 Scheduled jobs are off until switched on with repository variables
 (Settings > Secrets and variables > Actions > Variables), so a fresh fork
