@@ -128,6 +128,17 @@ decided 2026-10-11, replacing the spec's `wyc79.github.io/launch-window`).
 
 Free tier only.
 
+**Chinese users (to decide in Phases 3 and 4):** Cloudflare Workers and GitHub Pages are
+often slow or blocked in mainland China. Option: a Tencent Cloud SCF function in the
+Hong Kong region as the China endpoint, next to the Worker. Checked 2026-10-11 (Tencent docs):
+- SCF is free only for the first 3 months; after that a base package costs about
+  $1.86 a month, charged only in months the function is used. This breaks "free tier
+  only", so it needs your OK.
+- A custom domain on a mainland-region function needs an ICP filing; a Hong Kong
+  function does not. API Gateway in the mainland needs a filing either way.
+- The static site may need a China-reachable copy too (for example Tencent COS in Hong
+  Kong), not only the API. Chinese text for the page is a separate Phase 3 item.
+
 ## What only you can do
 
 | When | What |
@@ -138,6 +149,7 @@ Free tier only.
 | step 3 | Set `GP_DATASET_REPO` (and optionally `GP_DAILY_BUDGET`), then the switches one by one |
 | step 3 | Approve the "Data rights" wording on the dataset card and the first real upload |
 | step 4 | Answer the 4 open questions in the Phase 2 plan |
+| step 6 | Decide on a Tencent SCF (Hong Kong) endpoint for Chinese users, about $1.86 a month in months it is used |
 | around Nov 7 | Replace the 2027 China holiday estimates when the official dates are out |
 
 ## Risks to watch
