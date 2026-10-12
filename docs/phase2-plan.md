@@ -1,8 +1,7 @@
 # Phase 2 plan: analysis
 
-Status: the 4 open questions were answered on 2026-10-12 (section 7); waiting for
-the go-ahead to build. Nothing here is built yet. Updated 2026-10-11 after the
-pipeline audit: followers now come from Games Popularity, with history back to
+Status: building (2026-10-12). All questions answered (section 7). The site data files and the reference numbers are built; the model
+is next. Updated 2026-10-11 after the pipeline audit: followers now come from Games Popularity, with history back to
 2024-03-15, which changes sections 2 and 3.
 
 Phase 2 turns the collected data into two things the website shows:
@@ -33,8 +32,10 @@ Decided 2026-10-12:
   changed in the last 30 days is marked with its old date and when it changed,
   for example "moved here from October 2026, 3 days ago", so the user sees which
   competition is new to that week. A game that got its first date in that time
-  (from "Coming soon") is marked "date just set". Built from `release_changes`,
-  so it covers changes from 2026-10-11 on.
+  (from "Coming soon") is marked "date just set". Built by comparing the daily
+  snapshots (the same changes `release_changes` lists), so the first change it
+  can show is from 2026-10-12. Only a new precision or date range counts; new
+  wording for the same dates does not.
 - **Similarity in the model** (section 3) still uses tag vote weights, so a tag
   at #18 with few votes counts for little there. The top 10 by weight is the
   game's profile for that measure.
@@ -75,9 +76,70 @@ For each week and tag:
 | **Spread** | games with a month or quarter date, spread evenly over the days of their range **still ahead of the latest snapshot** (a "November" game seen on Nov 1 adds 7/30 to each full November week; a "Q4 2026" game seen on Dec 1 is spread over December only) |
 | **Total** | exact + spread |
 | **Hype-weighted** | the same, but each game counts by its follower count (see below) |
-| **No hype data** | how much of the total comes from games with no follower count and no wishlist rank |
+| **No hype data** | how much of the total comes from games with no follower count (a ranked game counts here too until the rank-to-followers curve can be fitted) |
 
 Exact and spread are always shown separately.
+
+**Normalized by default** (decided 2026-10-12): each week is shown compared
+with a usual week of real launches for the same selection (its average over the
+last 52 weeks of history). A "raw counts" toggle, off by default, shows the
+plain counts instead. Steam grows every
+year, so this reads better than raw counts across tags and years. Announced
+dates are not launches, and the page says so: near weeks run high because some
+will slip, far weeks low because many dates are not set yet. On 2026-10-12,
+English-language paid shooters (39 launches in a usual week) read 1.8 this week,
+2.6 in the week of October 26, and about 0.3 six months out. Once a few months of
+snapshots exist, a fairer baseline compares with how full weeks the same
+distance ahead usually were.
+
+**Near weeks read high, far weeks low** (found 2026-10-12): normalized against a
+usual week of real launches, all paid English games read 1.8 this week and about
+0.4 thirteen weeks out. Split up, exact dates are accurate up close (1.02 this
+week) but thin out with distance (0.06 by week 13, as developers set the day
+late), and vague dates add a flat 0.76 to each remaining week of Q4, many of
+which will slip. So the page:
+- shows exact and vague dates as two visible parts of each week;
+- fades weeks more than 4 weeks out, labeled "dates still being set";
+- later, once enough snapshots exist, compares each week with how full weeks
+  the same distance ahead usually were (about 12 weeks ahead by mid-January,
+  26 by April), and says which baseline is in use.
+
+**Typical for this time of year** (decided 2026-10-12): for every week shown,
+what past launches say about that time of year, from history only
+(`analysis/season.py`). Each past week's ratio is its launches over the average
+week in the 13 weeks before it. Two estimates:
+- calendar: the same week of the year in past years;
+- events: recurring events move from year to year (the Autumn Sale moved to
+  early October in 2025), so for each Next Fest, seasonal sale or holiday within
+  4 weeks, the ratios at the same distance from it in past years.
+
+They are combined, each weighted by how steady it was across years (years /
+SD squared), and shown with the spread across years. A backtest predicting the
+80 complete weeks of 2025 and 2026 from earlier years only (`season.backtest`;
+mean absolute error, lower is better; the last column uses the all-games
+pattern for the niche):
+
+| Selection | No pattern | Calendar | Events | Combined | All-games pattern |
+|---|---|---|---|---|---|
+| All paid English games | 0.198 | 0.153 | 0.143 | 0.142 | 0.142 |
+| Roguelike | 0.296 | 0.254 | 0.226 | 0.229 | 0.240 |
+| Puzzle | 0.227 | 0.184 | 0.184 | 0.183 | 0.181 |
+| Shooter | 0.247 | 0.230 | 0.249 | 0.244 | 0.223 |
+| Cozy | 0.440 | 0.537 | 0.515 | 0.506 | 0.387 |
+| Shooter AND roguelike | 0.447 | 0.511 | 0.547 | 0.538 | 0.428 |
+
+A niche's own pattern is noisy, and worse than nothing for small niches. The
+all-games pattern beat no pattern for every niche tried and was about as good
+as or better than the niche's own pattern (roguelike was the one exception,
+0.240 against 0.229). So the site shows the all-games pattern for the user's
+languages, paid or free, whatever tags are picked. On 2026-10-12 it gave 1.34
+for the week after Next Fest October, 0.51 for Christmas week, 0.49 for New Year
+week and 1.45 for the week after Next Fest February.
+
+Caveats: the settings (4 weeks around an event, 3 years at least) were chosen
+while looking at these same test years; events that cover the same weeks
+(Winter Sale and Christmas) are weighted as if separate; and each estimate rests
+on 3 to 5 years.
 
 **Date changes:** every number uses each game's date in the newest snapshot, so
 a game that moves (say from "October 2026" to "May 2027") leaves its old week
@@ -108,7 +170,7 @@ game into the main count would look like real competition in every week, so:
 - One number per year sits next to the heatmap ("sometime in 2027: 2,631
   games"), with the same hype weight and list of games.
 
-On 2026-10-12 that was 3,106 games for 2026 and 2,631 for 2027, against 4,211
+On 2026-10-12 that was 3,106 games for 2026 and 2,631 for 2027, against 4,194
 exact dates in the next 26 weeks. The 2026 group over its last 11 weeks is about
 280 a week, more than the exact dates (about 160 a week); the hover text says
 most of them will likely slip. Slip rates from `release_changes` (see "Later"
@@ -270,12 +332,28 @@ whether this matters.
 For the user's tag selection (any tags, AND or OR), split past launches into
 three groups by how busy their launch week was (quiet, normal, busy, by
 tercile), and show median, 75th and 90th percentile of 30-day reviews in each
-group.
+group. Launches with the same busy count stay in one group; each cut is placed
+as close to a third as it can be (`analysis.heatmap.cut_points`).
 
 "Busy" uses the heatmap's rule (decided 2026-10-12): the number of other past
 launches in the same week that match the user's selection. The browser counts it
 from `history.json`, so the panel and the heatmap tell one story. The model
 (section 3) keeps its own tag-weight similarity measure.
+
+**Normalized busy, the default** (decided 2026-10-12; the heatmap's "raw counts"
+toggle switches both): the **other** launches that week divided by the average
+week in the **13 weeks before it** (an average under 1 counts as 1, so a lone
+launch in a small niche reads as quiet, not busy). Only the past is used, since that is what a developer
+could know when picking the date; it also matches the heatmap, whose baseline
+is past launches. Launches in the data's first 13 weeks (January to March 2022)
+have no baseline and are left out of the normalized panel.
+
+Why: raw counts put mostly recent launches in the busy group (shooters: 40% of
+the busy group from 2026, 5% of the quiet group). Normalized, the mix evens out
+(2026 share: quiet 14%, normal 22%, busy 25%). A centered window (13 weeks
+before and after) gave a similar split but uses weeks the developer could not
+see. In a fast-growing niche the past lags, so its weeks read a little high;
+the panel ranks weeks in thirds, so a niche-wide lean like that mostly cancels.
 
 Hide a group with fewer than 30 games; hide the panel if any group is hidden
 (the match count warns about this, section 1).
@@ -286,21 +364,24 @@ Static files on GitHub Pages, rebuilt by Actions (decided 2026-10-12). The
 browser does the tag filtering and counting; Actions does the heavy parts.
 
 ```
-site/data/tags.json         tag id, name, games upcoming, games in history
+site/data/meta.json         snapshot date, tags (id, name, games upcoming, games in
+                            history), languages (the rows below point into these
+                            lists), and the fitted rank-to-followers curve if any
 site/data/upcoming.json     one row per upcoming game with a date or wishlist rank:
                             appid, name, date range and precision, tag ids by weight,
                             languages, free flag, hype weight, and for a date change
                             in the last 30 days the old date text and the change date
-site/data/history.json      one row per past launch: appid, launch week, tag ids by
-                            weight, languages, free flag, 30-day reviews, niche
-                            competition in its launch week (precomputed)
+site/data/history.json      one row per past launch (not `ea_exit`): appid, launch
+                            date and type, tag ids by weight, languages, free flag,
+                            price, 30-day reviews
 site/data/events.json       events.yaml as JSON
 site/data/model.json        effect sizes with intervals, sample sizes, caveats
                             (paid model and free model)
 ```
 
-Measured on 2026-10-12 data with tag ids only: about 0.6 MB gzipped for 20,495
-upcoming games and 2.3 MB for 83,219 past launches. The history file loads only
+Built from 2026-10-12 data by `analysis/site_data.py`: `upcoming.json` 1.0 MB
+gzipped (20,481 games), `history.json` 2.8 MB (82,910 launches), the rest under
+0.1 MB. The history file loads only
 when the history panel opens. From these the browser builds the heatmap, the
 "sometime in <year>" numbers, the match count and the history panel for any
 tag combination.
@@ -317,8 +398,10 @@ Refresh: `upcoming.json` daily after the snapshot (no Steam requests);
 
 ## 6. Tools
 
-Python with pandas and statsmodels, in `analysis/`. Tests for the week
-spreading, niche matching and event overlap logic. No Steam requests.
+Python in `analysis/`: `site_data.py` builds the files (standard library only),
+`heatmap.py` defines the site's numbers as a reference with tests, which the
+browser code will be checked against. The model adds pandas and statsmodels. No
+Steam requests.
 
 ## 7. Questions for you
 
@@ -336,6 +419,13 @@ spreading, niche matching and event overlap logic. No Steam requests.
    once on the Pi. First check on one game that the review endpoint accepts a
    language filter. Used to check whether Chinese localization raises reviews
    more than sales.
+
+5. ~~**Busy compared with what?**~~ Decided: normalized by default on the
+   heatmap (section 2) and the panel (section 4); a "raw counts" toggle, off by
+   default, shows plain counts.
+   Found while building: counted raw, "busy" mostly meant "recent"
+   (English-language paid shooters averaged 23.7 other shooter launches a week
+   in 2022 and 41.1 in 2026).
 
 ## Known data limits that feed into this
 

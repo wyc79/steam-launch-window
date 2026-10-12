@@ -17,7 +17,7 @@ hf = ["huggingface_hub>=1.0"]  # for collectors that sync with a Hugging Face da
 publish = ["pandas>=2.2", "pyarrow>=15", "huggingface_hub>=1.0"]
 
 [tool.setuptools]
-packages = ["pipeline"]
+packages = ["pipeline", "analysis"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

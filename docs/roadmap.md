@@ -18,7 +18,7 @@ starts only after a go-ahead.
 | Audit | 1 to 5. Audit, sources, costs, Hugging Face, research readiness | reported 2026-10-11 |
 | Audit | 6. Implementation | [PR #13](https://github.com/wyc79/steam-launch-window/pull/13) merged 2026-10-12; fixes from the first Games Popularity run in [PR #14](https://github.com/wyc79/steam-launch-window/pull/14), merged 2026-10-12 |
 | Audit | 7. Deliverables | reported 2026-10-12 in [pipeline-report.md](pipeline-report.md), together with the build Phase 1 report |
-| Build | 2. Analysis | plan in [phase2-plan.md](phase2-plan.md); its 4 questions answered 2026-10-12; waiting for go-ahead |
+| Build | 2. Analysis | in progress: site data files and reference numbers built (PR #18); model next; see [phase2-plan.md](phase2-plan.md) |
 | Build | 3. Website | not started |
 | Build | 4. Agent and Worker | not started |
 
