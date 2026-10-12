@@ -209,9 +209,13 @@ class FakeHub:
         return SimpleNamespace(sha="head1")
 
     def hf_hub_download(self, repo_id, filename, repo_type=None, revision=None):
-        from huggingface_hub.errors import EntryNotFoundError
+        from types import SimpleNamespace
+
+        from huggingface_hub.errors import LocalEntryNotFoundError, RemoteEntryNotFoundError
+        if self.remote == "network error":
+            raise LocalEntryNotFoundError("connection error and the file is not cached")
         if self.remote is None:
-            raise EntryNotFoundError("no manifest")
+            raise RemoteEntryNotFoundError("no manifest", response=SimpleNamespace(headers={}, request=None))
         path = self.tmp / "remote_manifest.json"
         path.write_text(json.dumps(self.remote))
         return str(path)
@@ -245,3 +249,25 @@ def test_upload_needs_an_existing_dataset(data, tmp_path):
     pub.build(d, events, out, "mit")
     with pytest.raises(SystemExit, match="create it"):
         pub.upload(out, "me/data", "tok", api=FakeHub(tmp_path, exists=False))
+
+
+def test_upload_does_not_skip_the_check_on_a_network_error(data, tmp_path):
+    from huggingface_hub.errors import LocalEntryNotFoundError
+    d, events = data
+    out = tmp_path / "out"
+    pub.build(d, events, out, "mit")
+    hub = FakeHub(tmp_path, remote_manifest="network error")
+    with pytest.raises(LocalEntryNotFoundError):
+        pub.upload(out, "me/data", "tok", api=hub)
+    assert hub.uploads == []
+
+
+def test_release_changes_marks_a_game_that_comes_back_as_returned(tmp_path):
+    rows = {"2026-10-11": "10,Oct 30 2026,day,2026-10-30,2026-10-30\n",
+            "2026-10-12": "11,TBA,unknown,,\n",
+            "2026-10-13": "10,Oct 30 2026,day,2026-10-30,2026-10-30\n"}
+    for day, row in rows.items():
+        write_gz(tmp_path / f"snaps/{day}.csv.gz", "appid,raw,precision,date,date_end\n" + row)
+    df = pub.release_changes(tmp_path / "snaps")
+    assert [(int(r.appid), r.change) for r in df.itertuples()] == [
+        (10, "first_seen"), (10, "left_list"), (11, "first_seen"), (10, "returned"), (11, "left_list")]

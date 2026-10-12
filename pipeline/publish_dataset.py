@@ -114,9 +114,10 @@ def monthly(src_dir: Path, out_dir: Path, columns: list[str]) -> dict[str, int]:
 
 def release_changes(src_dir: Path) -> pd.DataFrame:
     """One row per game each time its release date text or range changes, plus its
-    first day in the snapshots and the day it left the coming-soon list.
-    Days with no snapshot file are simply skipped."""
+    first day in the snapshots, each day it left the coming-soon list, and each
+    day it came back. Days with no snapshot file are simply skipped."""
     prev: dict[str, dict] = {}
+    seen: set[str] = set()
     rows = []
     for f in sorted(src_dir.glob("*.csv.gz")):
         day = f.name[:10]
@@ -125,7 +126,9 @@ def release_changes(src_dir: Path) -> pd.DataFrame:
             today[r["appid"]] = cur = {k: r.get(k, "") for k in RELEASE_FIELDS}
             old = prev.get(r["appid"])
             if old is None:
-                rows.append({"appid": r["appid"], "snapshot_date": day, "change": "first_seen", **cur})
+                change = "returned" if r["appid"] in seen else "first_seen"
+                rows.append({"appid": r["appid"], "snapshot_date": day, "change": change, **cur})
+                seen.add(r["appid"])
             elif old != cur:
                 rows.append({"appid": r["appid"], "snapshot_date": day, "change": "changed", **cur,
                              **{f"prev_{k}": v for k, v in old.items()}})
@@ -273,7 +276,7 @@ No personal data: no Steam IDs, usernames or review texts, only counts.
 | `history` | today's view | {rows("history/games.parquet"):,} | games launched on Steam since 2022: launch date and type, price, tags, languages, demo, reviews in the first day, week and 30 days |
 | `upcoming_snapshots` | raw, daily | {rows("upcoming/snapshots"):,} | one row per coming-soon game per day ({snap_months[0] if snap_months else "-"} to {snap_months[-1] if snap_months else "-"}): release date and its precision, Early Access, wishlist rank, price if set |
 | `upcoming_apps` | latest | {rows("upcoming/apps.parquet"):,} | name, developers, publishers, tags with vote weights, languages, demo; `last_seen` is the last day the game was coming soon |
-| `release_changes` | derived | {rows("upcoming/release_changes.parquet"):,} | each game's first day in the snapshots, every change of its release date text or range, and the day it left the coming-soon list |
+| `release_changes` | derived | {rows("upcoming/release_changes.parquet"):,} | each game's first day in the snapshots, every change of its release date text or range, each day it left the coming-soon list, and each day it came back (`returned`) |
 | `followers` | raw | {rows("followers/snapshots"):,} | Steam community hub follower counts, with fetch time |
 | `events` | curated | {rows("events.parquet"):,} | Steam sales, Next Fests, themed fests, major releases, regional holidays, each with a source; `starts_at`/`ends_at` (UTC) give the exact window: Steam events run from 10:00 Pacific on `start` to 10:00 Pacific on `end` |
 | `tags` | latest | {rows("tags.parquet"):,} | Steam tag id to name |
@@ -324,7 +327,7 @@ Full methods: [README](https://github.com/wyc79/steam-launch-window#readme) and
 
 def upload(out: Path, repo_id: str, token: str, api=None) -> None:
     from huggingface_hub import HfApi
-    from huggingface_hub.errors import EntryNotFoundError, RepositoryNotFoundError
+    from huggingface_hub.errors import RemoteEntryNotFoundError, RepositoryNotFoundError
 
     api = api or HfApi(token=token)
     try:
@@ -334,7 +337,7 @@ def upload(out: Path, repo_id: str, token: str, api=None) -> None:
     try:
         old = json.loads(Path(api.hf_hub_download(repo_id, "manifest.json", repo_type="dataset",
                                                   revision=head)).read_text(encoding="utf-8"))
-    except EntryNotFoundError:
+    except RemoteEntryNotFoundError:  # no manifest published yet; a network error must fail, not skip the check
         old = None
     new = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
     problems = check_manifest(new, old)

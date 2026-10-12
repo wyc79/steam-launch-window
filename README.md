@@ -160,7 +160,8 @@ are in Pacific time, like the store.
   covers the top ~5,300 games; followers are the only hype number for the rest.
 - **Followers come from a third party.** Games Popularity history starts on
   2024-03-15, and some small games have gaps or stale values. Each pull records
-  a status: `ok`, `null`, `not_in_dataset` or `stale`.
+  a status: `ok`, `null`, `not_in_dataset`, `stale`, or `partial` (very long
+  series where only the newest 5,000 points were fetched).
 - **History is today's view of the past.** Price, demo, tags and Early Access
   status are as they are now, not as they were at launch. A demo removed after
   launch is invisible. Deleted reviews are not counted. Games delisted before

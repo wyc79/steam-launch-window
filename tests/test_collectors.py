@@ -326,3 +326,19 @@ def test_early_review_windows_skip_requests_when_30_day_count_is_zero(tmp_path, 
 def test_early_review_windows_only_after_early_since(tmp_path, monkeypatch):
     rows, calls = _run_history(tmp_path, monkeypatch, [_item(7, SEP_5)], extra=["--early-since", "2026-10-01"])
     assert rows["7"]["reviews_1d"] == "" and [w for _, w in calls] == [30 * 86400]
+
+
+def test_history_reads_an_older_format_file_without_losing_data(tmp_path, monkeypatch):
+    old_header = ("appid,name,launch_date,launch_ts,steam_release_ts,launch_type,early_access_now,price_cents,"
+                  "is_free,tags,developers,publishers,franchises,demo_appids,demo_release_ts,demo_before_launch,"
+                  "reviews_total_now,reviews_30d,reviews_30d_positive,reviews_30d_source,reviews_30d_fetched\n")
+    path = tmp_path / "history" / "games.csv"
+    path.parent.mkdir(parents=True)
+    path.write_text(old_header +
+                    f"7,G7,2026-09-05,{SEP_5},,full,0,,0,,,,,,,,5,4,3,api,2026-10-06\n"
+                    f"99,Gone,2026-09-02,{SEP_1 + 86400},,full,0,,0,,,,,,,,2,2,2,api,2026-10-03\n")
+    rows, calls = _run_history(tmp_path, monkeypatch, [_item(7, SEP_5)])
+    assert (rows["7"]["reviews_30d"], rows["7"]["first_listed"]) == ("4", "2026-10-20")
+    assert (rows["99"]["reviews_30d"], rows["99"]["first_listed"]) == ("2", "")
+    assert [w for _, w in calls] == []  # counts already there, nothing refetched
+    assert set(ch.FIELDS) <= set(rows["7"])

@@ -194,3 +194,11 @@ def test_per_host_retry_limit():
     with pytest.raises(HTTPStatusError):
         c.get_text("https://a.test/")
     assert len(session.calls) == 2
+
+
+def test_network_errors_do_not_carry_the_api_key():
+    err = requests.ConnectionError("Max retries exceeded with url: /x?apiKey=SECRET")
+    c, _, _ = make([err], min_interval=0, max_retries=0)
+    with pytest.raises(requests.ConnectionError) as e:
+        c.get_text("https://a.test/x", {"apiKey": "SECRET"})
+    assert "SECRET" not in str(e.value) and "a.test/x" in str(e.value)

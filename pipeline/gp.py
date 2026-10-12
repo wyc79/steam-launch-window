@@ -52,6 +52,9 @@ def history(client: Client, kind: str, appid: int, key: str, *,
             if e.status != 404:
                 raise
             res.requests += 1
+            if "cursor" in params:  # odd, but keep the newer pages already fetched
+                res.complete = False
+                return res
             return History(status="not_in_dataset", requests=res.requests)
         res.requests += 1
         reached_since = False

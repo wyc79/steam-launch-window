@@ -228,3 +228,16 @@ def test_run_stops_when_429s_persist_after_the_clients_retries(tmp_path):
     client = FakeGP({1: [HTTPStatusError(429, "u")], 2: [page("followers")]})
     stats = run(tmp_path, client, [job(1), job(2)], {})
     assert stats["stopped"] == "rate_limited" and client.requests_made == 1
+
+
+def test_a_pull_cut_short_by_the_budget_is_not_saved_and_stays_due(tmp_path):
+    storage.write_csv(tmp_path / "runs.csv", [{"date": "2026-10-20", "started_at": "x", "requests": 899}],
+                      cg.RUN_FIELDS)
+    two_pages = page("followers", ("2026-10-20T10:00:00", 9), cursor="2026-10-19T00:00:00")
+    client = FakeGP({1: [two_pages]})
+    state = {}
+    stats = run(tmp_path, client, [job(1)], state, budget=900)
+    assert stats["stopped"] == "budget" and state == {}
+    assert not (tmp_path / "followers" / "2026-10-20.csv.gz").exists()
+    # the next day it is planned again
+    assert [j.appid for j in cg.plan([], [launched(1, "2025-06-01")], state, TODAY, POLICY)] == [1]

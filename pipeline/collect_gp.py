@@ -191,6 +191,11 @@ def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datet
                     break
                 continue
             consecutive = 0
+            if not res.complete and left < MAX_PAGES:
+                # The budget, not the page cap, cut this pull short: drop it so the game stays
+                # due and is fetched whole another day (saving it would lose the older points).
+                stopped = "budget"
+                break
             old = state.get((job.kind, job.appid), {})
             newest = max([t for t, _ in res.points] + ([_ts(old["last_observed_at"])] if old.get("last_observed_at") else []),
                          default=None)

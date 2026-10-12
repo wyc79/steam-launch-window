@@ -26,8 +26,9 @@ unavailable (Steam has no review data for the app; retried after 90 days).
 
 Rows are never dropped. A game that is no longer listed (delisted, or missed
 by one listing) keeps its row; last_listed says when it was last seen, and
-first_listed when it first appeared (rows older than these columns get the
-date of the first run that added them).
+first_listed when it first appeared. Rows from before these columns get the
+date of the first listing run that adds them; rows no longer listed by then
+keep both empty.
 
 Launch date and Early Access:
 - Query files Early Access games that left EA under their 1.0 date.

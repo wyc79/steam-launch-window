@@ -3,23 +3,26 @@ from types import SimpleNamespace
 import pytest
 
 pytest.importorskip("huggingface_hub")
-from huggingface_hub.errors import EntryNotFoundError  # noqa: E402
+from huggingface_hub.errors import LocalEntryNotFoundError, RemoteEntryNotFoundError  # noqa: E402
 
 from pipeline import hf_sync  # noqa: E402
 
 
 class FakeApi:
-    def __init__(self, tmp_path, remote: dict[str, str], sha="abc123"):
-        self.remote, self.sha, self.dir = remote, sha, tmp_path / "hfcache"
+    def __init__(self, tmp_path, remote: dict[str, str], sha="abc123", private=True):
+        self.remote, self.sha, self.dir, self.private = remote, sha, tmp_path / "hfcache", private
+        self.broken = None
         self.commits = []
 
     def repo_info(self, repo_id, repo_type=None):
-        return SimpleNamespace(sha=self.sha)
+        return SimpleNamespace(sha=self.sha, private=self.private)
 
     def hf_hub_download(self, repo_id, filename, repo_type=None, revision=None):
         assert revision == self.sha
+        if filename == self.broken:
+            raise LocalEntryNotFoundError("connection error and the file is not cached")
         if filename not in self.remote:
-            raise EntryNotFoundError(f"{filename} not found")
+            raise RemoteEntryNotFoundError(f"{filename} not found", response=SimpleNamespace(headers={}, request=None))
         path = self.dir / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(self.remote[filename])
@@ -74,3 +77,32 @@ def test_push_refuses_without_a_pulled_parent(tmp_path):
     with pytest.raises(SystemExit, match="pull"):
         hf_sync.push(api, "me/data", src, "msg")
     assert api.commits == []
+
+
+def test_pull_fails_on_a_network_error_instead_of_treating_the_file_as_missing(tmp_path):
+    api = FakeApi(tmp_path, {"state.csv": "a"})
+    api.broken = "state.csv"
+    dest = tmp_path / "gp"
+    with pytest.raises(LocalEntryNotFoundError):
+        hf_sync.pull(api, "me/data", ["state.csv"], dest)
+    assert not (dest / hf_sync.PARENT_FILE).exists()  # so a later push refuses to run
+
+
+def test_push_refuses_a_public_dataset_unless_allowed(tmp_path):
+    src = tmp_path / "gp"
+    src.mkdir()
+    (src / "state.csv").write_text("s")
+    (src / hf_sync.PARENT_FILE).write_text("abc123")
+    api = FakeApi(tmp_path, {}, private=False)
+    with pytest.raises(SystemExit, match="public"):
+        hf_sync.push(api, "me/data", src, "msg")
+    hf_sync.push(api, "me/data", src, "msg", allow_public=True)
+    assert len(api.commits) == 1
+
+
+def test_pull_refuses_a_folder_that_already_has_files(tmp_path):
+    dest = tmp_path / "gp"
+    (dest / "followers").mkdir(parents=True)
+    (dest / "followers" / "2026-01-01.csv.gz").write_text("stale")
+    with pytest.raises(SystemExit, match="not empty"):
+        hf_sync.pull(FakeApi(tmp_path, {}), "me/data", ["state.csv"], dest)

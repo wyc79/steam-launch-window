@@ -144,7 +144,8 @@ class Client:
                 r = self.session.get(url, params=params, timeout=self.timeout)
             except (requests.ConnectionError, requests.Timeout) as e:
                 if attempt == max_retries:
-                    raise
+                    # requests puts the full URL, query string included, in its message
+                    raise type(e)(f"{type(e).__name__} for {_describe(url, params)}") from None
                 delay = self._backoff(attempt)
                 log.warning("network error (%s) on %s, retry in %.0fs", type(e).__name__, _describe(url, params), delay)
                 self._sleep(delay)

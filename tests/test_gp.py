@@ -115,3 +115,9 @@ def test_value_at_interpolates_between_the_points_around_a_time():
     assert gp.value_at(points, utc(2026, 10, 11, 0)) == (150, 24.0)  # value, hours between the two points
     assert gp.value_at(points, utc(2026, 10, 12, 0)) is None          # after the newest point
     assert gp.value_at([], utc(2026, 10, 11)) is None
+
+
+def test_a_404_on_a_later_page_keeps_the_pages_already_fetched():
+    client = FakeClient(fixture("gp_followers_light_no_fire_page1.json"), HTTPStatusError(404, "u"))
+    res = gp.history(client, "followers", 2719590, "KEY")
+    assert len(res.points) == 3 and res.complete is False and res.requests == 2
