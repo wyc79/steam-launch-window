@@ -1,3 +1,4 @@
-date,games,dated,ranked,ranked_not_listed,date_mismatch,requests,seconds
-2026-10-11,60010,16949,5240,103,1,120,156
-2026-10-11,60032,16958,5239,103,1,120,155
+date,games,dated,ranked,ranked_not_listed,date_mismatch,requests,seconds,ranking_ok
+2026-10-11,60010,16949,5240,103,1,120,156,
+2026-10-11,60032,16958,5239,103,1,120,155,
+2026-10-12,60227,17067,5262,103,1,116,171,1
