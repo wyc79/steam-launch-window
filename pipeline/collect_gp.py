@@ -27,7 +27,7 @@ a pull it cuts short keeps its pages and is resumed; exit code 0), or after too 
 errors in a row. A run on a UTC day that already ended with a 429 does not start.
 
 Reads (under --data-dir): the newest upcoming snapshot and history/games.csv.
-Writes (under --gp-dir; the daily job syncs it with a private Hugging Face dataset):
+Writes (under --gp-dir; the daily job syncs it with gp/ in the public Hugging Face dataset):
   followers/YYYY-MM-DD.csv.gz  points fetched that UTC day: appid, followers, observed_at, fetched_at
   players/YYYY-MM-DD.csv.gz    same, with players
   state.csv                    per (appid, kind): see below
@@ -355,7 +355,7 @@ def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datet
 def main(argv=None) -> int:
     p = base_parser(__doc__)
     p.add_argument("--gp-dir", type=Path, default=Path("_gp"),
-                   help="state and fetched points (synced with the private dataset in CI)")
+                   help="state and fetched points (synced with gp/ in the public dataset in CI)")
     p.add_argument("--budget", type=int, default=int(os.environ.get("GP_DAILY_BUDGET") or 900),
                    help="requests allowed per UTC day, including earlier runs that day")
     p.add_argument("--gp-interval", type=float, default=1.2, help=f"seconds between requests to {gp.HOST}")

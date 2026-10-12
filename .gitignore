@@ -222,5 +222,6 @@ __marimo__/
 # pipeline outputs (the data branch is checked out here in CI)
 _data/
 
-# Games Popularity working folder (synced with a private Hugging Face dataset)
+# Hugging Face working folder (gp/ of the public dataset, synced by the daily job)
 _gp/
+_hf/

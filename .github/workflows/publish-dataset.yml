@@ -1,17 +1,25 @@
 name: publish dataset
 
-# Weekly: publish the data branch as Parquet on Hugging Face.
+# Weekly: publish the data branch as Parquet on Hugging Face, each time a
+# collect history run on main ends, whatever its result: it saves its progress
+# even when it fails or times out, and a run skipped because COLLECT_HISTORY is
+# off still starts the weekly upload. Starting from that run, not from a cron
+# of its own, keeps the order when GitHub delays schedules (9 hours on 2026-10-12).
+# The manifest check below still stops an upload of a broken build.
+# The gp/ folder in the dataset is written by the daily job and left alone here.
 #
 # Off by default. Needs:
 #   secret   HF_TOKEN          Hugging Face token with write access to the dataset
 #   variable HF_DATASET_REPO   e.g. <user>/steam-launch-data
-#   variable PUBLISH_DATASET=on  to let the schedule upload
+#   variable PUBLISH_DATASET=on  to let the history run start the upload
 # A manual run is a dry run unless "upload" is ticked: it builds the files and
 # attaches them to the run so they can be checked first.
 
 on:
-  schedule:
-    - cron: "17 12 * * 1"  # Mondays, after the weekly history run
+  workflow_run:
+    workflows: ["collect history"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       upload:
@@ -42,6 +50,9 @@ jobs:
 
       - name: Build (dry run)
         if: github.event_name == 'workflow_dispatch' && !inputs.upload
+        env:  # read only: to list the gp/ configs on the card
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_DATASET_REPO: ${{ vars.HF_DATASET_REPO }}
         run: python -m pipeline.publish_dataset --dry-run
       - name: Attach the built files to this run
         if: github.event_name == 'workflow_dispatch' && !inputs.upload
@@ -53,7 +64,7 @@ jobs:
           retention-days: 7
 
       - name: Build and upload
-        if: github.event_name == 'schedule' || inputs.upload
+        if: github.event_name == 'workflow_run' || inputs.upload
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_DATASET_REPO: ${{ vars.HF_DATASET_REPO }}

@@ -1,5 +1,6 @@
 import gzip
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -82,10 +83,31 @@ def test_card_lists_only_configs_with_data(data, tmp_path):
     assert "license: cc-by-4.0" in card
 
 
+def test_card_lists_games_popularity_configs_found_in_the_dataset(data, tmp_path):
+    d, events = data
+    out = tmp_path / "out"
+    pub.build(d, events, out, "mit")
+    card = (out / "README.md").read_text(encoding="utf-8")
+    assert "gp_followers" not in card and "gp_players" not in card
+    pub.build(d, events, out, "mit", gp_kinds={"followers"})
+    card = (out / "README.md").read_text(encoding="utf-8")
+    assert "config_name: gp_followers" in card and "gp/followers/*.csv.gz" in card
+    assert "| `gp_followers` |" in card and "gp_players" not in card
+    assert "games-popularity.com" in card
+    assert "gp/followers/2026-10-01.csv.gz" not in json.loads((out / "manifest.json").read_text())
+
+
+def test_remote_gp_kinds_looks_for_csv_files_under_gp():
+    api = SimpleNamespace(list_repo_files=lambda repo_id, repo_type=None: [
+        "README.md", "gp/state.csv", "gp/followers/2026-10-12.csv.gz", "followers/latest.parquet"])
+    assert pub.remote_gp_kinds("me/data", "x", api=api) == {"followers"}
+
+
 def test_default_card_grants_no_data_license(data, tmp_path, monkeypatch):
     d, events = data
     out = tmp_path / "out"
     monkeypatch.setenv("HF_TOKEN", "x")
+    monkeypatch.delenv("HF_DATASET_REPO", raising=False)  # with a repo, the build would ask Hugging Face
     monkeypatch.setattr(pub, "upload", lambda *a, **k: pytest.fail("a dry run must not upload"))
     assert pub.main(["--data-dir", str(d), "--events", str(events), "--out", str(out), "--dry-run"]) == 0
     card = (out / "README.md").read_text(encoding="utf-8")
@@ -242,6 +264,26 @@ def test_upload_names_its_parent_and_skips_the_marker(data, tmp_path):
     hub = FakeHub(tmp_path)
     pub.upload(out, "me/data", "tok", api=hub)
     assert hub.uploads[0]["parent_commit"] == "head1" and pub.MARKER in hub.uploads[0]["ignore_patterns"]
+    assert not hub.uploads[0].get("delete_patterns")  # gp/ in the dataset is the daily job's; never delete it
+
+
+def test_main_lists_the_remote_gp_configs_on_the_card(data, tmp_path, monkeypatch):
+    d, events = data
+    out = tmp_path / "out"
+    monkeypatch.setenv("HF_TOKEN", "x")
+    monkeypatch.setattr(pub, "remote_gp_kinds", lambda repo_id, token: {"players"})
+    assert pub.main(["--data-dir", str(d), "--events", str(events), "--out", str(out),
+                     "--repo-id", "me/data", "--dry-run"]) == 0
+    assert "config_name: gp_players" in (out / "README.md").read_text(encoding="utf-8")
+
+
+def test_remote_gp_kinds_explains_a_missing_dataset():
+    from huggingface_hub.errors import RepositoryNotFoundError
+
+    def missing(repo_id, repo_type=None):
+        raise RepositoryNotFoundError("nope", response=SimpleNamespace(headers={}, request=None))
+    with pytest.raises(SystemExit, match="create it"):
+        pub.remote_gp_kinds("me/data", "x", api=SimpleNamespace(list_repo_files=missing))
 
 
 def test_upload_stops_when_the_check_fails(data, tmp_path):

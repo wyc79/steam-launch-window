@@ -55,10 +55,10 @@ does not start collecting:
 | Variable | Turns on |
 |---|---|
 | `COLLECT_DAILY=on` | the daily snapshot |
-| `COLLECT_GP=on` | the Games Popularity step in the daily job (also needs the `GP_API_KEY` and `HF_TOKEN` secrets and the `GP_DATASET_REPO` variable; `GP_DAILY_BUDGET` is optional, default 900) |
+| `COLLECT_GP=on` | the Games Popularity step in the daily job (also needs the `GP_API_KEY` and `HF_TOKEN` secrets and the `HF_DATASET_REPO` variable; `GP_DAILY_BUDGET` is optional, default 900) |
 | `COLLECT_HISTORY=on` | the weekly history job |
 | `ENDPOINT_CHECK=on` | the weekly endpoint smoke test |
-| `PUBLISH_DATASET=on` | the weekly upload to Hugging Face (also needs the `HF_TOKEN` secret and `HF_DATASET_REPO` variable) |
+| `PUBLISH_DATASET=on` | the weekly upload to Hugging Face, which starts when the weekly history job ends (also needs the `HF_TOKEN` secret and `HF_DATASET_REPO` variable) |
 
 Each workflow can also be run by hand from the Actions tab.
 
@@ -80,7 +80,9 @@ follower counts come from [Games Popularity](https://games-popularity.com).
 Their numbers match ours (median gap 0.06% on 122 games), and one request
 returns a game's whole daily follower series, so how often a game is pulled
 only decides how fresh its newest value is. Their free API allows about 1,000
-requests a day. The daily job uses up to 900, in this order:
+requests a day (the owner said on 2026-10-12 that free limits will be cut and a
+paid plan added; lower `GP_DAILY_BUDGET` to match). The daily job uses up to 900,
+in this order:
 
 1. players 35 to 60 days after each launch (hourly counts for the first month;
    first, because a game missed by day 60 loses them for good)
@@ -96,8 +98,8 @@ the next UTC day. Manual scripts with the same key (`scripts/compare_followers.p
 count against the same 1,000 a day but are not in the job's count: keep them
 under 100 a day.
 
-Until Games Popularity allows republishing, this data is kept in a private
-Hugging Face dataset and only derived numbers are published.
+This data is republished, with the owner's permission (2026-10-12), under `gp/`
+in the public Hugging Face dataset, which the daily job also uses as its storage.
 `pipeline.collect_followers`, the old community scraper, is kept for occasional
 manual checks, and `scripts/compare_followers.py` compares the two sources.
 
@@ -149,7 +151,7 @@ history/games.csv                     one row per game released since 2022:
                                       first_listed, last_listed (rows are never dropped)
 ```
 
-Games Popularity data (private Hugging Face dataset, synced by the daily job):
+Games Popularity data (under `gp/` in the public Hugging Face dataset, synced by the daily job):
 
 ```
 followers/YYYY-MM-DD.csv.gz           points fetched that day: appid, followers,
@@ -193,4 +195,4 @@ Follower and player history: [Games Popularity](https://games-popularity.com).
 MIT for the code. The license does not cover the data: it comes from Steam,
 owned by Valve, which has not licensed or endorsed this project, so the dataset
 on Hugging Face is marked `license: other` and grants no license.
-Games Popularity data stays in a private dataset until they allow republishing.
+Games Popularity data is republished there with its owner's permission (2026-10-12).

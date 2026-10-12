@@ -333,7 +333,9 @@ Checked 2026-10-11 with about 40 requests without a key and about 140 with one.
   parameter (free after logging in). Without a key: 100 requests a day per IP.
 - **Limit:** the owner said (Discord, 2026-10-11) it is now about 1,000
   requests a day per key and per IP, with paid higher limits possible later.
-  The docs still say 1 request per second and no daily quota.
+  The docs still say 1 request per second and no daily quota (checked
+  2026-10-12). On 2026-10-12 the owner said free limits will be cut and a
+  paid plan added within days.
 - `GET /game/followers/{appid}` and `/game/players/{appid}`: history, newest
   first, up to 1,000 points per page, `nextCursor` (a timestamp, pass it back
   as `cursor`) for older pages. Followers are about one point a day, players
@@ -351,14 +353,14 @@ Checked 2026-10-11 with about 40 requests without a key and about 140 with one.
   first month after launch costs one request if pulled within 42 days.
 - A single 429 sometimes comes on the first request of a run and clears on a
   retry 2 s later (seen twice).
-- No terms page. Asked about republishing; until then the data stays in a
-  private dataset. Credit: link to games-popularity.com.
+- No terms page. The owner allowed republishing (Discord, 2026-10-12); the
+  data is in the public dataset under `gp/`. Credit: link to games-popularity.com.
 - **Paging:** the cursor of the next page is a timestamp. Whether its point is
   also the last one of the page before is not checked, so the collector skips
   any point at or after the oldest one it already has. A pull stopped by the
   5-page cap or the budget saves `resume_cursor` and goes on in a later run.
 - **Budget accounting:** the daily job counts its own requests in `runs.csv`
-  (synced with the private dataset). Requests from other places with the same
+  (synced with `gp/` in the public dataset). Requests from other places with the same
   key (manual scripts) or IP are not counted; the 900 budget leaves 100 for them.
   Whether their day is UTC or a rolling 24 hours is not known.
 
