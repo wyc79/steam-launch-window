@@ -176,8 +176,8 @@ def test_relative_busy_compares_a_week_with_the_weeks_before_it():
     panel = hm.history_panel(weekly(counts), [SHOOTER], min_group=1)  # relative is the default
     assert panel["measure"] == "relative"
     parts = panel["paid"]["parts"].values()
-    assert max(p.get("busy_max", 0) for p in parts) == 3.0   # 6 against 2 in the 13 weeks before
-    assert min(p.get("busy_min", 9) for p in parts) == 0.87  # later weeks have the spike in their past
+    assert max(p.get("busy_max", 0) for p in parts) == 2.5   # 5 others against 2 a week before
+    assert min(p.get("busy_min", 9) for p in parts) == 0.43  # 1 other against 30/13 with the spike in the past
     assert sum(p["games"] for p in parts) == 2 * 13 + 6      # the first 13 weeks have no baseline
     raw = hm.history_panel(weekly(counts), [SHOOTER], min_group=1, measure="raw")
     assert raw["measure"] == "raw" and max(p.get("busy_max", 0) for p in raw["paid"]["parts"].values()) == 5
@@ -192,3 +192,21 @@ def test_relative_busy_removes_slow_growth():
     interior = [p for p in panel["paid"]["parts"].values() if p["games"]]
     # every week is about usual; the past lags behind growth, so weeks read a little high (up to 1.3 here)
     assert all(0.9 <= p["busy_min"] and p["busy_max"] <= 1.35 for p in interior)
+
+
+def test_relative_busy_puts_a_lone_launch_in_a_small_niche_in_quiet():
+    counts = [0] * 40
+    for i in range(14, 40, 2):
+        counts[i] = 1          # one launch every other week: usual is about half a launch
+    counts[39] = 3
+    panel = hm.history_panel(weekly(counts), [SHOOTER], min_group=1)
+    parts = panel["paid"]["parts"]
+    assert parts["quiet"]["busy_max"] == 0.0     # alone in its week: no competition
+    assert max(p.get("busy_max", 0) for p in parts.values()) == 2.0  # 2 others against a floor of 1
+
+
+def test_unknown_mode_or_measure_is_an_error():
+    with pytest.raises(ValueError):
+        hm.matches([1], [1], "xor")
+    with pytest.raises(ValueError):
+        hm.history_panel([], measure="ratio")

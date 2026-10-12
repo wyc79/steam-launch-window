@@ -169,3 +169,19 @@ def test_cli_refuses_to_write_into_the_data_folder(data):
     d, _, events = data
     with pytest.raises(SystemExit, match="data folder"):
         sd.main(["--data-dir", str(d), "--out", str(d), "--events", str(events)])
+
+
+def test_new_wording_for_the_same_dates_is_not_a_move(tmp_path):
+    snaps = tmp_path / "s"
+    storage.write_csv(snaps / "2026-10-11.csv.gz", [snap(1, "Q4 2026", "quarter", "2026-10-01", "2026-12-31"),
+                                                   snap(2, "Nov 2026", "month", "2026-11-01", "2026-11-30")], SNAP)
+    storage.write_csv(snaps / "2026-10-12.csv.gz", [snap(1, "Q4, 2026", "quarter", "2026-10-01", "2026-12-31")], SNAP)
+    storage.write_csv(snaps / "2026-10-13.csv.gz", [snap(1, "Q4, 2026", "quarter", "2026-10-01", "2026-12-31"),
+                                                   snap(2, "Dec 3, 2026", "day", "2026-12-03")], SNAP)
+    # game 1 only changed wording; game 2 left for a day and came back with a new date
+    assert sd.recent_changes(snaps, date(2026, 10, 13)) == {2: ["moved", "Nov 2026", "2026-10-13"]}
+
+
+def test_build_without_snapshots_says_so(tmp_path):
+    with pytest.raises(SystemExit, match="no upcoming snapshot"):
+        sd.build(tmp_path, tmp_path / "events.yaml", tmp_path / "out")

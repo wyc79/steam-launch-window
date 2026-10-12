@@ -12,6 +12,8 @@ checked against. Games are dicts with the column names of those files.
   evenly over the days of their range from `today` on ("spread"). Year-only
   dates are spread the same way into a separate layer ("year") and also summed
   per year ("sometime"); they never add into exact or spread.
+- Week 0 counts exact dates for the whole week but spreads vague ones only from
+  `today` on; games that launched earlier that week have left the list.
 - Free games (Steam's flag or "Free to Play" in the top 10 tags) are counted
   apart from paid ones.
 """
@@ -36,7 +38,13 @@ def week_start(d: date) -> date:
     return d - timedelta(days=d.weekday())
 
 
+MODES = ("and", "or")
+MEASURES = ("relative", "raw")
+
+
 def matches(tags, selection, mode: str = "and") -> bool:
+    if mode not in MODES:
+        raise ValueError(f"mode must be one of {MODES}, not {mode!r}")
     if not selection:
         return True
     have = set(tags)
@@ -122,6 +130,8 @@ def heatmap(games, today: date, selection=(), mode: str = "and", languages=(), h
 
 def percentile(values: list[float], q: float) -> float:
     """Linear interpolation between the closest ranks (numpy's default), q in 0..1."""
+    if not values:
+        raise ValueError("percentile of no values")
     v = sorted(values)
     pos = (len(v) - 1) * q
     lo = int(pos)
@@ -140,13 +150,17 @@ def history_panel(history, selection=(), mode: str = "and", languages=(), min_gr
     Busy, for launches of the same group in the selection (weeks Monday to Sunday):
     - measure "raw" (the site's "raw counts" toggle, off by default): how many
       other launches that week;
-    - measure "relative" (the default): launches that week divided by the average
-      week in the RELATIVE_WEEKS before it (an average of 0 counts as 1), rounded
-      to 2 decimals. Steam grows every year, so raw counts make "busy" partly mean
+    - measure "relative" (the default): the other launches that week divided by
+      the average week in the RELATIVE_WEEKS before it, rounded to 2 decimals. An
+      average under 1 counts as 1, so a niche with less than one launch a week is
+      compared with one launch, not with a fraction (a lone launch after a quiet
+      quarter would otherwise read as very busy). Steam grows every year, so raw counts make "busy" partly mean
       "recent"; this compares a week with what was usual just before it, which is
       what a developer could know when picking the date. Launches in the data's
       first RELATIVE_WEEKS weeks have no such baseline and are left out. In a
       fast-growing niche the past lags, so its weeks read a little high."""
+    if measure not in MEASURES:
+        raise ValueError(f"measure must be one of {MEASURES}, not {measure!r}")
     chosen = [h for h in selected(history, selection, mode, languages) if h["launch_type"] in PANEL_TYPES]
     group_of = {id(h): "free" if h["free"] else "paid" for h in chosen}
     week_of = {id(h): week_start(date.fromisoformat(h["launch_date"])) for h in chosen}
@@ -158,7 +172,7 @@ def history_panel(history, selection=(), mode: str = "and", languages=(), min_gr
         if measure == "raw":
             return per_week[group, week] - 1
         usual = sum(per_week[group, week - timedelta(weeks=k)] for k in range(1, RELATIVE_WEEKS + 1)) / RELATIVE_WEEKS
-        return round(per_week[group, week] / (usual or 1), 2)
+        return round((per_week[group, week] - 1) / max(usual, 1), 2)
 
     out = {"measure": measure}
     for group in GROUPS:
@@ -198,7 +212,7 @@ def _terciles(sample: list[tuple[float, int]], min_group: int) -> dict:
     result = {"games": len(sample), "shown": True, "parts": {}}
     for name in ("quiet", "normal", "busy"):
         rows = parts[name]
-        if len(rows) < min_group:
+        if len(rows) < max(min_group, 1):
             result["shown"] = False
             result["parts"][name] = {"games": len(rows)}
             continue

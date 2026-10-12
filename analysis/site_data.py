@@ -42,7 +42,7 @@ MIN_FIT = 30
 UPCOMING_COLUMNS = ["appid", "name", "precision", "date", "date_end", "tags", "langs", "free", "ea",
                     "wishlist_rank", "followers", "hype_src", "moved"]
 HISTORY_COLUMNS = ["appid", "launch_date", "launch_type", "tags", "langs", "free", "price_cents", "reviews_30d"]
-RELEASE_FIELDS = ("raw", "precision", "date", "date_end")
+DATE_FIELDS = ("precision", "date", "date_end")  # a change in these is a move; wording alone is not
 
 log = logging.getLogger("site_data")
 
@@ -89,27 +89,32 @@ def rank_curve(pairs: list[tuple[int, int]]) -> tuple[float, float] | None:
 
 def recent_changes(snapshot_dir: Path, latest: date, days: int = MOVED_DAYS) -> dict[int, list]:
     """Each game's last date change in the `days` before `latest`: [kind, old raw text, change date].
-    A change is seen on the first snapshot that shows it; a game's first snapshot is not a change."""
+    A change is a new precision or date range, seen on the first snapshot that shows
+    it; new wording for the same dates is not one, and a game's first snapshot is
+    not one. A game that leaves the list and comes back is compared with its last
+    snapshot before it left only if that is inside the window."""
     since = latest - timedelta(days=days + 1)  # one more day, as the baseline
     files = [f for f in sorted(snapshot_dir.glob("*.csv.gz")) if since <= date.fromisoformat(f.name[:10]) <= latest]
-    prev: dict[int, tuple] = {}
+    last: dict[int, tuple[tuple, str]] = {}  # appid: (dates, raw text) in its newest snapshot so far
     changes: dict[int, list] = {}
     for f in files:
         day = f.name[:10]
-        today = {}
         for r in storage.read_csv(f):
             appid = int(r["appid"])
-            today[appid] = cur = tuple(r.get(k, "") for k in RELEASE_FIELDS)
-            old = prev.get(appid)
-            if old is not None and old != cur:
-                changes[appid] = ["date_set" if old[1] in ("", "unknown") else "moved", old[0], day]
-        prev = today
+            cur = tuple(r.get(k, "") for k in DATE_FIELDS)
+            old = last.get(appid)
+            if old is not None and old[0] != cur:
+                changes[appid] = ["date_set" if old[0][0] in ("", "unknown") else "moved", old[1], day]
+            last[appid] = (cur, r.get("raw", ""))
     return changes
 
 
 def build(data_dir: Path, events_path: Path, out: Path, gp_dir: Path | None = None) -> dict:
     snapshot_dir = data_dir / "upcoming" / "snapshots"
-    snapshot_path = sorted(snapshot_dir.glob("*.csv.gz"))[-1]
+    snapshots = sorted(snapshot_dir.glob("*.csv.gz"))
+    if not snapshots:
+        raise SystemExit(f"no upcoming snapshot in {snapshot_dir}")
+    snapshot_path = snapshots[-1]
     snapshot_date = date.fromisoformat(snapshot_path.name[:10])
     apps = {int(r["appid"]): r for r in storage.read_csv(data_dir / "upcoming" / "apps.csv")}
     tag_names = {int(r["tagid"]): r["name"] for r in storage.read_csv(data_dir / "tags.csv")}
