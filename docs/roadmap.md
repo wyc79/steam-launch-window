@@ -128,16 +128,13 @@ decided 2026-10-11, replacing the spec's `wyc79.github.io/launch-window`).
 
 Free tier only.
 
-**Chinese users (to decide in Phase 4):** GitHub Pages works from mainland China (tested
-by the owner on another repo), so the static site needs no copy. Cloudflare Workers are
-often slow or blocked there. Option: a Tencent Cloud SCF function in the Hong Kong region
-as the China endpoint for the agent, next to the Worker. Checked 2026-10-11 (Tencent docs):
-- SCF is free only for the first 3 months; after that a base package costs about
-  $1.86 a month, charged only in months the function is used. This breaks "free tier
-  only", so it needs your OK.
-- A custom domain on a mainland-region function needs an ICP filing; a Hong Kong
-  function does not. API Gateway in the mainland needs a filing either way.
-- Chinese text for the page is a separate Phase 3 item.
+**Chinese users (decided 2026-10-11):** GitHub Pages works from mainland China (tested
+by the owner), so the static site needs no copy. Cloudflare Workers are often slow or
+blocked there, so the agent also gets a **Tencent Cloud SCF function in a mainland China
+region**, next to the Worker. The owner runs the same setup for a portfolio chat on the
+free basic tier. When setting it up, check the account's billing page once: the
+international docs describe a monthly base package after the first 3 months. Chinese
+text for the page is a separate Phase 3 item.
 
 ## What only you can do
 
@@ -149,7 +146,7 @@ as the China endpoint for the agent, next to the Worker. Checked 2026-10-11 (Ten
 | step 3 | Set `GP_DATASET_REPO` (and optionally `GP_DAILY_BUDGET`), then the switches one by one |
 | step 3 | Approve the "Data rights" wording on the dataset card and the first real upload |
 | step 4 | Answer the 4 open questions in the Phase 2 plan |
-| step 6 | Decide on a Tencent SCF (Hong Kong) endpoint for Chinese users, about $1.86 a month in months it is used |
+| step 6 | Set up the Tencent SCF function (mainland region) for the agent's China endpoint |
 | around Nov 7 | Replace the 2027 China holiday estimates when the official dates are out |
 
 ## Risks to watch
