@@ -225,3 +225,6 @@ _data/
 # Hugging Face working folder (gp/ of the public dataset, synced by the daily job)
 _gp/
 _hf/
+
+# website data built by analysis.site_data
+site/data/

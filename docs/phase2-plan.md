@@ -1,8 +1,8 @@
 # Phase 2 plan: analysis
 
-Status: the 4 open questions were answered on 2026-10-12 (section 7); waiting for
-the go-ahead to build. Nothing here is built yet. Updated 2026-10-11 after the
-pipeline audit: followers now come from Games Popularity, with history back to
+Status: building (2026-10-12). Questions 1 to 4 answered, question 5 open
+(section 7). The site data files and the reference numbers are built; the model
+is next. Updated 2026-10-11 after the pipeline audit: followers now come from Games Popularity, with history back to
 2024-03-15, which changes sections 2 and 3.
 
 Phase 2 turns the collected data into two things the website shows:
@@ -270,7 +270,8 @@ whether this matters.
 For the user's tag selection (any tags, AND or OR), split past launches into
 three groups by how busy their launch week was (quiet, normal, busy, by
 tercile), and show median, 75th and 90th percentile of 30-day reviews in each
-group.
+group. Launches with the same busy count stay in one group; each cut is placed
+as close to a third as it can be (`analysis.heatmap.cut_points`).
 
 "Busy" uses the heatmap's rule (decided 2026-10-12): the number of other past
 launches in the same week that match the user's selection. The browser counts it
@@ -286,21 +287,23 @@ Static files on GitHub Pages, rebuilt by Actions (decided 2026-10-12). The
 browser does the tag filtering and counting; Actions does the heavy parts.
 
 ```
-site/data/tags.json         tag id, name, games upcoming, games in history
+site/data/meta.json         snapshot date, tags (id, name, games upcoming, games in
+                            history), languages; the rows below point into these lists
 site/data/upcoming.json     one row per upcoming game with a date or wishlist rank:
                             appid, name, date range and precision, tag ids by weight,
                             languages, free flag, hype weight, and for a date change
                             in the last 30 days the old date text and the change date
-site/data/history.json      one row per past launch: appid, launch week, tag ids by
-                            weight, languages, free flag, 30-day reviews, niche
-                            competition in its launch week (precomputed)
+site/data/history.json      one row per past launch (not `ea_exit`): appid, launch
+                            date and type, tag ids by weight, languages, free flag,
+                            price, 30-day reviews
 site/data/events.json       events.yaml as JSON
 site/data/model.json        effect sizes with intervals, sample sizes, caveats
                             (paid model and free model)
 ```
 
-Measured on 2026-10-12 data with tag ids only: about 0.6 MB gzipped for 20,495
-upcoming games and 2.3 MB for 83,219 past launches. The history file loads only
+Built from 2026-10-12 data by `analysis/site_data.py`: `upcoming.json` 1.0 MB
+gzipped (20,481 games), `history.json` 2.8 MB (82,910 launches), the rest under
+0.1 MB. The history file loads only
 when the history panel opens. From these the browser builds the heatmap, the
 "sometime in <year>" numbers, the match count and the history panel for any
 tag combination.
@@ -317,8 +320,10 @@ Refresh: `upcoming.json` daily after the snapshot (no Steam requests);
 
 ## 6. Tools
 
-Python with pandas and statsmodels, in `analysis/`. Tests for the week
-spreading, niche matching and event overlap logic. No Steam requests.
+Python in `analysis/`: `site_data.py` builds the files (standard library only),
+`heatmap.py` defines the site's numbers as a reference with tests, which the
+browser code will be checked against. The model adds pandas and statsmodels. No
+Steam requests.
 
 ## 7. Questions for you
 
@@ -336,6 +341,15 @@ spreading, niche matching and event overlap logic. No Steam requests.
    once on the Pi. First check on one game that the review endpoint accepts a
    language filter. Used to check whether Chinese localization raises reviews
    more than sales.
+
+5. **Busy compared with what?** (found while building, 2026-10-12) Counted as
+   plain launches per week, "busy" mostly means "recent": English-language paid
+   shooters averaged 23.7 other shooter launches a week in 2022 and 41.1 in 2026.
+   So the panel's busy group is mostly 2025 to 2026 launches and quiet mostly
+   2022 to 2023, and any difference mixes competition with how Steam changed.
+   Proposal: compare each week with the selection's usual level around it (the
+   average over the 13 weeks before and after), and split by that ratio. It
+   keeps short peaks (Next Fest, holidays) and removes the slow growth.
 
 ## Known data limits that feed into this
 
