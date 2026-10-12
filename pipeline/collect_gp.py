@@ -2,8 +2,9 @@
 
 One request returns a game's whole daily follower series, so how often a game
 is pulled only decides how fresh its newest value is. Jobs, most urgent first:
-  0. players, 35 to 42 days after launch (hourly counts for the first month, one page);
-     first, because a game missed by day 42 loses its first month for good
+  0. players, 35 to 60 days after launch (hourly counts for the first month: one page
+     until about day 41, two after); first, because a game missed by day 60 loses its
+     first month for good
   1. followers, about 8 days after launch (whole pre-launch series plus launch week);
      missed ones are caught up for 60 days, then by the backfill
   2. followers for every upcoming game with a date or a wishlist rank, every 60 days
@@ -69,7 +70,8 @@ class Policy:
     post_launch_days: int = 8
     post_launch_window: int = 60
     players_days: int = 35
-    players_window: int = 42     # one page of hourly points covers about 41 days
+    players_window: int = 60     # one page of hourly points covers about 41 days, so usually
+                                 # day 35 costs one request; later catch-ups cost two
     refresh_days: int = 60
     stale_page_days: int = 30      # upcoming dates this far past are stale store pages, not tracked
     stale_days: int = 14
@@ -172,11 +174,9 @@ def plan(snapshot: list[dict], history: list[dict], state: dict, today: date, po
                 add(Job(1, (launch.toordinal(), appid), "followers", appid, since))
         if ("players", appid) not in resuming:
             players_since = _midnight(launch - timedelta(days=1))
-            if players is None and policy.players_days <= age <= policy.players_window:
-                add(Job(0, (launch.toordinal(), appid), "players", appid, players_since))
-            elif (players is not None and _tries(players) > 0
-                  and policy.players_days <= age <= policy.post_launch_window and retry(players)):
-                # nothing came back last time; a later retry may cost a second page
+            # never pulled, or nothing came back last time; oldest launch first, nearest the cutoff
+            if policy.players_days <= age <= policy.players_window and (
+                    players is None or (_tries(players) > 0 and retry(players))):
                 add(Job(0, (launch.toordinal(), appid), "players", appid, players_since))
         if (launch >= policy.backfill_since and age > policy.post_launch_window
                 and ("followers", appid) not in resuming
@@ -285,11 +285,16 @@ def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datet
     stamp = now.replace(microsecond=0).isoformat()
     points: dict[str, list[dict]] = {k: [] for k in gp.KINDS}
     stats = collections.Counter()
-    stopped, consecutive = "done", 0
+    stopped, consecutive = "running", 0  # what a killed run leaves in runs.csv
 
     def save():
         _save_points(gp_dir, day, points)
         save_state(gp_dir, state)
+        # the run's row too, so a killed run still counts its requests toward today's budget
+        row = {"date": day, "started_at": stamp, "requests": client.requests_made - start,
+               "stopped": stopped, **{f: stats[f] for f in RUN_FIELDS if f in stats}}
+        storage.replace_row(gp_dir / "runs.csv", {f: row.get(f, 0) for f in RUN_FIELDS}, RUN_FIELDS,
+                            key="started_at")
 
     try:
         for i, job in enumerate(todo):
@@ -328,15 +333,13 @@ def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datet
             if (i + 1) % checkpoint == 0:
                 save()
                 log.info("%d jobs, %d requests", stats["jobs"], client.requests_made - start)
+        else:
+            stopped = "done"
     except KeyboardInterrupt:
         stopped = "interrupted"
         log.info("interrupted, saving progress")
     finally:
         save()
-        row = {"date": day, "started_at": stamp, "requests": client.requests_made - start,
-               "stopped": stopped, **{f: stats[f] for f in RUN_FIELDS if f in stats}}
-        storage.replace_row(gp_dir / "runs.csv", {f: row.get(f, 0) for f in RUN_FIELDS}, RUN_FIELDS,
-                            key="started_at")
     result = {"requests": client.requests_made - start, "stopped": stopped, **stats}
     log.info("run: %s", result)
     return result

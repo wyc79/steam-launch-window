@@ -238,9 +238,10 @@ def test_main_without_key_fails_loudly(tmp_path, monkeypatch):
         cg.main(["--data-dir", str(data), "--gp-dir", str(tmp_path / "gp"), "--today", "2026-10-20"])
 
 
-def test_players_pull_is_skipped_after_42_days():
+def test_players_never_pulled_are_caught_up_until_day_60():
     assert (0, "players", 1) in jobs(history=[launched(1, "2026-09-08")])      # day 42
-    assert (0, "players", 1) not in jobs(history=[launched(1, "2026-09-07")])  # day 43: more than one page
+    assert (0, "players", 1) in jobs(history=[launched(1, "2026-08-21")])      # day 60: two pages
+    assert (0, "players", 1) not in jobs(history=[launched(1, "2026-08-20")])  # day 61
 
 
 def test_run_stops_when_429s_persist_after_the_clients_retries(tmp_path):
@@ -431,3 +432,19 @@ def test_players_come_before_follower_catch_up():
     # a game on day 41 must get its players pull before any followers catch-up uses the budget
     hist = [launched(1, "2026-10-12"), launched(2, "2026-09-09"), launched(3, "2026-09-15")]
     assert jobs(history=hist)[:3] == [(0, "players", 2), (0, "players", 3), (1, "followers", 2)]
+
+
+def test_a_killed_run_has_already_counted_its_requests(tmp_path):
+    seen = {}
+
+    class Killed(FakeGP):
+        def get_json(self, url, params=None):
+            if self.requests_made == 3:  # what a run killed now would leave behind
+                seen["runs"] = storage.read_csv(tmp_path / "runs.csv")
+            return super().get_json(url, params)
+
+    client = Killed({i: [page("followers", ("2026-10-20T10:00:00", i))] for i in range(1, 5)})
+    cg.run([job(i) for i in range(1, 5)], client, "KEY", {}, tmp_path, NOW, 900, checkpoint=2)
+    assert [(r["requests"], r["stopped"]) for r in seen["runs"]] == [("2", "running")]
+    assert cg.used_today(tmp_path, "2026-10-20") == 4  # the finished run replaced its own row
+    assert storage.read_csv(tmp_path / "runs.csv")[0]["stopped"] == "done"

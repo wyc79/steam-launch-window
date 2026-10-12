@@ -1,6 +1,6 @@
 # Roadmap and status
 
-Last updated: 2026-10-11.
+Last updated: 2026-10-12.
 
 Two plans have run in parallel:
 - **The build plan** (Phases 0 to 4): endpoints, data pipeline, analysis, website, agent.
@@ -14,9 +14,9 @@ starts only after a go-ahead.
 | Plan | Phase | Status |
 |---|---|---|
 | Build | 0. Endpoint discovery | done 2026-10-10 |
-| Build | 1. Data pipeline | PRs #1 to #12 merged; PR #13 open; backfill finishing |
+| Build | 1. Data pipeline | PRs #1 to #13 merged; backfill on the data branch; PR #14 open |
 | Audit | 1 to 5. Audit, sources, costs, Hugging Face, research readiness | reported 2026-10-11 |
-| Audit | 6. Implementation | [PR #13](https://github.com/wyc79/steam-launch-window/pull/13): reviewed, CI green; merge after the backfill lands |
+| Audit | 6. Implementation | [PR #13](https://github.com/wyc79/steam-launch-window/pull/13) merged 2026-10-12; fixes from the first Games Popularity run in [PR #14](https://github.com/wyc79/steam-launch-window/pull/14) |
 | Audit | 7. Deliverables | after 6, together with the build Phase 1 report |
 | Build | 2. Analysis | draft plan in [phase2-plan.md](phase2-plan.md); 4 open questions |
 | Build | 3. Website | not started |
@@ -25,23 +25,34 @@ starts only after a go-ahead.
 ## Where things stand
 
 **Code:**
-- `main`: every Steam collector, the events file and checker, and the Hugging Face publisher.
-- PR #13 (`phase6-audit`): the Games Popularity collector, the data-safety fixes from the
-  audit, publisher checks, docs. A fresh reviewer agent reviewed it; its fixes are in.
-  A second review (2026-10-11) added: review counts from `IUserReviewsService/GetAppReviews`
-  (Steam retires `appreviews` on **2026-10-22**; same counts checked on 4 games), retries
-  for Games Popularity pulls that got nothing, resumable long histories, no `mit` license
-  on the dataset card. 250 offline tests pass.
+- `main`: every Steam collector, the Games Popularity collector, the events file and
+  checker, and the Hugging Face publisher. PR #13 (merged 2026-10-12) moved review counts
+  to `IUserReviewsService/GetAppReviews` (Steam retires `appreviews` on **2026-10-22**;
+  same counts checked on 4 games) and added Games Popularity retries, resumable long
+  histories and a dataset card that claims no data license.
+- PR #14 (`gp-players-first`): fixes from the first Games Popularity run (below).
+- Checked after the merge: publish dry run on GitHub (accepts `queue: max`; 83,128 history
+  rows built), `pytest -m live` without the community test (5 passed, from the PC).
 
-**Data branch** (`origin/data`): one upcoming snapshot (2026-10-11). No history and no
-followers yet.
+**Data branch** (`origin/data`): upcoming snapshots for 2026-10-11 and 10-12, and
+`history/games.csv` from the Pi backfill: 83,128 games launched 2022-01-01 to 2026-10-10,
+every closed 30-day window counted, 15,901 hidden Early Access checks (258 relabeled).
 
-**GitHub Actions:** no scheduled collection is on. Variables set: `HF_DATASET_REPO`.
+**GitHub Actions:** no scheduled collection is on. Variables set: `HF_DATASET_REPO`,
+`GP_DATASET_REPO` (`strikeoo/steam-launch-gp`).
 Secrets set: `STEAM_API_KEY`, `HF_TOKEN`, `HF_DATASET_REPO`, `GP_API_KEY`.
 
+**First Games Popularity run** (manual, 2026-10-12, cancelled after about 730 requests):
+700 games saved to the private dataset (629 ok, 48 stale, 23 no data), 71,393 follower
+points. It showed three problems, fixed in PR #14: players came after about 6 days of
+follower catch-up, so games past day 42 would lose their first month; a cancel killed the
+collector before it saved, so the run's requests were never counted; and games launched
+43 to 60 days ago never got a players pull. The 730 requests are not in `runs.csv`, so
+**do not run Games Popularity again before 2026-10-13 UTC**.
+
 **Raspberry Pi:**
-- The history backfill is in its last stage, the hidden Early Access check (15,901 games
-  at about 2 s each; done around 11:15 pm on Oct 11). It prints `backfill complete`.
+- The history backfill finished on Oct 11 (9:22 pm) and is on the data branch. Its
+  service can be removed (`systemctl --user disable --now steam-history-backfill`).
 - The follower scrape service is disabled and the pace test is stopped (Oct 11, 1:39 pm).
 - The PC and the Pi share one public IP. Nothing on either machine may call
   steamcommunity.com, and nothing on the PC should send heavy store traffic while the
@@ -62,7 +73,7 @@ Secrets set: `STEAM_API_KEY`, `HF_TOKEN`, `HF_DATASET_REPO`, `GP_API_KEY`.
 - `strikeoo/steam-launch-data`: public, holds only the dataset card.
 - `strikeoo/steam-launch-gp`: private, for Games Popularity data, created Oct 11.
 - `HF_TOKEN` (secret and `.env`): fine-grained, write access to both. It also has a
-  user-wide write scope, which is no longer needed once PR #13 is merged.
+  user-wide write scope, which is no longer needed now that PR #13 is merged.
 
 **Events:** `data/events.yaml` has 308 audited entries. The 2027 China holidays are
 estimates; the weekly events check fails as a reminder around Nov 7, 2026.
@@ -74,7 +85,8 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 - Wishlist rank is the main hype signal. Followers are second.
 - Followers need not be fresh. Trend and history matter more, since this is not a tracking tool.
 - Games Popularity policy (900 requests a day, setting `GP_DAILY_BUDGET`), in this order:
-  1. players 35 to 42 days after each launch (hourly, first month, one request; first,
+  1. players 35 to 60 days after each launch (hourly, first month, one request until about
+     day 41, then two; first,
      because a missed game loses its first month for good);
   2. followers about 8 days after each launch (whole pre-launch series plus launch week);
   3. every upcoming game with a date or a wishlist rank, once every 60 days;
@@ -90,31 +102,21 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 
 ## Next steps, in order
 
-### 1. Land the history backfill (tonight)
+### 1. Done: history backfill landed, PR #13 merged (2026-10-12)
 
-1. Wait for `backfill complete` on the Pi.
-2. Copy `history/games.csv` to the PC, check the counts, commit it to the data branch, push.
+### 2. Merge PR #14, drop the token's user-wide write scope
 
-### 2. Merge PR #13 (before 2026-10-22)
-
-Steam turns off `appreviews` on Oct 22. After that, only code with the PR's
-`GetAppReviews` change can collect review counts. Any review job on the Pi still
-running then must be stopped, updated and restarted.
-
-1. Optional, before merging: run **publish dataset** by hand on the `phase6-audit` branch
-   without "upload" (a dry run: no Steam requests, nothing uploaded). It confirms GitHub
-   accepts the new `concurrency.queue: max` setting.
-2. Merge.
-3. Drop the token's user-wide write scope.
+Steam turns off `appreviews` on Oct 22. Only `main` since PR #13 uses the new endpoint;
+any review job on the Pi must run that code.
 
 ### 3. Audit Phase 7 and the build Phase 1 report
 
 One report covering what was built, verified, and still open. Then the switches go on one
 at a time, checking each for a few days:
 1. `COLLECT_DAILY`
-2. `COLLECT_HISTORY`, once `games.csv` is on the data branch
-3. `COLLECT_GP`, with `GP_DATASET_REPO=strikeoo/steam-launch-gp`; first one manual run
-   with "Games Popularity" ticked, then a look at the private dataset
+2. `COLLECT_HISTORY` (`games.csv` is on the data branch)
+3. `COLLECT_GP`, after PR #14 and not before 2026-10-13 UTC (the first manual run is done;
+   the first days go to about 2,600 players pulls, oldest launch first)
 4. `PUBLISH_DATASET`, after you approve a dry-run artifact
 5. `ENDPOINT_CHECK`, once the community block has certainly lifted (it requests one
    follower page)
@@ -149,10 +151,9 @@ text for the page is a separate Phase 3 item.
 | When | What |
 |---|---|
 | now | Get Games Popularity's answer on republishing and a key-based whitelist |
-| tonight | Copy and commit the finished `games.csv` |
-| before Oct 22 | Merge PR #13 (review counts break on old code after Oct 22), then drop the token's user-wide scope |
+| now | Merge PR #14, then drop the token's user-wide scope; remove the Pi backfill service |
 | step 2 | The public dataset card may still say `license: mit`; the next upload replaces it with `license: other` |
-| step 3 | Set `GP_DATASET_REPO` (and optionally `GP_DAILY_BUDGET`), then the switches one by one |
+| step 3 | Turn the switches on one by one (`GP_DATASET_REPO` is set; `GP_DAILY_BUDGET` optional) |
 | step 3 | Approve the "Data rights" wording on the dataset card and the first real upload |
 | step 4 | Answer the 4 open questions in the Phase 2 plan |
 | step 6 | Set up the Tencent SCF function (mainland region) for the agent's China endpoint |
