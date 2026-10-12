@@ -1,7 +1,7 @@
 # Phase 2 plan: analysis
 
-Status: building (2026-10-12). All questions answered (section 7). The site data files and the reference numbers are built; the model
-is next. Updated 2026-10-11 after the pipeline audit: followers now come from Games Popularity, with history back to
+Status: building (2026-10-12). All questions answered (section 7). The site data files, the reference
+numbers and the model (section 3, `analysis/model.py`) are built; the website is next. Updated 2026-10-11 after the pipeline audit: followers now come from Games Popularity, with history back to
 2024-03-15, which changes sections 2 and 3.
 
 Phase 2 turns the collected data into two things the website shows:
@@ -326,6 +326,100 @@ whether this matters.
 - Model fit against a baseline with only genre, year and price, on 2026 launches
   held out from fitting.
 - A short Methods section in plain language (it becomes the Phase 3 Methods page).
+
+### Built (2026-10-12)
+
+`python -m analysis.model --data-dir _data --gp-dir _gp --out site/data` writes
+`model.json` (paid and free models: rate ratios with 95% intervals, sample
+sizes, checks, held-out scores, caveats). Features are in `analysis/features.py`,
+the Methods text in [methods.md](methods.md). A full run takes about 6 minutes.
+
+**Sample:** 80,095 launches (2022-01-01 to 2026-09-11): 297 `ea_exit` and 11
+launches on Jan 1 and 2, 2022 left out, no `unavailable` review data (0), 72
+paid games without a price left out. Paid 67,791, free 12,232; 245 launch weeks.
+
+**Paid results** (rate ratios, 95% intervals; the full list is in `model.json`):
+
+| Predictor | Rate ratio | Games |
+|---|---|---|
+| one more same-niche, same-tier launch that week | 0.991 (0.988 to 0.994); per 10: 0.913 | median 15 |
+| big paid release within 3 days | 1.02 (0.89 to 1.17) | 21,375 |
+| seasonal sale | 0.64 (0.53 to 0.76) | 5,310 |
+| 7 days before a sale | 0.86 (0.68 to 1.07) | 5,337 |
+| Next Fest | 1.18 (0.81 to 1.74) | 3,047 |
+| demo in the last Next Fest | 1.69 (1.35 to 2.11) | 10,394 |
+| themed fest for its tags | 0.55 (0.46 to 0.65) | 1,008 |
+| Spring Festival / National Day | 0.64 (0.46 to 0.87) / 0.43 (0.28 to 0.65) | 1,408 / 1,047 |
+| ... with Simplified Chinese (extra) | 1.14 (0.76 to 1.72) / 1.10 (0.65 to 1.87) | 531 / 349 |
+| Thanksgiving to Cyber Monday / Christmas to New Year | 1.35 (0.73 to 2.50) / 1.17 (0.78 to 1.76) | 713 / 741 |
+| Early Access | 1.16 (0.99 to 1.36) | 10,962 |
+| demo before launch | 0.60 (0.50 to 0.73) | 12,822 |
+| price, per doubling | 2.88 (2.25 to 3.69) | |
+| price against the niche median, per doubling | 0.62 (0.49 to 0.80) | |
+
+The demo results go together: a game with a demo in the last Next Fest has both
+markers (0.60 x 1.69 = 1.02), so a demo that skipped Next Fest is what goes
+with fewer reviews.
+
+**Checks (paid):**
+- Same-tier competition predicted 2026 slightly better than plain competition
+  (log-likelihood per game -3.694 against -3.702; rank correlation 0.486 against
+  0.489), so it is the main measure. Plain: 0.989 (0.986 to 0.992).
+- Top 5 tags 0.990, top 20 0.993, same primary tag 0.985, small games (46,277)
+  0.992: the same conclusion.
+- Revenue proxy: the same rate ratios (price per doubling 5.75, as expected).
+- Hurdle: competition, sales and demos show up in "any reviews at all" (odds
+  ratios 0.996, 0.86, 0.85); the "how many" part has wide intervals.
+- **Placebo fails:** competition 8 weeks after launch gives 0.989 (0.987 to 0.992),
+  the real week 0.990 on the same 65,380 games. Together, the real week drops to
+  0.998 (0.993 to 1.002) and the placebo stays at 0.991. So the competition
+  measure mostly captures how crowded a niche and period are in general, not the
+  week itself. `model.json` carries this as a caveat.
+- Held out (fitted on 2022 to 2025, scored on 16,383 launches of 2026): rank
+  correlation 0.49 against 0.39 for the genre, year and price baseline;
+  log-likelihood per game -3.70 against -3.77.
+
+**Followers:** Games Popularity counts exist for 677 games (one file,
+2026-10-12), 626 of them with a count 7 days before launch, all launched
+2026-08-13 to 08-19. That is 1.3% of the 42,426 paid launches since June 2024.
+On those 555 paid games (2 weeks, so no clustering; marked preliminary),
+competition is 0.993 (0.985 to 1.001) without followers and 0.999 (0.994 to
+1.003) with them, a shrink of about 80%; followers per doubling 1.98. The 71
+free games are too few to fit. The follower fit becomes the headline
+automatically once 90% of eligible launches have a count over 52 weeks or more.
+
+**Free model:** fitted but marked unreliable. 91% of free launches have 0
+reviews in 30 days, while their median review count today is 26: the review
+counts are Steam purchases only (`purchase_type` 0), which leaves out most
+reviews of free games. Recounting free games with all purchase types (about
+12,000 requests, a Pi job) would fix it. On the 2026 hold-out the free model
+ranks a little better than the baseline (0.09 against 0.07) but has a worse
+log-likelihood.
+
+**Deviations and choices made while building:**
+- Held-out fits use a linear year trend instead of year fixed effects (a
+  held-out 2026 has no year effect to estimate), for the model and the baseline.
+- Launches on Jan 1 and 2, 2022 are left out: their week started in 2021, so
+  their competition is not known.
+- "Major language": English plus the 8 languages of the language indicators.
+- Competition counts full and Early Access launches of the same group (paid
+  with paid, free with free), including launches with no review count yet.
+- Niche median price: all other paid launches since 2022 with similarity at
+  least 0.3 and a shared language, any week; with fewer than 5, the median of
+  all paid games (195 games).
+- Demo in the last Next Fest: the last Next Fest that ended before launch, and
+  the game's demo released before that fest ended. Taking part is not checked.
+- "Attention" releases: free-to-play or not on Steam, not expansions, not
+  surprises. Big competitors and attention releases are within 3 Pacific days.
+- Followers 7 days before launch: linear between the observations around that
+  time; one-sided only within 2 days. Launches from 2024-06 on.
+- Under 20 launch weeks, standard errors are robust (HC1) but not clustered and
+  the fit is marked preliminary; under 100 games, no fit.
+- The placebo also gets a fit with both measures together.
+- Not done: `reviews_7d` (294 launches, Oct 1 to 4, 2026, after the sample) and
+  peak players (no `gp/players` files in the public dataset yet).
+- Frozen pre-launch tags from `upcoming/apps.csv` are used when the game was last
+  seen there before launch; no launch in the sample has one yet.
 
 ## 4. Historical panel per niche
 
