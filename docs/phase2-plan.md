@@ -1,23 +1,43 @@
 # Phase 2 plan: analysis
 
-Status: draft for review. Nothing here is built yet. Updated 2026-10-11 after the
+Status: the 4 open questions were answered on 2026-10-12 (section 7); waiting for
+the go-ahead to build. Nothing here is built yet. Updated 2026-10-11 after the
 pipeline audit: followers now come from Games Popularity, with history back to
 2024-03-15, which changes sections 2 and 3.
 
 Phase 2 turns the collected data into two things the website shows:
 
-1. **Competition ahead:** for a tag (or tag pair), how crowded each of the next
+1. **Competition ahead:** for a tag selection (one or more tags, AND or OR), how crowded each of the next
    26 weeks is.
 2. **What history says:** how past launches in that niche did, depending on
    competition and Steam events around launch.
 
 ## 1. Who counts as "in a niche"
 
-A game is in tag T if T is among its **top 10 tags** by vote weight. Steam
-shows a game's top tags first, and players vote them, so the top 10 describe
-what the game is. Lower tags are often noise ("Singleplayer", "Great Soundtrack").
+Decided 2026-10-12:
 
-For a tag pair (A and B), the game needs both in its top 10.
+- **Search filter:** a game matches a tag the user types if the tag is
+  **anywhere in its tags** (Steam gives up to 20; the median game has 20). Users
+  often type broad tags, and a genre tag often sits below the top 10. For
+  upcoming games this adds 20 to 35% to genre tags (Shooter 5,156 to 6,514) and
+  more to broad ones (Pixel Graphics +63%, Indie +181%).
+- **Several tags:** the user picks a mode. **All of these** (AND, a tight niche)
+  or **any of these** (OR, a wide market view).
+- **Match count:** as the user picks tags and the mode, the site shows how many
+  games match, out of all we have, for both upcoming games and past launches
+  (for example "1,204 of 20,495 upcoming, 3,950 of 83,219 past launches"), and
+  warns when past launches are too few for the history panel.
+- **Competing games list:** games with the tag in their top 10 come first, then
+  the rest. All are counted.
+- **"Moved here" marker** (decided 2026-10-12): in that list, a game whose date
+  changed in the last 30 days is marked with its old date and when it changed,
+  for example "moved here from October 2026, 3 days ago", so the user sees which
+  competition is new to that week. A game that got its first date in that time
+  (from "Coming soon") is marked "date just set". Built from `release_changes`,
+  so it covers changes from 2026-10-11 on.
+- **Similarity in the model** (section 3) still uses tag vote weights, so a tag
+  at #18 with few votes counts for little there. The top 10 by weight is the
+  game's profile for that measure.
 
 **Language:** a game only competes with games that share a major language with
 it. The user picks the languages their game supports (default: English), and
@@ -52,13 +72,59 @@ For each week and tag:
 | Number | How |
 |---|---|
 | **Exact** | games with a day-precision date in that week |
-| **Spread** | games with a month, quarter or year date, spread evenly over the days of their range (a "November" game adds 7/30 to each full November week) |
+| **Spread** | games with a month or quarter date, spread evenly over the days of their range **still ahead of the latest snapshot** (a "November" game seen on Nov 1 adds 7/30 to each full November week; a "Q4 2026" game seen on Dec 1 is spread over December only) |
 | **Total** | exact + spread |
 | **Hype-weighted** | the same, but each game counts by its follower count (see below) |
 | **No hype data** | how much of the total comes from games with no follower count and no wishlist rank |
 
-Exact and spread are always shown separately, because a "2027" game spread
-over 52 weeks is very different from 52 games with real dates.
+Exact and spread are always shown separately.
+
+**Date changes:** every number uses each game's date in the newest snapshot, so
+a game that moves (say from "October 2026" to "May 2027") leaves its old week
+and appears in the new one in the next daily build. Older dates stay in the
+daily snapshots and in `release_changes`. Games that switch to "Coming soon" or
+"To be announced" leave the heatmap; games that launch leave the list and join
+the history weekly. Between the 2026-10-11 and 10-12 snapshots, 218 games
+changed their date text or range (for example one went from "2026" to "2027").
+
+**Spreading starts at the latest snapshot** (decided 2026-10-12). A vague date
+says the game comes somewhere in its range; if it still says so today, the part
+already past is ruled out. So each game's weight goes only to the days from the
+newest snapshot to the end of its range, and it is recomputed every day. A
+side effect: a group that never updates gets denser as its range runs out (3,106
+"2026" games over 11 weeks now, over 1 week in late December). That is honest if
+the dates are true, and the slip rates in "Later" correct it once measured.
+
+**Year-only dates are a separate layer** (decided 2026-10-12). Adding a "2027"
+game into the main count would look like real competition in every week, so:
+
+- They never add into the main color (exact plus month and quarter spread).
+- A faint layer in its own style (lighter second color or hatching) shows them
+  per week: the year's year-only games divided by the weeks left in that year,
+  counted from the latest snapshot. Nothing is drawn for time already past.
+  Hover text says what it is ("about 51 games dated only '2027', spread over its
+  52 weeks").
+- A toggle, "Show games without a firm date", **off by default**, shows the layer.
+- One number per year sits next to the heatmap ("sometime in 2027: 2,631
+  games"), with the same hype weight and list of games.
+
+On 2026-10-12 that was 3,106 games for 2026 and 2,631 for 2027, against 4,211
+exact dates in the next 26 weeks. The 2026 group over its last 11 weeks is about
+280 a week, more than the exact dates (about 160 a week); the hover text says
+most of them will likely slip. Slip rates from `release_changes` (see "Later"
+below) will shrink this layer once measured.
+
+**Why so many games still say "2026" in October** (checked 2026-10-12): a year
+date stays valid until December 31, and many developers keep it until they set a
+day or announce a delay. The group is not just dead pages: 401 have a wishlist
+rank (87 in the top 1,000, three in the top 100) and 1,239 have a demo.
+No game on the coming-soon list shows a month, quarter or year that has already
+ended, while 43,160 show "Coming soon" or "To be announced". So an expired vague
+date seems to turn into "Coming soon" rather than stay on the page; the snapshots
+started too late (2026-10-11) to have seen it happen. The first check comes on
+November 1, when 538 "October 2026" games either get a day, move, or change
+to "Coming soon"; the big one is January 1 for the 2026 group and 2,228 "Q4 2026"
+games.
 
 **Free games are a separate layer.** They compete for front-page space and
 players' time, but not for purchases. Each week shows the paid count (paid or
@@ -127,7 +193,7 @@ Checks with other outcomes, where the data exists:
   launch (launches from October 2026 on, or all launches after the optional Pi
   backfill).
 - Peak players in the first week and month, from Games Popularity (launches
-  from about September 2026 on). Useful for free games, where reviews mean less.
+  from about mid-August 2026 on). Useful for free games, where reviews mean less.
 
 39% of launches get zero reviews and a few get tens of thousands, so the model
 is for counts:
@@ -201,32 +267,53 @@ whether this matters.
 
 ## 4. Historical panel per niche
 
-For each tag (and common tag pair), split past launches into three groups by
-niche competition in their launch week (quiet, normal, busy, by tercile), and
-show median, 75th and 90th percentile of 30-day reviews in each group.
+For the user's tag selection (any tags, AND or OR), split past launches into
+three groups by how busy their launch week was (quiet, normal, busy, by
+tercile), and show median, 75th and 90th percentile of 30-day reviews in each
+group.
 
-Hide a group with fewer than 30 games; hide the tag if any group is hidden.
+"Busy" uses the heatmap's rule (decided 2026-10-12): the number of other past
+launches in the same week that match the user's selection. The browser counts it
+from `history.json`, so the panel and the heatmap tell one story. The model
+(section 3) keeps its own tag-weight similarity measure.
+
+Hide a group with fewer than 30 games; hide the panel if any group is hidden
+(the match count warns about this, section 1).
 
 ## 5. Outputs for the website
 
-Small JSON files, rebuilt by Actions:
+Static files on GitHub Pages, rebuilt by Actions (decided 2026-10-12). The
+browser does the tag filtering and counting; Actions does the heavy parts.
 
 ```
-site/data/tags.json                 tag id, name, games upcoming, games in history
-site/data/upcoming/<tagid>.json     26 weeks x {paid, free} x {exact, spread, hype, no_hype}
-                                    + top games per week
-site/data/history/<tagid>.json      panel numbers from section 4, for paid and free games
-site/data/pairs/<a>-<b>.json        same, for tag pairs with at least 200 past launches
-site/data/events.json               events.yaml as JSON
-site/data/model.json                effect sizes with intervals, sample sizes, caveats
-                                    (paid model and free model)
+site/data/tags.json         tag id, name, games upcoming, games in history
+site/data/upcoming.json     one row per upcoming game with a date or wishlist rank:
+                            appid, name, date range and precision, tag ids by weight,
+                            languages, free flag, hype weight, and for a date change
+                            in the last 30 days the old date text and the change date
+site/data/history.json      one row per past launch: appid, launch week, tag ids by
+                            weight, languages, free flag, 30-day reviews, niche
+                            competition in its launch week (precomputed)
+site/data/events.json       events.yaml as JSON
+site/data/model.json        effect sizes with intervals, sample sizes, caveats
+                            (paid model and free model)
 ```
 
-Three or more tags are combined in the browser from the per-tag files (as an
-approximation, labeled as such).
+Measured on 2026-10-12 data with tag ids only: about 0.6 MB gzipped for 20,495
+upcoming games and 2.3 MB for 83,219 past launches. The history file loads only
+when the history panel opens. From these the browser builds the heatmap, the
+"sometime in <year>" numbers, the match count and the history panel for any
+tag combination.
 
-Refresh: upcoming files daily after the snapshot (cheap, no Steam requests);
-history files and model weekly.
+Why not the Worker: filtering 83k games takes milliseconds in the browser and
+the files load once. GitHub Pages works from mainland China, while Workers are
+often slow or blocked there. On the free plan a Worker gets 10 ms of CPU per
+request, and D1's 5 million row reads a day would cover only about 60 full
+scans of the past launches (both checked 2026-10-12). The Worker stays for the
+agent (Phase 4), reading the same files.
+
+Refresh: `upcoming.json` daily after the snapshot (no Steam requests);
+`history.json` and the model weekly.
 
 ## 6. Tools
 
@@ -235,16 +322,20 @@ spreading, niche matching and event overlap logic. No Steam requests.
 
 ## 7. Questions for you
 
-1. **Niche = top 10 tags?** Or a weight threshold (tags with at least half the
-   votes of the game's top tag)?
-2. **Tag pairs:** precompute only pairs with 200+ past launches (a few hundred
-   files), or let the browser combine single tags for everything?
-3. **Year-precision games** ("2027"): include in the spread count, or only
-   show them as a separate "sometime this year" number? They are 5,858 games,
-   more than all exact dates combined.
-4. **Reviews by language (sample):** counting reviews by language costs one
-   request per language per game. Worth doing for a 1,000-game sample, to check
-   that Chinese localization really shifts who reviews? About 10,000 requests.
+1. ~~**Niche = top 10 tags?**~~ Decided: filter on all tags, AND or OR mode
+   chosen by the user (section 1).
+2. ~~**Tag pairs:**~~ Decided: no pair files. The site gets per-game files and
+   counts any AND/OR combination exactly in the browser (section 5). Narrow AND
+   combinations will often hide history groups (under 30 games); the match
+   count warns about that.
+3. ~~**Year-precision games:**~~ Decided: kept out of the main color; shown as a
+   faint separate layer that can be switched off, plus a "sometime in <year>"
+   number (section 2).
+4. ~~**Reviews by language (sample):**~~ Decided: yes. About 1,000 past
+   launches, first-month reviews per language (about 10,000 Steam requests), run
+   once on the Pi. First check on one game that the review endpoint accepts a
+   language filter. Used to check whether Chinese localization raises reviews
+   more than sales.
 
 ## Known data limits that feed into this
 
