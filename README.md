@@ -184,7 +184,8 @@ are in Pacific time, like the store.
   daily snapshots and the frozen `upcoming/apps.csv` row show the pre-launch state.
 - **Early Access is messy.** Some games that left Early Access only tell us the
   1.0 date. Those rows are marked `launch_type=ea_exit` and should be analysed apart.
-- **Reviews are a proxy for sales,** and only for Steam purchases.
+- **Reviews are a proxy for sales,** and for paid games only Steam purchases
+  count. Free games count every review (`reviews_purchase=all`).
 
 ## Credits
 
