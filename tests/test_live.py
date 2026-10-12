@@ -5,11 +5,12 @@ One or two requests per endpoint. They check that the shapes we rely on
 instead of quietly corrupting the data.
 """
 
-import time
+import os
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from pipeline import steam
+from pipeline import gp, steam
 from pipeline.http import Client
 
 pytestmark = pytest.mark.live
@@ -61,6 +62,15 @@ def test_review_window_count(client):
     assert counts["positive"] + counts["negative"] == counts["total"]
 
 
-def test_follower_count(client):
-    time.sleep(2)
-    assert steam.follower_count(client, BALATRO) > 10_000
+def test_games_popularity_follower_history(client):
+    # The follower source (one request). The community follower page is no longer
+    # checked: we do not collect from it, and shared runner IPs can be blocked there.
+    key = os.environ.get("GP_API_KEY", "").strip()
+    if not key:
+        pytest.skip("GP_API_KEY not set")
+    res = gp.history(client, "followers", BALATRO, key, max_pages=1)
+    assert res.status == "ok" and res.requests == 1
+    assert len(res.points) > 100  # one page of a long daily series
+    newest, value = res.points[0]
+    assert value > 10_000
+    assert datetime.now(timezone.utc) - newest < timedelta(days=14)

@@ -14,10 +14,10 @@ starts only after a go-ahead.
 | Plan | Phase | Status |
 |---|---|---|
 | Build | 0. Endpoint discovery | done 2026-10-10 |
-| Build | 1. Data pipeline | PRs #1 to #14 merged; backfill on the data branch; scheduled jobs on since 2026-10-12; PR #15 (Games Popularity data goes public) |
+| Build | 1. Data pipeline | PRs #1 to #15 merged; scheduled jobs on since 2026-10-12; reported 2026-10-12 in [pipeline-report.md](pipeline-report.md) |
 | Audit | 1 to 5. Audit, sources, costs, Hugging Face, research readiness | reported 2026-10-11 |
 | Audit | 6. Implementation | [PR #13](https://github.com/wyc79/steam-launch-window/pull/13) merged 2026-10-12; fixes from the first Games Popularity run in [PR #14](https://github.com/wyc79/steam-launch-window/pull/14), merged 2026-10-12 |
-| Audit | 7. Deliverables | after 6, together with the build Phase 1 report |
+| Audit | 7. Deliverables | reported 2026-10-12 in [pipeline-report.md](pipeline-report.md), together with the build Phase 1 report |
 | Build | 2. Analysis | draft plan in [phase2-plan.md](phase2-plan.md); 4 open questions |
 | Build | 3. Website | not started |
 | Build | 4. Agent and Worker | not started |
@@ -31,7 +31,7 @@ starts only after a go-ahead.
   same counts checked on 4 games) and added Games Popularity retries, resumable long
   histories and a dataset card that claims no data license.
 - PR #14 (merged 2026-10-12): fixes from the first Games Popularity run (below).
-- PR #15 (`gp-public`): Games Popularity data moves from the private dataset to `gp/` in
+- PR #15 (merged 2026-10-12): Games Popularity data moves from the private dataset to `gp/` in
   the public one (the owner allowed republishing on 2026-10-12), and the weekly publish
   now starts when the history run ends instead of on its own cron.
 - Checked after the merge: publish dry run on GitHub (accepts `queue: max`; 83,128 history
@@ -90,8 +90,8 @@ enforced that day.
 **Hugging Face:**
 - `strikeoo/steam-launch-data`: public. The weekly publish writes the Parquet files and
   the card; after PR #15 the daily job writes Games Popularity data under `gp/`.
-- `strikeoo/steam-launch-gp`: private, held Games Popularity data until PR #15. Once its
-  files are copied to `gp/` in the public dataset, it can be deleted.
+- `strikeoo/steam-launch-gp`: private, held Games Popularity data until PR #15; copied
+  to `gp/` and deleted on 2026-10-12.
 - `HF_TOKEN` (secret and `.env`): fine-grained, write access to both. It also has a
   user-wide write scope, which is no longer needed now that PR #13 is merged.
 
@@ -131,19 +131,20 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 do: drop the token's user-wide write scope. Steam turns off `appreviews` on Oct 22; only
 `main` since PR #13 uses the new endpoint, so any review job on the Pi must run that code.
 
-### 3. PR #15: Games Popularity data goes public
+### 3. Done: Games Popularity data public (PR #15, 2026-10-12)
 
-Merge, copy the private dataset's files to `gp/` in the public one (the daily step
-refuses to start until `gp/state.csv` is there), run the daily job with Games
-Popularity and a publish, and check the card. Then delete the private dataset and the
-`GP_DATASET_REPO` variable.
+Merged; the private dataset's files were copied to `gp/` and checked byte for byte; the
+daily job and a publish ran against the public dataset and the card lists `gp_followers`
+and `gp_players`. The private dataset is deleted. Still to do: delete the `GP_DATASET_REPO` variable.
 
-### 4. Audit Phase 7 and the build Phase 1 report
+### 4. Reported: audit Phase 7 and the build Phase 1 report (2026-10-12)
 
-One report covering what was built, verified, and still open. Watch the scheduled jobs
-for a few days first (the first days of Games Popularity go to about 2,600 players
-pulls, oldest launch first). `ENDPOINT_CHECK` goes on once the community block has
-certainly lifted (it requests one follower page).
+[pipeline-report.md](pipeline-report.md): what was built, verified, and still open, with
+costs and your checklist (section G). Waiting for your review. Keep an eye on the
+scheduled jobs for the next few days (the first days of Games Popularity go to about
+1,900 players pulls, oldest launch first). `ENDPOINT_CHECK` can go on now: it runs
+from a GitHub runner and no longer requests a community follower page (replaced by one
+Games Popularity request).
 
 Optional later, on the Pi: first-day and first-week review counts for all launches since
 2022 ([scripts/server/README.md](../scripts/server/README.md), section 4).
@@ -175,7 +176,7 @@ text for the page is a separate Phase 3 item.
 | When | What |
 |---|---|
 | now | Drop the token's user-wide scope; remove the Pi backfill service |
-| step 3 | After the copy: delete the private `strikeoo/steam-launch-gp` dataset and the `GP_DATASET_REPO` variable |
+| now | Delete the `GP_DATASET_REPO` variable; turn on `ENDPOINT_CHECK` |
 | step 3 | Check the "Data rights" wording on the dataset card, now with the Games Popularity credit |
 | within days | When Games Popularity cuts the free limits, lower `GP_DAILY_BUDGET` (or pay) |
 | step 5 | Answer the 4 open questions in the Phase 2 plan |
