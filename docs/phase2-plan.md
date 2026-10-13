@@ -1,7 +1,7 @@
 # Phase 2 plan: analysis
 
-Status: building (2026-10-12). All questions answered (section 7). The site data files and the reference numbers are built; the model
-is next. Updated 2026-10-11 after the pipeline audit: followers now come from Games Popularity, with history back to
+Status: building (2026-10-12). All questions answered (section 7). The site data files, the reference
+numbers and the model (section 3, `analysis/model.py`) are built; the website is next. Updated 2026-10-11 after the pipeline audit: followers now come from Games Popularity, with history back to
 2024-03-15, which changes sections 2 and 3.
 
 Phase 2 turns the collected data into two things the website shows:
@@ -281,7 +281,7 @@ The site shows a free-to-play developer the free-game results.
 | **Genre** | indicators for the 30 most common tags |
 | **Time** | launch year and month (fixed effects), day of week |
 | **Price** | log of US price; under $5 indicator |
-| **Price vs niche** | log(price / median price of the game's niche), so a $25 game in an $8 niche differs from one in a $30 niche |
+| **Niche price** | log of the median price of the paid launches in the game's niche in the year before it, next to log price (so the price effect is own price at a fixed niche price). Built: niche prices barely vary (half of all games sit at $4.99), so this mostly leaves log price as own price |
 | **Same-tier competition** | as niche competition, but only launches in the same price tier (under $10, $10 to $25, over $25); kept instead of plain competition if it predicts held-out launches better. History only, since upcoming games rarely have prices |
 | **Languages** | supports Simplified Chinese, Japanese, Russian, Korean, Brazilian Portuguese, German, French, Spanish (indicators); number of languages; English audio |
 | **Regional holidays** | launch during China's Spring Festival or National Day holiday, US Thanksgiving to Cyber Monday, or Christmas to New Year (from `events.yaml`); the Chinese holidays also as interactions with Simplified Chinese support |
@@ -308,8 +308,11 @@ What we do about it:
 - Control for what else we can see: price, publisher reach, franchise, Early Access, demo.
 - Report the results again for "small games only" (under $20, no franchise,
   publisher with at most 2 earlier releases), where strategic date choice is weaker.
-- Placebo check: competition in an unrelated week (for example 8 weeks after
-  launch) should show no effect.
+- Placebo check: the same competition measure in an unrelated week (8 weeks
+  after launch) should show no effect.
+- Chance test for the event indicators: fake windows of the same length on
+  random weeks, to see how often an effect this large shows up by chance (most
+  events have only 4 to 19 windows in the sample).
 - Use robust standard errors clustered by launch week.
 - Word every result as "launches in busier weeks got X% fewer reviews on
   average, after adjusting for ...", never "busy weeks cause X% fewer reviews".
@@ -327,6 +330,173 @@ whether this matters.
 - Model fit against a baseline with only genre, year and price, on 2026 launches
   held out from fitting.
 - A short Methods section in plain language (it becomes the Phase 3 Methods page).
+
+### Built (2026-10-12)
+
+`python -m analysis.model --data-dir _data --gp-dir _gp --out site/data` writes
+`model.json` (paid and free models: rate ratios with 95% intervals, sample
+sizes, checks, held-out scores, caveats). Features are in `analysis/features.py`,
+the Methods text in [methods.md](methods.md). A full run takes about 6 minutes
+(1,000 chance-test draws per event; `--permutations` changes it).
+
+**Sample:** 80,095 launches (2022-01-01 to 2026-09-11): 297 `ea_exit` and 11
+launches on Jan 1 and 2, 2022 left out, no `unavailable` review data (0), 72
+paid games without a price left out. Paid 67,791, free 12,232; 245 launch weeks.
+
+**Paid results** (rate ratios, 95% intervals; the full list is in `model.json`).
+"Chance" is the chance test for events with few windows (see Checks): the
+event's effect estimated alone on all games pooled (`ratio_alone`), then its
+p-value:
+
+| Predictor | Rate ratio | Chance | Games |
+|---|---|---|---|
+| one more same-niche, same-tier launch that week | 0.991 (0.988 to 0.994); per 10: 0.913 | | median 15 |
+| big paid release within 3 days | 1.03 (0.90 to 1.18) | | 21,375 |
+| seasonal sale | 0.63 (0.53 to 0.76) | 0.75; 0.001 (19 windows) | 5,310 |
+| 7 days before a sale | 0.85 (0.68 to 1.06) | | 5,337 |
+| Next Fest | 1.19 (0.81 to 1.75) | 1.13; 0.34 (14) | 3,047 |
+| demo in the last Next Fest | 1.71 (1.36 to 2.15) | | 10,394 |
+| themed fest for its tags | 0.55 (0.46 to 0.65) | 0.56; 0.04 (69) | 1,008 |
+| Spring Festival / National Day, games without Simplified Chinese | 0.63 (0.46 to 0.86) / 0.44 (0.29 to 0.67) | all games: 0.70; 0.08 (5) / 0.51; 0.007 (4) | 877 / 698 |
+| ... extra for Simplified Chinese | 1.13 (0.76 to 1.68) / 1.09 (0.64 to 1.84) | | 531 / 349 |
+| ... games with Simplified Chinese (main x extra) | 0.71 (0.55 to 0.92) / 0.48 (0.24 to 0.94) | | 531 / 349 |
+| Thanksgiving to Cyber Monday / Christmas to New Year | 1.38 (0.75 to 2.54) / 1.16 (0.77 to 1.73) | 1.26; 0.42 / 1.11; 0.61 (4 each) | 713 / 741 |
+| Early Access | 1.18 (1.00 to 1.38) | | 10,962 |
+| demo before launch | 0.60 (0.49 to 0.72) | | 12,822 |
+| own price, per doubling (niche price fixed) | 1.81 (1.69 to 1.94) | | |
+| niche's median price, per doubling (own price fixed) | 1.29 (1.06 to 1.58) | | |
+
+The demo results go together: a game with a demo in the last Next Fest has both
+markers (0.60 x 1.71 = 1.02), so a demo that skipped Next Fest is what goes
+with fewer reviews.
+
+**Price.** The first build fitted log price next to log(price / niche median).
+Niche medians barely vary (half of all games sit at $4.99; 90% between $3.99
+and $8.99), so the two moved together (correlation 0.97) and "price per
+doubling 2.88" was really own price plus the niche ratio (about 2.88 x 0.62 =
+1.79 for own price). Now log price sits next to log(niche median), correlation
+0.32: own price per doubling 1.81. This says which games charge more (bigger,
+more polished ones), not what a price change would do: it is not pricing advice.
+
+**Chinese holidays are not a general rule.** With the Simplified Chinese
+extra in the model, `cn_spring` and `cn_national` are the effects for games
+without Simplified Chinese. Games with it: 0.71 (0.55 to 0.92) and 0.48 (0.24
+to 0.94), main plus extra with the interval from the clustered covariance
+(`holidays.with_schinese`). The extra itself (1.13 and 1.09) is no clear
+difference in the review-count model, but its intervals are wide, so a
+difference is not ruled out. The "any reviews" part does show one: Simplified
+Chinese games launched during Spring Festival were less likely to get any
+review (extra odds ratio 0.71, 0.55 to 0.93). All 9 holiday windows in the
+sample overlapped another Steam event (Lunar New Year Sale 2022; Next Fest
+October 2022, February 2024 and February 2026; Autumn Sale 2025; themed fests
+in the other years). With 5 and 4 windows, week-clustered intervals overstate
+certainty; the chance test (all games pooled: 0.51 and 0.70) gives 0.007 for
+National Day and 0.08 for Spring Festival. `model.json` carries this as a note
+(`holidays`), and the site shows Chinese holidays only as calendar context for
+games that support Simplified Chinese, marked unconfirmed, not as advice for
+other games.
+
+**Checks (paid):**
+- Same-tier competition won on held-out log-likelihood only (per game -3.690
+  against -3.697 for plain competition); it ranked 2026 launches very slightly
+  worse (rank correlation 0.485 against 0.489). It is the main measure. Plain:
+  0.989 (0.986 to 0.992).
+- Top 5 tags 0.990, top 20 0.993, same primary tag 0.985, small games 0.992
+  (39,655 games; launched from 2023 on, since publisher reach counts from
+  2022-01-01 and early-2022 games from big publishers would look small): the
+  same conclusion.
+- Revenue proxy: the same rate ratios (own price per doubling 3.61, as expected
+  for reviews x price).
+- Hurdle, "any reviews at all" (odds ratios): same-tier competition 0.996,
+  sales 0.86, Next Fest 0.90, demo before launch 0.85, demo in the last Next
+  Fest 2.14; themed fests (0.95) and the Chinese holidays for games without
+  Simplified Chinese (0.99, 1.02) are within noise, but the Spring Festival
+  extra for Simplified Chinese is 0.71 (0.55 to 0.93). The zero-truncated count
+  part has no finite maximum (alpha runs off past 10^8; the first build's BFGS
+  fit had stopped unconverged, so its numbers were not usable) and is left out
+  of `model.json`; the site-facing caveat says "no stable fit" and the number
+  stays in `hurdle.count_given_some.failure`. A plain negative binomial on the
+  51,066 games with reviews (not corrected for the missing zeros) stands in:
+  sales 0.65, themed fests 0.55, Spring Festival 0.59, National Day 0.45, demo
+  in the last fest 1.47. So the themed-fest and holiday dips are among games
+  that got some reviews.
+- **Placebo, on the same measure:** same-tier competition 8 weeks after launch
+  gives 0.991 (0.988 to 0.994), the real week 0.990 (0.987 to 0.994) on the same
+  65,380 games. Together: real week 0.994 (0.988 to 1.000), placebo 0.996 (0.991
+  to 1.000). General crowding explains a lot of the competition number; the
+  launch week keeps a small effect at the edge of noise. The caveat in
+  `model.json` is written from these numbers.
+- **Chance test** for the event indicators with few windows: 1,000 sets of fake
+  windows, each real window moved by a random whole number of weeks (same
+  length, weekday and Pacific clock time across daylight saving; themed fests
+  keep their tags) inside the sample, never on any real window of the event
+  (a fake themed fest also stays off real fests for other tags), and not on
+  another fake one with shared tags. Each event has its own random generator
+  (seeded from its name), so adding an event does not change the others.
+  Every event still got all 1,000 draws. A full refit per draw would take hours
+  (about 8 s a fit), so the model is refitted once without the event (and its
+  Simplified Chinese extra), and with that fit held fixed only the event's own
+  coefficient is estimated, for the real and for each fake set, on all games
+  pooled (`ratio_alone`; for a holiday, with and without Simplified Chinese).
+  p = share of fake sets at least as far from 1. On 15 fake sets for Spring Festival and
+  sales, this one-parameter coefficient tracked a full refit with correlation
+  0.995 and 0.999. Full refits spread the fake coefficients 22% and 37% wider
+  and put the real ones 31% and 56% further from 1, so if anything these
+  p-values are a little too large (cautious). Results: sale 0.001 (no fake set
+  as far), National Day 0.007, themed fest 0.04, Spring Festival 0.08, Next Fest
+  0.34, Thanksgiving 0.42, Christmas 0.61. About 45 s per group.
+- Held out (fitted on 2022 to 2025, scored on 16,383 launches of 2026; genres
+  picked from 2022 to 2025 only): rank correlation 0.485 against 0.384 for the
+  genre, year and price baseline; log-likelihood per game -3.69 against -3.77.
+
+**Followers:** Games Popularity counts exist for 677 games (one file,
+2026-10-12), 626 of them with a count 7 days before launch, all launched
+2026-08-13 to 08-19. That is 1.3% of the 42,426 paid launches since June 2024.
+On those 555 paid games (2 weeks, so no clustering; marked preliminary),
+competition is 0.993 (0.985 to 1.001) without followers and 0.999 (0.994 to
+1.003) with them, a shrink of about 80%; followers per doubling 1.98. The 71
+free games are too few to fit. The follower fit becomes the headline
+automatically once 90% of eligible launches have a count over 52 weeks or more.
+
+**Free model:** fitted but marked unreliable. 91% of free launches have 0
+reviews in 30 days, while their median review count today is 26: the review
+counts are Steam purchases only (`purchase_type` 0), which leaves out most
+reviews of free games. Recounting free games with all purchase types (about
+12,000 requests, a Pi job) would fix it. On the 2026 hold-out the free model
+ranks a little better than the baseline (0.09 against 0.07) but has a worse
+log-likelihood. Its placebo, chance tests and holiday note are in `model.json`
+but should not be read either. PR #20 added the recount (`reviews_purchase`);
+rerun the model after it has run.
+
+**Deviations and choices made while building:**
+- Held-out fits use a linear year trend instead of year fixed effects (a
+  held-out 2026 has no year effect to estimate), for the model and the baseline.
+- Launches on Jan 1 and 2, 2022 are left out: their week started in 2021, so
+  their competition is not known.
+- "Major language": English plus the 8 languages of the language indicators.
+- Competition counts full and Early Access launches of the same group (paid
+  with paid, free with free), including launches with no review count yet.
+- Niche median price: paid launches in the 365 days before the game (earlier
+  only) with similarity at least 0.3 and a shared language; with fewer than 5,
+  the median of all paid launches in those 365 days (343 games). A game with
+  fewer than 5 paid launches before it at all is left out (none in the data;
+  there is no fallback that uses later launches).
+- Demo in the last Next Fest: the last Next Fest that ended before launch, and
+  the game's demo released before that fest ended. Taking part is not checked.
+- "Attention" releases: free-to-play or not on Steam, not expansions, not
+  surprises. Big competitors and attention releases are within 3 Pacific days.
+- Followers 7 days before launch: linear between the observations around that
+  time; one-sided only within 2 days. Launches from 2024-06 on.
+- Under 20 launch weeks, standard errors are robust (HC1) but not clustered and
+  the fit is marked preliminary; under 100 games, no fit.
+- The placebo uses the same rule as the main measure (same tier for paid
+  games) and also gets a fit with both measures together.
+- Small games: launched from 2023 on, so every publisher has a year of history.
+- `--today` drops launches after that date from the pool and the placebo.
+- Not done: `reviews_7d` (294 launches, Oct 1 to 4, 2026, after the sample) and
+  peak players (no `gp/players` files in the public dataset yet).
+- Frozen pre-launch tags from `upcoming/apps.csv` are used when the game was last
+  seen there before launch; no launch in the sample has one yet.
 
 ## 4. Historical panel per niche
 
