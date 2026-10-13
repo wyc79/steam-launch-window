@@ -16,6 +16,8 @@ name: collect daily
 # The step refuses to start without gp/state.csv in the dataset, so a lost state
 # cannot restart every pull from scratch. For a first run, upload a gp/state.csv
 # that holds only its header line (see STATE_FIELDS in pipeline/collect_gp.py).
+# The step also keeps gp/latest_followers.csv (the newest count per game) for the
+# site build; when it is missing, the step downloads every followers file to build it.
 # A manual run (Run workflow button) does the snapshot and asks whether to
 # include Games Popularity.
 
@@ -82,7 +84,14 @@ jobs:
         run: |
           day=$(date -u +%F)
           python -m pipeline.hf_sync pull --repo "$HF_DATASET_REPO" --dest _hf --require gp/state.csv \
-            --file gp/runs.csv --file "gp/followers/$day.csv.gz" --file "gp/players/$day.csv.gz"
+            --file gp/runs.csv --file gp/latest_followers.csv \
+            --file "gp/followers/$day.csv.gz" --file "gp/players/$day.csv.gz"
+          if [ ! -f _hf/gp/latest_followers.csv ]; then
+            # first run with the file: the collector builds it from every day's followers file,
+            # fetched at the pulled revision (unchanged files are left out of the push)
+            python -m pipeline.hf_sync fetch --repo "$HF_DATASET_REPO" --dest _hf \
+              --revision "$(cat _hf/.hf_parent)" --glob "gp/followers/*.csv.gz"
+          fi
           # exec: a cancel or timeout signals the step's shell; this way it reaches the collector,
           # which then saves its progress and today's request count before exiting
           exec python -m pipeline.collect_gp --data-dir _data --gp-dir _hf/gp

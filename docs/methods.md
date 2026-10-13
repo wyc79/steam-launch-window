@@ -149,7 +149,9 @@ games.
 - **Free games:** our review counts only include Steam purchases, so most free
   launches show 0 reviews in their first 30 days although they do have reviews.
   The free model is fitted but marked unreliable until free games are recounted
-  with all reviews.
+  with all reviews. The model checks this in the data: it reads the free model
+  once at least 95% of free launches in the sample have `reviews_purchase=all`
+  (`recounted_share` in `model.json`).
 - **Today's view of the past:** price, demo, tags and Early Access state are
   today's, not launch day's. Games delisted before we started collecting are
   missing, so older years look a bit better than they were.

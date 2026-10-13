@@ -3,6 +3,7 @@ keep their data there (Games Popularity, under gp/ in the public dataset).
 
     python -m pipeline.hf_sync pull --repo user/name --dest _hf --require gp/state.csv --file gp/runs.csv
     python -m pipeline.hf_sync push --repo user/name --src _hf --message "gp 2026-10-20"
+    python -m pipeline.hf_sync fetch --repo user/name --dest _hf --glob "gp/followers/*.csv.gz"
 
 pull downloads the named files that exist (missing --file ones are skipped, a
 missing --require one stops it) from the current revision and writes that
@@ -11,12 +12,15 @@ dotfiles and .tmp files, with .hf_parent as the parent commit, so a write made b
 in between makes the push fail instead of being overwritten. push refuses to run
 without .hf_parent. pull refuses a folder that already has files. Unchanged
 files are left out of the commit by huggingface_hub.
-Needs HF_TOKEN.
+fetch downloads every file matching a pattern (at --revision, default the
+current one) into a folder, keeping files already there; it fails when nothing
+matches. pull and push need HF_TOKEN; fetch reads a public dataset without one.
 """
 
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import logging
 import os
 import shutil
@@ -51,6 +55,23 @@ def pull(api, repo_id: str, names: list[str], dest: Path, required: list[str] = 
     return sha
 
 
+def fetch(api, repo_id: str, pattern: str, dest: Path, revision: str | None = None) -> list[str]:
+    revision = revision or api.repo_info(repo_id, repo_type=REPO_TYPE).sha
+    names = sorted(n for n in api.list_repo_files(repo_id, repo_type=REPO_TYPE, revision=revision)
+                   if fnmatch.fnmatchcase(n, pattern))
+    if not names:
+        raise SystemExit(f"no file in {repo_id} matches {pattern}")
+    for name in names:
+        target = dest / name
+        if target.exists():  # pulled already, at the same revision
+            continue
+        path = api.hf_hub_download(repo_id, name, repo_type=REPO_TYPE, revision=revision)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(path, target)
+    log.info("fetched %d files matching %s", len(names), pattern)
+    return names
+
+
 def push(api, repo_id: str, src: Path, message: str) -> None:
     from huggingface_hub import CommitOperationAdd
 
@@ -80,16 +101,23 @@ def main(argv=None) -> int:
     ps.add_argument("--repo", required=True)
     ps.add_argument("--src", type=Path, required=True)
     ps.add_argument("--message", required=True)
+    fe = sub.add_parser("fetch")
+    fe.add_argument("--repo", required=True)
+    fe.add_argument("--dest", type=Path, required=True)
+    fe.add_argument("--glob", required=True, help="e.g. gp/followers/*.csv.gz")
+    fe.add_argument("--revision", default=None, help="default: the current revision")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     token = os.environ.get("HF_TOKEN")
-    if not token:
+    if not token and args.cmd != "fetch":
         raise SystemExit("set HF_TOKEN")
     from huggingface_hub import HfApi
 
-    api = HfApi(token=token)
+    api = HfApi(token=token or None)
     if args.cmd == "pull":
         pull(api, args.repo, args.file, args.dest, args.require)
+    elif args.cmd == "fetch":
+        fetch(api, args.repo, args.glob, args.dest, args.revision)
     else:
         push(api, args.repo, args.src, args.message)
     return 0

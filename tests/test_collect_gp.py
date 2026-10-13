@@ -473,3 +473,38 @@ def test_main_exits_0_when_the_daily_ceiling_stops_the_run(tmp_path, monkeypatch
     assert cg.main(args) == 0
     monkeypatch.setattr(cg, "run", lambda *a, **k: {"stopped": "errors", "requests": 10})
     assert cg.main(args) == 1
+
+
+# -- latest followers ------------------------------------------------------------
+
+def latest(path):
+    return [(r["appid"], r["followers"], r["observed_at"]) for r in storage.read_csv(path / cg.LATEST_FILE)]
+
+
+def test_latest_followers_keeps_the_newest_point_per_game(tmp_path):
+    client = FakeGP({1: [page("followers", ("2026-10-20T10:00:00", 12), ("2026-10-19T10:00:00", 11))],
+                     2: [page("players", ("2026-10-20T10:00:00", 5))]})
+    run(tmp_path, client, [job(1), job(2, kind="players")])
+    assert latest(tmp_path) == [("1", "12", "2026-10-20T10:00:00+00:00")]  # players are not followers
+    # a later run with an older point (a resumed long history) does not replace it
+    client = FakeGP({1: [page("followers", ("2026-01-01T00:00:00", 3))],
+                     3: [page("followers", ("2026-10-18T00:00:00", 0))]})
+    run(tmp_path, client, [job(1), job(3)])
+    assert latest(tmp_path) == [("1", "12", "2026-10-20T10:00:00+00:00"), ("3", "0", "2026-10-18T00:00:00+00:00")]
+
+
+def test_latest_followers_is_built_from_the_day_files_when_missing(tmp_path):
+    fields = ["appid", "followers", "observed_at", "fetched_at"]
+    storage.write_csv(tmp_path / "followers" / "2026-10-12.csv.gz", [
+        {"appid": 1, "followers": 50, "observed_at": "2026-10-11T00:00:00+00:00"},
+        {"appid": 2, "followers": 7, "observed_at": "2026-10-11T00:00:00+00:00"},
+        {"appid": 2, "followers": "", "observed_at": "2026-10-12T00:00:00+00:00"}], fields)  # missing, not a value
+    storage.write_csv(tmp_path / "followers" / "2026-10-13.csv.gz", [
+        {"appid": 1, "followers": 40, "observed_at": "2026-09-01T00:00:00+00:00"},  # older point, later file
+        {"appid": 2, "followers": 9, "observed_at": "2026-10-12T12:00:00+00:00"}], fields)
+    run(tmp_path, FakeGP({}), [], budget=0)  # a run with nothing to do still builds it
+    assert latest(tmp_path) == [("1", "50", "2026-10-11T00:00:00+00:00"), ("2", "9", "2026-10-12T12:00:00+00:00")]
+    # once it exists, the day files are not read again
+    (tmp_path / "followers" / "2026-10-12.csv.gz").unlink()
+    run(tmp_path, FakeGP({3: [page("followers", ("2026-10-20T10:00:00", 1))]}), [job(3)])
+    assert [a for a, _, _ in latest(tmp_path)] == ["1", "2", "3"]

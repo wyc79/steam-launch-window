@@ -30,6 +30,9 @@ Reads (under --data-dir): the newest upcoming snapshot and history/games.csv.
 Writes (under --gp-dir; the daily job syncs it with gp/ in the public Hugging Face dataset):
   followers/YYYY-MM-DD.csv.gz  points fetched that UTC day: appid, followers, observed_at, fetched_at
   players/YYYY-MM-DD.csv.gz    same, with players
+  latest_followers.csv         the newest follower point per game (by observed_at): appid,
+                               followers, observed_at; updated with each run's points, and
+                               built from every followers/*.csv.gz when it is missing
   state.csv                    per (appid, kind): see below
   runs.csv                     one row per run: requests, results, why it stopped
 state.csv columns: last_pulled (last answer from the API), last_tried (last attempt,
@@ -61,6 +64,8 @@ STATE_FIELDS = ["appid", "kind", "last_pulled", "status", "last_observed_at", "p
                 "tries", "last_tried", "resume_cursor", "resume_before", "resume_since"]
 RUN_FIELDS = ["date", "started_at", "requests", "jobs", "ok", "null", "not_in_dataset", "stale",
               "partial", "points", "errors", "stopped"]
+LATEST_FIELDS = ["appid", "followers", "observed_at"]
+LATEST_FILE = "latest_followers.csv"
 MAX_PAGES = 5
 
 log = logging.getLogger("collect_gp")
@@ -226,7 +231,36 @@ def _save_points(gp_dir: Path, day: str, points: dict[str, list[dict]]) -> None:
         merged.update({(str(r["appid"]), r["observed_at"]): r for r in rows})
         storage.write_csv(path, [merged[k] for k in sorted(merged, key=lambda k: (int(k[0]), k[1]))],
                           ["appid", kind, "observed_at", "fetched_at"])
+        if kind == "followers":
+            update_latest(gp_dir, rows)
         rows.clear()
+
+
+def _keep_newest(latest: dict[int, dict], rows) -> None:
+    """Merge follower points into {appid: row}; a later point (or a later fetch of the same one) wins."""
+    for r in rows:
+        if r["followers"] in (None, ""):
+            continue
+        appid = int(r["appid"])
+        if appid not in latest or r["observed_at"] >= latest[appid]["observed_at"]:
+            latest[appid] = {"appid": appid, "followers": r["followers"], "observed_at": r["observed_at"]}
+
+
+def latest_followers(gp_dir: Path) -> dict[int, dict]:
+    """latest_followers.csv as {appid: row}, or built from every followers/*.csv.gz when it is missing."""
+    path = gp_dir / LATEST_FILE
+    if path.exists():
+        return {int(r["appid"]): r for r in storage.read_csv(path)}
+    latest: dict[int, dict] = {}
+    for f in sorted((gp_dir / "followers").glob("*.csv.gz")):
+        _keep_newest(latest, storage.read_csv(f))
+    return latest
+
+
+def update_latest(gp_dir: Path, rows=()) -> None:
+    latest = latest_followers(gp_dir)
+    _keep_newest(latest, rows)
+    storage.write_csv(gp_dir / LATEST_FILE, [latest[k] for k in sorted(latest)], LATEST_FIELDS)
 
 
 def used_today(gp_dir: Path, day: str) -> int:
@@ -287,6 +321,8 @@ def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datet
     points: dict[str, list[dict]] = {k: [] for k in gp.KINDS}
     stats = collections.Counter()
     stopped, consecutive = "running", 0  # what a killed run leaves in runs.csv
+    if not (gp_dir / LATEST_FILE).exists():
+        update_latest(gp_dir)  # first run with the file: build it from the day files
 
     def save():
         _save_points(gp_dir, day, points)

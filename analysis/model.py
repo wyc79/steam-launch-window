@@ -49,6 +49,7 @@ FOLLOWER_FROM = date(2024, 6, 1)  # follower history starts 2024-03-15
 HEADLINE_COVERAGE = 0.9  # the follower-controlled fit leads once this share of eligible launches have followers
 HEADLINE_WEEKS = 52
 MAX_ZERO_SHARE = 0.8     # a group where more launches than this have no reviews is marked unreliable
+FREE_RECOUNTED = 0.95    # the free model is read once this share of free launches count every review
 HOUR_BANDS = ((0, "0_5"), (6, "6_9"), (10, "10_12"), (13, "13_17"), (18, "18_23"))
 HOUR_BASE = "10_12"
 COMPETITION = ("competition", "comp_tier", "comp_top5", "comp_top20", "comp_primary", "comp_placebo",
@@ -563,9 +564,21 @@ def run_group(s: pd.DataFrame, free: bool, events: list[dict] | None = None, tag
             if t and "p_value" in t:  # the chance test's own estimate: the event alone, all games pooled
                 e["chance_p"], e["chance_ratio_alone"], e["windows"] = t["p_value"], t["ratio_alone"], t["windows"]
         out["holidays"] = holiday_summary(s, out, events, main)
-    zero = float((s["y"] == 0).mean())
-    out["status"] = "unreliable" if zero > MAX_ZERO_SHARE else "ok"
+    out.update(group_status(s, free))
     out["headline"] = "with_followers" if out["followers"].get("headline") else "reviews"
+    return out
+
+
+def group_status(s: pd.DataFrame, free: bool) -> dict:
+    """"unreliable" when most launches have no reviews, or, for free games, until at
+    least FREE_RECOUNTED of them are counted with every purchase type (PR #20)."""
+    zero = float((s["y"] == 0).mean()) if len(s) else 0.0
+    out = {"status": "unreliable" if zero > MAX_ZERO_SHARE else "ok", "zero_share": round(zero, 4)}
+    if free:
+        share = float((s["purchase"] == "all").mean()) if "purchase" in s and len(s) else 0.0
+        out["recounted_share"], out["recounted"] = round(share, 4), share >= FREE_RECOUNTED
+        if not out["recounted"]:
+            out["status"] = "unreliable"
     return out
 
 
@@ -828,6 +841,8 @@ CAVEATS = [
 FREE_CAVEAT = ("The review counts are Steam purchases only, so a free game's reviews from players who did not "
                "buy anything are left out: most free launches show 0 reviews in their first 30 days although "
                "they have reviews. Do not read the free model until free games are counted with all purchase types.")
+
+
 def _per_launch(e: dict) -> str:
     """'0.9% fewer' or '1.2% more' for a per-launch rate ratio."""
     r = e["rate_ratio"]
@@ -873,7 +888,10 @@ def placebo_caveat(check: dict) -> str | None:
 
 
 def group_caveats(g: dict, free: bool) -> list[str]:
-    out = [FREE_CAVEAT] if free and g["status"] == "unreliable" else []
+    out = [FREE_CAVEAT] if free and not g.get("recounted") else []
+    if not out and g.get("zero_share", 0) > MAX_ZERO_SHARE:
+        out.append(f"{g['zero_share']:.0%} of these launches have no reviews in their first 30 days, too many for "
+                   "the model to be read.")
     text = placebo_caveat(g["checks"]["placebo"])
     if text:
         out.append(text)
@@ -907,7 +925,8 @@ def report(result: dict) -> str:
     for group in ("paid", "free"):
         g = result[group]
         lines.append(f"\n== {group}: {g['reviews']['n']} games, {g['reviews']['weeks']} weeks, "
-                     f"competition measure {g['competition_measure']}")
+                     f"competition measure {g['competition_measure']}, status {g['status']}"
+                     + (f" (recounted {g['recounted_share']:.1%})" if "recounted_share" in g else ""))
         for e in g["reviews"]["effects"]:
             chance = (f"  chance p {e['chance_p']} ({e['windows']} windows; alone, all games {e['chance_ratio_alone']})"
                       if "chance_p" in e else "")

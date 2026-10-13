@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); building starts with step 1.
+Status: decided (2026-10-13); step 1 built (site-pipeline PR, waiting for review).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -109,12 +109,20 @@ These are JavaScript ports of `heatmap.py` and `season.py`, checked against the
 Python versions with shared test cases (the Python code writes expected outputs
 for fixed inputs; the JavaScript tests must match them).
 
-Two small pipeline additions:
+Two small pipeline additions (step 1, built):
 - **Latest followers:** `collect_gp` also keeps `gp/latest_followers.csv` (the
   newest count per game), so the daily build does not download every day's file.
-- **Model output on the data branch:** the weekly model run writes
-  `site/model.json` to the data branch, so the daily site build reuses it
-  instead of fitting the model (about 5 minutes) every day.
+  When the file is missing, the daily job downloads every followers file once and
+  the collector builds it from them. `analysis.site_data` reads it when present.
+- **Model output on the data branch:** the `model` workflow runs after each
+  `collect history` run (switch `MODEL_RUN=on`) and writes `site/model.json` to
+  the data branch, so the daily site build reuses it instead of fitting the model
+  (about 5 minutes) every day. It downloads the follower files from the public
+  dataset for the follower control.
+- **Free model status:** `model.json` marks the free model `ok` once at least 95%
+  of free launches in the sample are recounted (`reviews_purchase=all`, field
+  `recounted_share`); until then it stays `unreliable` with its caveat. The site
+  shows "not ready yet" from that status, not from a constant.
 
 ## Deploy
 
@@ -138,7 +146,7 @@ A `site` workflow builds and deploys to GitHub Pages:
 
 ## Build order
 
-1. Pipeline additions (latest followers, weekly `model.json`), with tests.
+1. Pipeline additions (latest followers, weekly `model.json`), with tests. Built.
 2. JavaScript ports of the reference numbers, with the shared test cases.
 3. Page shell, styles and the top bar.
 4. Sections 01 to 03.

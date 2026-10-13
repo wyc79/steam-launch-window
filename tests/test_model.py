@@ -123,6 +123,10 @@ def test_model_cli_writes_model_json(data_dir, frames, tmp_path, capsys):
     assert "revenue" in result["paid"] and "log_price" in {e["key"] for e in result["paid"]["reviews"]["effects"]}
     assert "log_price" not in {e["key"] for e in result["free"]["reviews"]["effects"]}
     assert "with_followers" in result["paid"]["followers"]
+    # reviews_purchase is empty in this data: the free model is not read yet
+    free = result["free"]
+    assert (free["status"], free["recounted_share"], free["recounted"]) == ("unreliable", 0.0, False)
+    assert M.FREE_CAVEAT in free["caveats"] and "recounted_share" not in result["paid"]
     assert "== paid" in capsys.readouterr().out
     # small games: launched from REACH_FULL_FROM only (the data starts before it)
     s = frames[0]["paid"]
@@ -262,6 +266,44 @@ def test_hurdle_leaves_out_a_failed_count_part(monkeypatch):
     caveats = M.group_caveats({"status": "ok", "hurdle": h, "checks": {"placebo": PLACEBO_NOISE}}, free=False)
     assert any("no stable fit" in c and "not corrected for the missing zeros" in c for c in caveats)
     assert not any("did not converge" in c for c in caveats)     # the technical reason stays in "failure"
+
+
+def test_free_model_is_read_once_95_percent_are_recounted():
+    pd = pytest.importorskip("pandas")
+
+    def frame(recounted, n=100, zeros=10):
+        return pd.DataFrame({"y": [0] * zeros + [5] * (n - zeros),
+                             "purchase": ["all"] * recounted + ["steam"] * (n - recounted)})
+
+    def caveats(g, free=True):
+        return M.group_caveats({**g, "hurdle": {"count_given_some": {}}, "checks": {"placebo": PLACEBO_NOISE}}, free)
+
+    before = M.group_status(frame(94), free=True)
+    assert (before["status"], before["recounted_share"], before["recounted"]) == ("unreliable", 0.94, False)
+    assert caveats(before) == [M.FREE_CAVEAT]
+    after = M.group_status(frame(95), free=True)
+    assert (after["status"], after["recounted_share"], after["recounted"]) == ("ok", 0.95, True)
+    assert caveats(after) == []
+    # a file from before the recount has no reviews_purchase column: not recounted
+    old = M.group_status(frame(0).drop(columns="purchase"), free=True)
+    assert (old["status"], old["recounted_share"]) == ("unreliable", 0.0)
+    # recounted, but still mostly zeros: unreliable, with its own caveat
+    zeros = M.group_status(frame(100, zeros=85), free=True)
+    assert zeros["status"] == "unreliable" and caveats(zeros) == [
+        "85% of these launches have no reviews in their first 30 days, too many for the model to be read."]
+    # paid games do not depend on the recount
+    assert M.group_status(frame(0), free=False) == {"status": "ok", "zero_share": 0.1}
+
+
+def test_history_reads_reviews_purchase(tmp_path):
+    make_data(tmp_path, n=3)
+    rows = storage.read_csv(tmp_path / "history" / "games.csv")
+    rows[0]["reviews_purchase"] = "all"
+    storage.write_csv(tmp_path / "history" / "games.csv", rows, FIELDS)
+    assert list(M.F.load_history(tmp_path / "history" / "games.csv")["purchase"]) == ["all", "", ""]
+    old = [f for f in FIELDS if f != "reviews_purchase"]   # a file from before PR #20
+    storage.write_csv(tmp_path / "history" / "games.csv", rows, old)
+    assert list(M.F.load_history(tmp_path / "history" / "games.csv")["purchase"]) == ["", "", ""]
 
 
 def effect(key, ratio, low, high, p):

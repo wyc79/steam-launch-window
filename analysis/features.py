@@ -82,6 +82,7 @@ def load_history(path: Path) -> pd.DataFrame:
             "publishers": _split(r["publishers"]), "franchise": bool(r["franchises"]),
             "reviews_30d": float(r["reviews_30d"]) if r["reviews_30d"] != "" else math.nan,
             "source": r["reviews_30d_source"],
+            "purchase": r.get("reviews_purchase", ""),  # "all" once recounted; files from before PR #20 lack it
         })
     df = pd.DataFrame(rows)
     df["week"] = [d - timedelta(days=d.weekday()) for d in df["launch_date"]]

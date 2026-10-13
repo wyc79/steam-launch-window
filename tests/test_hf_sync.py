@@ -28,6 +28,10 @@ class FakeApi:
         path.write_text(self.remote[filename])
         return str(path)
 
+    def list_repo_files(self, repo_id, repo_type=None, revision=None):
+        assert revision == self.sha
+        return list(self.remote)
+
     def create_commit(self, repo_id, operations, *, commit_message, repo_type=None, parent_commit=None):
         self.commits.append({"paths": sorted(op.path_in_repo for op in operations),
                              "message": commit_message, "parent": parent_commit})
@@ -111,3 +115,31 @@ def test_pull_refuses_a_folder_that_already_has_files(tmp_path):
     (dest / "followers" / "2026-01-01.csv.gz").write_text("stale")
     with pytest.raises(SystemExit, match="not empty"):
         hf_sync.pull(FakeApi(tmp_path, {}), "me/data", ["state.csv"], dest)
+
+
+def test_fetch_downloads_every_matching_file_and_keeps_pulled_ones(tmp_path):
+    remote = {"gp/state.csv": "s", "gp/followers/2026-10-12.csv.gz": "a", "gp/followers/2026-10-13.csv.gz": "b",
+              "gp/players/2026-10-13.csv.gz": "p"}
+    api = FakeApi(tmp_path, remote)
+    dest = tmp_path / "hf"
+    hf_sync.pull(api, "me/data", ["gp/followers/2026-10-13.csv.gz"], dest, required=["gp/state.csv"])
+    (dest / "gp/followers/2026-10-13.csv.gz").write_text("changed by this run")
+    got = hf_sync.fetch(api, "me/data", "gp/followers/*.csv.gz", dest, revision="abc123")
+    assert got == ["gp/followers/2026-10-12.csv.gz", "gp/followers/2026-10-13.csv.gz"]
+    assert (dest / "gp/followers/2026-10-12.csv.gz").read_text() == "a"
+    assert (dest / "gp/followers/2026-10-13.csv.gz").read_text() == "changed by this run"
+    assert not (dest / "gp/players").exists()
+
+
+def test_fetch_fails_when_nothing_matches(tmp_path):
+    with pytest.raises(SystemExit, match="matches"):
+        hf_sync.fetch(FakeApi(tmp_path, {"gp/state.csv": "s"}), "me/data", "gp/followers/*.csv.gz", tmp_path / "x")
+
+
+def test_cli_fetch_needs_no_token(tmp_path, monkeypatch):
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    seen = {}
+    monkeypatch.setattr(hf_sync, "fetch", lambda api, repo, pattern, dest, revision: seen.update(
+        repo=repo, pattern=pattern, revision=revision))
+    assert hf_sync.main(["fetch", "--repo", "me/data", "--dest", str(tmp_path), "--glob", "gp/followers/*"]) == 0
+    assert seen == {"repo": "me/data", "pattern": "gp/followers/*", "revision": None}
