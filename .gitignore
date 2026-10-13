@@ -224,7 +224,7 @@ _gp/
 _hf/
 
 # website data built by analysis.site_data
-site/data/
+site/public/data/
 
 # website (Vite): dependencies, build output, test coverage
 site/node_modules/

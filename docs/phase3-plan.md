@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); step 1 built (PR #23); step 2 built (PR #24, waiting for review).
+Status: decided (2026-10-13); steps 1 and 2 built (PR #23, PR #24); step 3 built (waiting for review).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -99,7 +99,10 @@ number means, the caveats in full, and credit to Games Popularity.
 
 ## Data
 
-The site reads static JSON from `site/data/`:
+The site reads static JSON from `site/public/data/` (gitignored): `vite dev` serves
+it and `vite build` copies it into the build. `npm run data` in `site/` builds it
+locally from a checkout of the data branch (`../_data` by default; `--gp-dir` for
+follower counts) and copies the branch's `site/model.json`:
 
 | File | Built by | When | Size (gzip) |
 |---|---|---|---|
@@ -143,8 +146,8 @@ A `site` workflow builds and deploys to GitHub Pages:
 - after each `collect daily` run, after the weekly model run, and on pushes to
   `main` that touch `site/`;
 - steps: check out `main` and the data branch, fetch `gp/latest_followers.csv`,
-  run `analysis.site_data`, copy `model.json`, `vite build`, deploy with
-  `actions/deploy-pages`;
+  run `analysis.site_data` into `site/public/data`, copy `model.json` there,
+  `vite build`, deploy `site/dist` with `actions/deploy-pages`;
 - a repository variable `DEPLOY_SITE=on`, like the other switches.
 
 ## Quality
@@ -164,7 +167,13 @@ A `site` workflow builds and deploys to GitHub Pages:
    (`heatmap.js`, `season.js`); `python -m analysis.golden` writes the cases to `site/test/golden/`,
    which both test suites check. `heatmap.py` gained `heatmap_rows`, `normalized`,
    `match_count` and `week_games` (a week's games).
-3. Page shell, styles and the top bar.
+3. Page shell, styles and the top bar. Built: `site/index.html` and `src/main.js` (the frame
+   draws at once, the data files load in parallel), `src/strings.js` (all text), `src/state.js`
+   (the selection the sections subscribe to), `src/ui/` (masthead, top bar, empty section
+   frames, footer), `src/styles.css`, a placeholder `methods.html`. The match count turns red
+   when the history panel would hide the picked group (`historyPanel(...).shown`, parts under
+   `MIN_GROUP`). The theme choice is kept under its own key (`slw-theme`), since
+   wyc79.github.io writes `yc-theme` on the same origin and defaults it to light.
 4. Sections 01 to 03.
 5. Methods page.
 6. The deploy workflow, then a review of the live site.

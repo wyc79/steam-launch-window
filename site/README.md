@@ -1,0 +1,20 @@
+# Website
+
+Vite and plain JavaScript. The plan is [docs/phase3-plan.md](../docs/phase3-plan.md).
+
+```
+npm ci
+npm run data      # build the data files into public/data (see below)
+npm run dev       # http://localhost:5173/steam-launch-window/
+npm test          # unit tests and the golden cases shared with analysis/
+npm run build     # into dist/; npm run preview serves it
+```
+
+`npm run data` runs `python -m analysis.site_data` from the repository root on a checkout
+of the data branch (`../_data` by default) and copies the branch's `site/model.json`. It
+uses the repository's `.venv` when there is one, else `$PYTHON` or `python`. Options:
+`--data-dir <folder>`, and `--gp-dir <folder>` for follower counts (a copy of `gp/` from
+the Hugging Face dataset). It reads local files only. `public/data` is gitignored.
+
+Text lives in `src/strings.js`; the reference numbers in `src/lib/` (ports of
+`analysis/heatmap.py` and `analysis/season.py`).

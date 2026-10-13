@@ -1,6 +1,6 @@
 """What history says: the launch model (docs/phase2-plan.md section 3).
 
-    python -m analysis.model --data-dir _data --gp-dir _gp --out site/data
+    python -m analysis.model --data-dir _data --gp-dir _gp --out site/public/data
 
 Fits negative binomial models (log link) of 30-day reviews on niche
 competition, Steam events, price and the other predictors in
@@ -998,7 +998,7 @@ def main(argv=None) -> int:
     p.add_argument("--gp-dir", type=Path, default=None,
                    help="Games Popularity folder (followers/*.csv.gz); without it, no follower control")
     p.add_argument("--events", type=Path, default=Path("data/events.yaml"))
-    p.add_argument("--out", type=Path, default=Path("site/data"))
+    p.add_argument("--out", type=Path, default=Path("site/public/data"))
     p.add_argument("--today", type=date.fromisoformat, default=None,
                    help="the data's date (default: the newest launch date in history); later launches are ignored")
     p.add_argument("--permutations", type=int, default=PERMUTATIONS,
