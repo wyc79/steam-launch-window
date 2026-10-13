@@ -1,7 +1,7 @@
 # Methods: what history says
 
 This is the text for the website's Methods page (Phase 3). The numbers are from
-the 2026-10-12 data. `python -m analysis.model` rebuilds them into
+the 2026-10-13 model run. `python -m analysis.model` rebuilds them into
 `site/public/data/model.json`.
 
 ## The question
@@ -13,12 +13,14 @@ times?
 ## The data
 
 - **Launches:** every game released on Steam from 2022-01-01 until 31 days
-  before the data date (so the 30-day window has closed): 80,095 launches up to
+  before the data date (so the 30-day window has closed): 80,403 launches up to
   2026-09-11. Early Access launches are in, with an Early Access marker. Games
-  leaving Early Access (297) are left out: that is not their first launch.
+  leaving Early Access (541) are left out: that is not their first launch. The
+  model keeps 79,852 of them.
 - **Paid and free games are fitted apart.** A game is free if Steam marks it free
-  or "Free to Play" is in its top 10 tags. 67,791 paid games, 12,232 free.
-- **Outcome:** reviews from Steam buyers written in the first 30 days. Reviews
+  or "Free to Play" is in its top 10 tags. 67,791 paid games, 11,989 free.
+- **Outcome:** reviews written in the first 30 days: from Steam buyers for paid
+  games, all reviews for free games (almost nobody "buys" a free game). Reviews
   stand in for sales, but the ratio varies by genre and price, so we say "more
   reviews", not "more sales". For paid games we also fit reviews x price, a rough
   revenue proxy.
@@ -87,25 +89,6 @@ also holds that combination with its own range (`demo_with_fest`, from the fit's
 clustered covariance); until the next model run writes it, the site uses a cautious
 range that treats the two terms as independent.
 
-## What we found (free games)
-
-Fitted on 2026-10-13, after every free launch was recounted with all reviews
-(11,989 launches, status `ok`; 3.8% have no review in 30 days). The site shows:
-
-- Seasonal sales, themed fests: no clear difference.
-- A demo out by the end of the last Next Fest, against one that came out after it:
-  95% more reviews (9% to 247%). A demo that came out after it, against no demo:
-  62% fewer (37% to 77%).
-- Weekly competition: each extra same-niche launch that week went with 4.9% fewer
-  reviews; with the placebo in the same fit, 3.9% (2.2% to 5.7%), still clear, so
-  part of it is general crowding.
-- US Thanksgiving to Cyber Monday 52% fewer (35% to 64%), Christmas to New Year 47%
-  fewer (25% to 63%), but the chance test does not confirm them (p 0.055 and 0.094,
-  4 years each), and most of those weeks fell in a Steam sale. The site shows them
-  as unconfirmed, not as advice.
-- China's holidays: no clear pattern (the chance test gives 1.58, p 0.09, and 1.08,
-  p 0.82).
-
 **Price.** At the same niche price, a game that costs twice as much got 81% more
 reviews (69% to 94%). That is not pricing advice: it shows which games charge
 more (bigger, more polished ones), not what a price change would do. Niche
@@ -125,9 +108,30 @@ Sale (2022), Next Fest (October 2022, February 2024, February 2026), the Autumn
 Sale (2025) or a themed fest (the other years). With only 5 and 4 windows, the
 usual intervals overstate how sure this is. The chance test, on all games
 pooled, agrees for National Day (0.007) but not clearly for Spring Festival
-(0.08). The site shows Chinese holidays only as calendar context for games that
-support Simplified Chinese, marked unconfirmed, and not as advice for other
-games.
+(0.08). The site shows Chinese holidays only to people who pick Simplified Chinese,
+as context, never as advice and without numbers: each holiday whose effect for games
+with Simplified Chinese is clear is named, marked unconfirmed, with "not confirmed by
+a chance test" or "from few games" where that applies.
+
+## What we found (free games)
+
+Fitted on 2026-10-13, after every free launch was recounted with all reviews (11,989
+launches; 4% have no review in 30 days). Compared with otherwise similar launches:
+
+- Seasonal sales, themed fests: no clear difference.
+- A demo out by the end of the last Next Fest got 95% more reviews (9% to 247%) than
+  one that came out after it. A demo that came out after it went with 62% fewer
+  (37% to 77%) than no demo.
+- Weekly competition: each extra same-niche launch that week went with 5% fewer
+  reviews (3% to 6%); with the placebo in the same fit, 4% fewer (2% to 6%), still
+  clear, so part of it is general crowding. The site describes this without a number.
+- US Thanksgiving to Cyber Monday: 52% fewer (35% to 64%); Christmas to New Year: 47%
+  fewer (25% to 63%). The chance test does not confirm them (p 0.055 and 0.094, 4
+  years each), and those weeks fell in a Steam sale most years, so the site shows
+  them as unconfirmed, not as advice.
+- China's holidays, games with Simplified Chinese: National Day 61% fewer (40% to
+  74%), from only 36 games; Spring Festival no clear difference. The pooled chance
+  test confirms neither (1.58, p 0.09; 1.08, p 0.82).
 
 ## How much to trust it
 
@@ -203,14 +207,11 @@ measure, but it ranked them very slightly worse (0.485 against 0.489). The model
 explains who gets more reviews in general far better than it explains anything
 about timing.
 
-## The niche trend (Competition ahead)
+## The niche trend (held back)
 
-A niche's share of upcoming games with exact dates in the next 13 weeks divided by
-its share of the launches in the last 52 weeks, for the same languages and paid or
-free. The site names it only when it is clearly different: at least 10 niche games
-with exact dates, at least one niche launch a week last year, a ratio of 1.45 or
-more (or 0.69 or less), and a pooled two-proportion z of at least 1.96. The cutoff
-comes from real launches (`analysis/trend_calibration.py`): with each 13 weeks of
-launches since 2023 in place of the upcoming games, the rule flags 4.4% of
-tag-quarters (paid 3.5%, free 6.0%), where nothing was announced. Announced games
-are not launches: not all will launch.
+A line comparing a niche's share of upcoming games with its share of last year's
+launches is built (`analysis/heatmap.py` `niche_trend`) but not shown. Calibrated on
+launches against launches it flags 4.4% of tags, but on today's upcoming list it flags
+about a fifth, so it mostly measures how announced dates and developer-set tags differ
+from launches. It waits for a calibration on daily snapshots against launches, possible
+once 13 weeks of snapshots exist (about 2027-01-10).

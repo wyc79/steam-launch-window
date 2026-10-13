@@ -5,7 +5,7 @@
 
 import { describe, expect, test } from "vitest";
 import { en } from "../src/strings.js";
-import { change, clear, combine, crowding, percentOf, ready, timingLines } from "../src/timing.js";
+import { busyNote, change, clear, combine, crowding, percentOf, ready, timingLines } from "../src/timing.js";
 
 const e = (key, rate_ratio, low, high, extra = {}) => ({ key, rate_ratio, low, high, p: 0.001, ...extra });
 const placebo = (alone, real, together) => ({
@@ -54,8 +54,8 @@ const PAID = {
     ]),
   },
   holidays: holidays({
-    cn_spring: e("cn_spring_schinese", 0.7087, 0.545, 0.9216),
-    cn_national: e("cn_national_schinese", 0.4783, 0.2424, 0.9439),
+    cn_spring: e("cn_spring_schinese", 0.7087, 0.545, 0.9216, { games_with: 531 }),
+    cn_national: e("cn_national_schinese", 0.4783, 0.2424, 0.9439, { games_with: 349 }),
   }),
 };
 const FREE = {
@@ -90,8 +90,8 @@ const FREE = {
     ]),
   },
   holidays: holidays({
-    cn_spring: e("cn_spring_schinese", 1.274, 0.3476, 4.665),
-    cn_national: e("cn_national_schinese", 0.3935, 0.2562, 0.6044),
+    cn_spring: e("cn_spring_schinese", 1.274, 0.3476, 4.665, { games_with: 45 }),
+    cn_national: e("cn_national_schinese", 0.3935, 0.2562, 0.6044, { games_with: 36 }),
   }),
 };
 const MODEL = { paid: PAID, free: FREE };
@@ -122,7 +122,7 @@ describe("paid games", () => {
     expect(v.china).toBeNull();
     const zh = timingLines(MODEL, "paid", { languages: ["english", "schinese"] });
     expect(zh.china).toBe(
-      "China holidays (unconfirmed): launches during Spring Festival and National Day got fewer reviews in past years, with or without Simplified Chinese, and every one overlapped a Steam sale or fest.",
+      "Spring Festival (unconfirmed): fewer reviews for games with Simplified Chinese in past years, not confirmed by a chance test. National Day (unconfirmed): fewer reviews for games with Simplified Chinese in past years. Every one of these holiday windows overlapped a Steam sale or fest.",
     );
     expect(zh.china).not.toMatch(/\d/);
     expect(zh.lines).toEqual(PAID_LINES); // never advice
@@ -146,7 +146,7 @@ describe("free games", () => {
       "Themed fests for your tags: no clear effect.",
       "If you have a demo, have it out before Next Fest. Launches whose demo was out by the last Next Fest got 95% more reviews (9% to 247% more) than those whose demo came out after it, and no clear difference from launches with no demo (a cautious range).",
       "A demo that came out after the last Next Fest went with 62% fewer reviews (37% to 77% fewer) than no demo.",
-      "Weekly competition: small; part of it is general crowding (a niche here is games with similar tags and a shared language, not just your tags).",
+      "Weekly competition: a clear effect for free games; part of it is general crowding (a niche here is games with similar tags and a shared language, not just your tags).",
       "US Thanksgiving to Cyber Monday: fewer reviews in past years (4 years), not confirmed by a chance test; the week also falls in Steam's Autumn Sale most years.",
       "Christmas to New Year: fewer reviews in past years (4 years), not confirmed by a chance test; the week also falls in Steam's Winter Sale every year.",
     ]);
@@ -160,8 +160,24 @@ describe("free games", () => {
     );
   });
 
-  test("China's holidays: no clear pattern when neither the chance test nor the main effects say fewer", () => {
-    expect(v.china).toBe("China holidays (unconfirmed): no clear pattern in past launches.");
+  test("China's holidays: each holiday from the effect for games with Simplified Chinese", () => {
+    // Spring Festival is not clear for those games: not named; National Day is, from 36 games
+    expect(v.china).toBe(
+      "National Day (unconfirmed): fewer reviews for games with Simplified Chinese in past years, from few games (36), not confirmed by a chance test. Every one of these holiday windows overlapped a Steam sale or fest.",
+    );
+    const none = { ...FREE, holidays: holidays({ cn_spring: e("x", 1.1, 0.8, 1.4) }) };
+    expect(timingLines({ free: none }, "free", { languages: ["schinese"] }).china).toBe(
+      "China holidays (unconfirmed): no clear dip for games with Simplified Chinese in past launches.",
+    );
+  });
+
+  test("a US holiday without a chance-test row stays unconfirmed and never says 0 years", () => {
+    const { us_thanksgiving, ...rest } = FREE.chance_test;
+    const lines = timingLines({ free: { ...FREE, chance_test: rest } }, "free").lines;
+    expect(lines).toContain(
+      "US Thanksgiving to Cyber Monday: fewer reviews in past years, not confirmed by a chance test; the week also falls in Steam's Autumn Sale most years.",
+    );
+    expect(lines.join(" ")).not.toMatch(/0 years/);
   });
 });
 
@@ -229,10 +245,28 @@ describe("the words", () => {
 
   test("competition: from the fit with the placebo", () => {
     const comp = e("comp_tier", 0.99, 0.98, 0.995);
-    expect(crowding(PAID, comp)).toBe("small at most; much of it is general crowding");
-    expect(crowding(FREE, comp)).toBe("small; part of it is general crowding");
+    expect(crowding(PAID, comp, "paid")).toBe("small at most; much of it is general crowding");
+    expect(crowding(FREE, comp, "free")).toBe("a clear effect for free games; part of it is general crowding");
+    // a placebo that goes the other way from the launch week: no "general crowding"
+    const other = { ...PAID, checks: { placebo: { ...PAID.checks.placebo, placebo: { effects: [e("p", 1.01, 1.005, 1.02)] } } } };
+    expect(crowding(other, comp, "paid")).toBe("launches in busier weeks of their niche got fewer reviews");
     const weak = { competition_measure: "c", checks: { placebo: placebo(e("p", 0.999, 0.99, 1.01), e("c", 0.99, 0.98, 0.995), [e("c", 0.99, 0.98, 0.995)]) } };
-    expect(crowding(weak, comp)).toBe("launches in busier weeks of their niche got fewer reviews");
-    expect(crowding({}, comp)).toBe("launches in busier weeks of their niche got fewer reviews");
+    expect(crowding(weak, comp, "paid")).toBe("launches in busier weeks of their niche got fewer reviews");
+    expect(crowding({}, comp, "paid")).toBe("launches in busier weeks of their niche got fewer reviews");
+  });
+});
+
+describe("the note under the history panel", () => {
+  const first = "Busier weeks can look better here because stronger games often launch then.";
+  test("says what the model says about busier weeks, from the competition rule", () => {
+    expect(busyNote(MODEL, "paid")).toBe(`${first} Comparing similar games, a busier week goes with slightly fewer reviews at most.`);
+    expect(busyNote(MODEL, "free")).toBe(`${first} Comparing similar free games, a busier week goes with clearly fewer reviews.`);
+  });
+
+  test("only the first sentence without a ready model; no clear effect when competition is not clear", () => {
+    expect(busyNote(null, "paid")).toBe(first);
+    expect(busyNote({ free: { status: "unreliable" } }, "free")).toBe(first);
+    const unclear = { paid: { ...PAID, reviews: { effects: [e("comp_tier", 0.999, 0.99, 1.01)] } } };
+    expect(busyNote(unclear, "paid")).toBe(`${first} Comparing similar games, a busier week shows no clear effect.`);
   });
 });

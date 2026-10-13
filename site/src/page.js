@@ -13,7 +13,7 @@ export function afterPaint(fn) {
 // data: loadData's promises. bar: setMeta, setTagCounts, setCount, setError (and
 // setSummary). parts: settle. history (What history says): start, setModel, draw,
 // busy. season (Typical for this time of year): start, setEvents, pending, draw,
-// busy. ahead (Competition ahead): start, setEvents, draw, busy.
+// busy. ahead (Competition ahead): start, setEvents, setModel (optional), draw, busy.
 // Returns a promise for the shared numbers (null if the data failed).
 export function connect({
   data,
@@ -47,11 +47,14 @@ export function connect({
     const numbers = createNumbers(games, past, meta.snapshot_date);
     bar.setTagCounts((st) => numbers.tagCounts(st));
     history?.start(numbers);
-    if (history) data.model.then((model) => !failed && history.setModel(model), quiet);
     for (const part of [season, ahead]) {
       if (!part) continue;
       part.start(numbers, meta);
       data.events.then((events) => !failed && part.setEvents(events), quiet);
+    }
+    // model.json: the lines in What history says, and the week row in Competition ahead
+    for (const part of [history, ahead]) {
+      if (part?.setModel) data.model.then((model) => !failed && part.setModel(model), quiet);
     }
     let waiting = false;
     const draw = () => {

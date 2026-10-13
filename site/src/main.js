@@ -21,7 +21,7 @@ const bar = topbar(s, selection);
 const parts = sections(s);
 const foot = footer(s);
 const history = historySection(s, parts.bodies.history);
-const season = seasonSection(s, parts.bodies.season);
+const season = seasonSection(s, parts.bodies.season, parts.intros.season);
 const ahead = aheadSection(s, parts.bodies.ahead);
 
 document.getElementById("app").replaceChildren(
@@ -31,6 +31,7 @@ document.getElementById("app").replaceChildren(
   h("main", { class: "wrap" }, parts.els),
   h("div", { class: "wrap" }, foot.el),
 );
+bar.watchSections(parts.els);
 
 // the sticky bar's height, so a section scrolled to is not hidden under it
 new ResizeObserver(([entry]) => {

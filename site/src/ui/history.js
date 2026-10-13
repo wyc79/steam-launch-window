@@ -4,7 +4,7 @@
 // shared raw counts toggle (top bar) sets the panel's measure.
 
 import { panelView } from "../panelview.js";
-import { timingLines } from "../timing.js";
+import { busyNote, timingLines } from "../timing.js";
 import { fill, h, uid } from "./dom.js";
 
 export function historySection(s, body) {
@@ -73,9 +73,9 @@ export function historySection(s, body) {
             "tr",
             {},
             h("th", { scope: "col", class: "hs-part-head" }, t.heads.part),
+            head("median"),
             head("p75"),
             head("p90"),
-            head("median"),
             head("games"),
             h("td", { class: "hs-bar-cell", "aria-hidden": "true" }),
           ),
@@ -88,15 +88,17 @@ export function historySection(s, body) {
               "tr",
               { class: `is-${r.part}` },
               h("th", { scope: "row" }, h("span", { class: "hs-part" }, r.name), h("span", { class: "hs-range" }, r.range)),
+              h("td", { class: "hs-num" }, r.median),
               h("td", { class: "hs-num hs-lead" }, r.p75),
               h("td", { class: "hs-num hs-lead" }, r.p90),
-              h("td", { class: "hs-num" }, r.median),
               h("td", { class: "hs-num hs-games" }, r.games),
               h("td", { class: "hs-bar-cell", "aria-hidden": "true" }, bars(r.bars)),
             ),
           ),
         ),
       ),
+      h("p", { class: "hs-busy" }, busyNote(model, st.group, s)),
+      h("p", { class: "hs-unit" }, t.unit),
       h("p", { class: "hs-cuts" }, v.cuts),
       h("p", { class: "hs-read quiet" }, v.read, h("span", { class: "hs-bars-key" }, " ", t.barsKey)),
     );
@@ -142,7 +144,7 @@ export function historySection(s, body) {
     // model.json, or null when it is missing or broken
     setModel(m) {
       model = m;
-      if (st && numbers) drawTiming();
+      if (st && numbers) redraw(); // the lines, and the note under the panel
     },
     draw(selected) {
       st = selected;

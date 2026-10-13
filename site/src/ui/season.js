@@ -14,7 +14,8 @@ import { laneItems } from "./lanes.js";
 const NONE = []; // the events when events.json failed: one list, so the cached outlook is kept
 const NARROW = "(max-width: 1023px)"; // weeks run down the page (styles.css)
 
-export function seasonSection(s, body) {
+// intro: the section's intro line, filled in with the group and languages
+export function seasonSection(s, body, intro = null) {
   const t = s.season;
   let numbers = null;
   let names = new Map();
@@ -29,12 +30,19 @@ export function seasonSection(s, body) {
 
   const keyLine = h("p", { class: "ol-key" }, t.key);
   const good = h("p", { class: "ol-good" }, t.good);
-  const from = h("p", { class: "ol-from quiet" });
   const note = h("p", { class: "ol-note quiet" });
   const chart = h("div", { class: "ol-scroll" });
   const detail = h("div", { class: "ol-detail", "aria-hidden": "true" });
   const labelId = uid("ol-label");
-  const frame = [h("p", { id: labelId, class: "visually-hidden" }, t.label), keyLine, good, from, note, chart, detail];
+  const frame = [h("p", { id: labelId, class: "visually-hidden" }, t.label), keyLine, good, note, chart, detail];
+
+  // "How busy each coming week usually is across Steam (all paid games in English, not just your tags)."
+  function introText(st) {
+    const sec = s.sections.season;
+    const names = st.languages.map((c) => s.languages[c] ?? c);
+    const langs = names.length > 2 ? sec.nLangs(names.length) : sec.langs(names);
+    return sec.introFor(t[st.group], langs);
+  }
 
   function showDetail(i) {
     const w = view.weeks[i];
@@ -158,7 +166,7 @@ export function seasonSection(s, body) {
       languages: st.languages,
     });
     const key = [outlook, st.group, JSON.stringify(band.events.map((e) => e.name))];
-    from.textContent = t.from(t[st.group]);
+    if (intro) intro.textContent = introText(st);
     note.textContent = events === null ? t.eventsFailed : "";
     body.removeAttribute("aria-busy");
     if (drawnFor && key.every((k, i) => k === drawnFor[i])) return;

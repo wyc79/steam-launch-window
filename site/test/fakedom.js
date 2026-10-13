@@ -63,6 +63,7 @@ export class Element {
     this.classList = new ClassList(this);
     this.dataset = {};
     this.hidden = false;
+    this.style = {};
   }
   append(...nodes) {
     for (const n of nodes) {

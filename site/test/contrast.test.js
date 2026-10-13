@@ -59,7 +59,7 @@ const pairs = [
   ["labels, notes and the game list", "--paper", "--ink-2"],
   ['"This week" and the current date', "--paper", "--accent-ui"],
   ["the year part's number (on paper)", "--paper", "--ink"],
-  ["the phone summary", "--ink", "--paper"],
+  ["the phone summary, its section links, and a cell's tooltip", "--ink", "--paper"],
   // the outlook under 1024px: the picked or hovered week on the tint, its events as tags on the tint
   ["the picked week and what it rests on", "--tint", "--ink-2"],
   ["the picked week's date and value", "--tint", "--ink"],

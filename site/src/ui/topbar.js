@@ -5,7 +5,7 @@ import { arrowActive, openActive } from "../combo.js";
 import { numberFormat } from "../format.js";
 import { searchTags, tagNames } from "../tags.js";
 import { fill, h, uid } from "./dom.js";
-import { sectionNumber } from "./sections.js";
+import { SECTIONS, sectionNumber } from "./sections.js";
 
 // Type to search, arrows to move, Enter to pick, Backspace on an empty field
 // removes the last chip, Escape closes the list (a second Escape clears the text).
@@ -265,7 +265,30 @@ export function topbar(s, state) {
     onchange: (e) => state.set({ measure: e.target.checked ? "raw" : "relative" }),
   });
   state.subscribe((st) => (raw.checked = st.measure === "raw"));
-  const rawToggle = h("label", { class: "raw-toggle", title: s.bar.rawHint }, raw, h("span", {}, s.bar.raw));
+  const rawHint = s.bar.rawHint(sectionNumber("history"), sectionNumber("ahead"));
+  const rawToggle = h("label", { class: "raw-toggle", title: rawHint }, raw, h("span", {}, s.bar.raw));
+
+  // links to the sections: in the bar (sticky on wide screens) and, short, in the
+  // phone summary; the section in view is marked (aria-current)
+  const links = [];
+  const sectionNav = (short) =>
+    h(
+      "nav",
+      { class: short ? "summary-nav" : "bar-nav", "aria-label": s.nav.label },
+      SECTIONS.map((key) => {
+        const num = sectionNumber(key);
+        const full = s.nav.link(num, s.sections[key].short);
+        const a = h("a", { href: `#${key}`, "data-key": key, "aria-label": short ? full : null }, short ? num : full);
+        links.push(a);
+        return a;
+      }),
+    );
+  function markCurrent(key) {
+    for (const a of links) {
+      if (a.getAttribute("data-key") === key) a.setAttribute("aria-current", "location");
+      else a.removeAttribute("aria-current");
+    }
+  }
 
   const el = h(
     "div",
@@ -277,20 +300,20 @@ export function topbar(s, state) {
       switcher(s, s.bar.mode, "mode", ["and", "or"], state),
       switcher(s, s.bar.price, "group", ["paid", "free"], state),
       langs.el, // last, so its panel can open leftwards from the right edge at every width
-      h("div", { class: "count-row" }, count, rawToggle),
+      h("div", { class: "count-row" }, count, sectionNav(false), rawToggle),
     ),
   );
   let failed = false;
 
   // Phones: the bar does not stick, so a one-line summary stays on top once it has
-  // scrolled away (CSS shows it only under 640px); tapping it goes back.
+  // scrolled away (CSS shows it only under 640px); tapping it goes back. The
+  // section links sit beside it.
   const summaryText = h("span", { class: "summary-text" });
-  const summary = h(
+  const summaryButton = h(
     "button",
     {
       type: "button",
-      class: "summary",
-      hidden: true,
+      class: "summary-button",
       onclick: () => {
         const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         el.scrollIntoView({ block: "start", behavior: smooth ? "smooth" : "auto" });
@@ -299,6 +322,7 @@ export function topbar(s, state) {
     },
     summaryText,
   );
+  const summary = h("div", { class: "summary", hidden: true }, summaryButton, sectionNav(true));
   new IntersectionObserver(([entry]) => {
     summary.classList.toggle("is-away", !entry.isIntersecting && entry.boundingClientRect.bottom <= 0);
   }).observe(el);
@@ -306,11 +330,24 @@ export function topbar(s, state) {
   return {
     el,
     summary,
+    // the section elements (page order): the one in the upper part of the screen is marked
+    watchSections(els) {
+      const seen = new Map();
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const e of entries) seen.set(e.target.id, e.isIntersecting);
+          const inView = els.find((x) => seen.get(x.id));
+          markCurrent(inView?.id ?? null);
+        },
+        { rootMargin: "-30% 0px -60% 0px" },
+      );
+      for (const x of els) observer.observe(x);
+    },
     // summaryLine's text
     setSummary(line) {
       if (failed) return;
       summaryText.textContent = line;
-      summary.setAttribute("aria-label", s.bar.summaryLabel(line));
+      summaryButton.setAttribute("aria-label", s.bar.summaryLabel(line));
       summary.hidden = false;
     },
     setMeta(meta) {

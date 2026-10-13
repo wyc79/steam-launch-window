@@ -469,7 +469,7 @@ fieldset.ctl { display: block; }
   .pick-panel ul { columns: 1; }
 }
 
-/* The match count, and the one raw counts toggle (sections 01 and 03) beside it */
+/* The match count, the section links and the one raw counts toggle (history and heatmap) */
 .count-row {
   display: flex;
   flex-wrap: wrap;
@@ -479,6 +479,11 @@ fieldset.ctl { display: block; }
   padding-top: var(--s2);
   border-top: 1px solid var(--rule-soft);
 }
+/* the section links, in the sticky bar */
+.bar-nav { display: flex; flex-wrap: wrap; gap: 0 var(--s4); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.bar-nav a { color: var(--ink-2); text-decoration: none; white-space: nowrap; }
+.bar-nav a:hover { color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent-ui); }
+.bar-nav a[aria-current] { color: var(--ink); font-weight: 700; text-decoration: underline 2px var(--accent-ui); text-underline-offset: .3em; }
 .raw-toggle { display: inline-flex; align-items: center; gap: .5em; font-size: var(--fs-small); cursor: pointer; }
 .raw-toggle input { flex: none; width: 1rem; height: 1rem; margin: 0; accent-color: var(--ink); }
 .count {
@@ -645,6 +650,45 @@ main { display: block; }
 .hm-block.is-themed_fest { box-shadow: inset 3px 0 0 var(--ink-2); }
 .hm-block.is-cn_holiday, .hm-tag.is-cn_holiday { outline: 1px dashed var(--ink); outline-offset: -1px; }
 
+/* a cell's raw numbers on hover or focus (fixed, so the scroll area cannot clip it;
+   it never takes the pointer, so a tap still opens the week) */
+.hm-tip {
+  position: fixed;
+  z-index: 40;
+  max-width: min(20rem, calc(100vw - 16px));
+  padding: .4rem .6rem;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: var(--fs-small);
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.ah-detail-how { margin: 0 0 var(--s1); max-width: var(--measure); }
+
+/* "Past launches in a week like this": the model's event effects by week, under the lanes */
+.hm-likes { display: contents; }
+.hm-like-name { grid-row: var(--tr); grid-column: 1; align-self: center; padding-right: var(--s2); font-size: var(--fs-meta); line-height: 1.2; color: var(--ink-2); }
+.hm-like {
+  grid-row: var(--tr);
+  grid-column: var(--wk);
+  min-width: 0;
+  padding: 3px 0;
+  border-top: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule-soft);
+  font-size: .75rem;
+  line-height: 1.3;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hm-like.is-effect { color: var(--ink); font-weight: 700; }
+.hm-like.is-unconfirmed, .hm-week-like.is-unconfirmed { text-decoration: underline dotted; text-underline-offset: .2em; }
+.hm-week-like { display: none; }
+
 .hm-rowhead {
   grid-row: var(--tr);
   grid-column: 1;
@@ -753,16 +797,33 @@ main { display: block; }
 }
 .ah-game-meta { color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; }
 .ah-moved { grid-column: 1 / -1; color: var(--ink-2); font-size: var(--fs-meta); }
-.ah-more {
-  margin-top: var(--s3);
+/* the week's games: a search box with a live count, then a scroll area */
+.ah-find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-top: var(--s3); }
+.ah-search {
+  flex: 0 1 22rem;
+  min-width: 0;
   min-height: var(--control);
-  padding: 0 var(--s4);
+  padding: 0 .6rem;
   border: 1px solid var(--ink);
+  border-radius: 0;
   background: var(--paper);
   font-size: var(--fs-small);
-  cursor: pointer;
 }
-.ah-more:hover { background: var(--tint); }
+.ah-search::placeholder { color: var(--ink-2); opacity: 1; }
+.ah-found { margin: 0; font-size: var(--fs-small); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ah-list {
+  max-width: 56rem;
+  max-height: 60vh;
+  overflow: auto;
+  margin-top: var(--s3);
+  padding-right: var(--s2);
+  border-top: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule-soft);
+  overscroll-behavior: contain;
+}
+.ah-list:focus-visible { outline: 2px solid var(--accent-ui); outline-offset: 2px; }
+.ah-list .ah-part:first-child { margin-top: var(--s3); }
+.ah-none { margin: var(--s3) 0; }
 
 /* Tablets and small laptops: narrower weeks; the heatmap scrolls in its own area if it must */
 @media (max-width: 1023px) {
@@ -779,7 +840,9 @@ main { display: block; }
 /* Phones: weeks run down (rows), the heatmap rows across (columns); the events
    are text in each week's row instead of the lanes */
 @media (max-width: 639px) {
-  .hm-band, .hm-marks { display: none; }
+  .hm-band, .hm-marks, .hm-likes { display: none; }
+  .hm-week-like { display: block; margin-top: 2px; font-size: var(--fs-meta); line-height: 1.3; color: var(--ink-2); }
+  .hm-week-like.is-effect { color: var(--ink); font-weight: 700; }
   .hm-wrap { --label-w: 6.5rem; min-width: calc(var(--label-w) + var(--rows) * 3rem); }
   .hm { grid-template-columns: var(--label-w) repeat(var(--rows), minmax(3rem, 1fr)); row-gap: 2px; }
   .hm-corner { grid-row: 1; grid-column: 1; }
@@ -870,7 +933,9 @@ main { display: block; }
 .hs-bar.is-p90 { background: var(--heat-2); }
 .hs-bar.is-p75 { background: var(--ink-2); }
 .hs-tick { position: absolute; top: 0; bottom: 0; left: var(--x); width: 2px; background: var(--paper); }
-.hs-cuts { margin: var(--s3) 0 var(--s1); font-size: var(--fs-small); max-width: var(--measure); font-variant-numeric: tabular-nums; }
+.hs-busy { margin: var(--s2) 0 0; font-size: var(--fs-small); max-width: var(--measure); }
+.hs-unit { margin: var(--s2) 0 0; font-size: var(--fs-small); color: var(--ink-2); max-width: var(--measure); }
+.hs-cuts { margin: var(--s2) 0 var(--s1); font-size: var(--fs-small); max-width: var(--measure); font-variant-numeric: tabular-nums; }
 .hs-read { margin: 0; max-width: var(--measure); }
 .hs-lines { margin: 0; padding: 0; list-style: none; }
 .hs-lines li { padding: var(--s2) 0; border-top: 1px solid var(--rule-soft); line-height: 1.45; font-variant-numeric: tabular-nums; }
@@ -1003,7 +1068,8 @@ main { display: block; }
 }
 
 /* ---------- The phone summary ---------- */
-/* one line on top once the controls have scrolled away (topbar.js) */
+/* one line on top once the controls have scrolled away (topbar.js): the summary,
+   which goes back to the controls, and the section links */
 .summary {
   display: none;
   position: fixed;
@@ -1011,25 +1077,38 @@ main { display: block; }
   left: 0;
   right: 0;
   z-index: 25;
-  width: 100%;
-  margin: 0;
-  padding: .6rem var(--margin);
-  border: 0;
+  align-items: stretch;
   background: var(--ink);
   color: var(--paper);
   font-size: var(--fs-small);
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
+}
+.summary-button {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: .6rem var(--s2) .6rem var(--margin);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
 }
-.summary:focus-visible { outline-offset: -4px; outline-color: var(--paper); }
+.summary-nav { flex: none; display: flex; padding-right: calc(var(--margin) - .4rem); }
+.summary-nav a { display: flex; align-items: center; padding: 0 .4rem; color: var(--paper); text-decoration: none; }
+.summary-nav a[aria-current] { text-decoration: underline 2px; text-underline-offset: .3em; font-weight: 700; }
+.summary-button:focus-visible, .summary-nav a:focus-visible { outline: 2px solid var(--paper); outline-offset: -4px; }
 @media (max-width: 639px) {
-  .summary.is-away { display: block; }
+  .summary.is-away { display: flex; }
   html { scroll-padding-top: 3rem; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
 }
 
 .visually-hidden {

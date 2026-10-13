@@ -24,11 +24,13 @@ const EVENTS = inputs.events.map((e) => ({
 }));
 
 let body;
+let intro;
 let section;
 let numbers;
 function start() {
   body = h("div");
-  section = seasonSection(en, body);
+  intro = h("p");
+  section = seasonSection(en, body, intro);
   numbers = createNumbers([], inputs.history, META.snapshot_date);
   section.start(numbers, META);
   section.draw({ ...DEFAULT, languages: [] });
@@ -57,6 +59,7 @@ describe("the weeks", () => {
     expect(picked()).toBe(0);
     expect(options().filter((o) => o.getAttribute("tabindex") === "0")).toHaveLength(1);
     expect(options()[0].getAttribute("aria-label")).toMatch(/^Week of Oct 12 to Oct 18: usually \d\.\d\d, /);
+    expect(body.querySelector(".ol-good").textContent).toBe("Quiet is not the same as good.");
   });
 
   test("move with the arrow keys, Home and End", () => {
@@ -92,7 +95,13 @@ describe("the weeks", () => {
     options()[3].click();
     section.draw({ ...DEFAULT, languages: [], group: "free" });
     expect(picked()).toBe(3);
-    expect(body.querySelector(".ol-from").textContent).toBe("From all free games in your languages, not just your tags.");
+    expect(intro.textContent).toBe(
+      "How busy each coming week usually is across Steam (all free games in any language, not just your tags).",
+    );
+    section.draw({ ...DEFAULT, languages: ["english", "schinese"] });
+    expect(intro.textContent).toBe(
+      "How busy each coming week usually is across Steam (all paid games in English or Simplified Chinese, not just your tags).",
+    );
   });
 
   test("are cached per languages, so a tag pick costs nothing", () => {

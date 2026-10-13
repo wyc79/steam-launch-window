@@ -53,9 +53,15 @@ function draw(patch = {}, model) {
 describe("the panel", () => {
   beforeEach(() => draw({ languages: [] }));
 
-  test("shows the 75th and 90th percentiles first, then the median and the launches", () => {
+  test("shows the median, the 75th and 90th percentiles, then the launches, with the unit", () => {
     const heads = body.querySelectorAll(".hs-table thead th").map((th) => th.querySelector(".hs-long")?.textContent ?? th.textContent);
-    expect(heads).toEqual(["Launch week", "75th percentile", "90th percentile", "Median", "Launches"]);
+    expect(heads).toEqual(["Launch week", "Median reviews", "75th pct.", "90th pct.", "Launches"]);
+    expect(body.querySelector(".hs-busy").textContent).toBe(
+      "Busier weeks can look better here because stronger games often launch then.",
+    ); // no model.json yet: the first sentence only
+    expect(body.querySelector(".hs-unit").textContent).toBe(
+      "Reviews in the first 30 days, our stand-in for sales. Half of launches got the median or fewer.",
+    );
     const rows = body.querySelectorAll(".hs-table tbody tr");
     expect(rows.map((r) => r.querySelector(".hs-part").textContent)).toEqual(["Quiet", "Normal", "Busy"]);
     expect(rows[0].querySelectorAll("td")).toHaveLength(5); // four numbers and the bars
@@ -95,8 +101,9 @@ describe("the model's lines", () => {
     expect(body.querySelector(".hs-timing").textContent).toBe("Not ready yet.");
   });
 
-  test("show the paid lines and the caveat", () => {
+  test("show the paid lines and the caveat, and the note under the panel says what the model says", () => {
     draw({}, MODEL);
+    expect(body.querySelector(".hs-busy")?.textContent ?? "").toMatch(/^Busier weeks can look better here/);
     const lines = body.querySelectorAll(".hs-timing .hs-lines li").map((li) => li.textContent);
     expect(lines[0]).toBe("Avoid launching during a Steam seasonal sale: such launches got 37% fewer reviews (24% to 47% fewer).");
     expect(body.querySelector(".hs-caveat").textContent).toBe(en.history.caveat);
@@ -112,7 +119,9 @@ describe("the model's lines", () => {
   test("China's holidays with Simplified Chinese picked: one line, no numbers, not in the list", () => {
     draw({ languages: ["english", "schinese"] }, MODEL);
     expect(body.querySelector(".hs-china").tagName).toBe("P");
-    expect(body.querySelector(".hs-china").textContent).toBe(en.history.china(false));
+    expect(body.querySelector(".hs-china").textContent).toBe(
+      "National Day (unconfirmed): fewer reviews for games with Simplified Chinese in past years, not confirmed by a chance test.",
+    );
     expect(body.querySelectorAll(".hs-lines li").map((li) => li.textContent).join(" ")).not.toMatch(/China/);
   });
 });

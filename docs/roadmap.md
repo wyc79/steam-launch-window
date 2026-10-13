@@ -17,8 +17,8 @@ ends with a report, and the next one starts only after a go-ahead.
 | Audit | 1 to 5. Audit, sources, costs, Hugging Face, research readiness | reported 2026-10-11 |
 | Audit | 6. Implementation | [PR #13](https://github.com/wyc79/steam-launch-window/pull/13) merged 2026-10-12; fixes from the first Games Popularity run in [PR #14](https://github.com/wyc79/steam-launch-window/pull/14), merged 2026-10-12 |
 | Audit | 7. Deliverables | reported 2026-10-12 in [pipeline-report.md](pipeline-report.md), together with the build Phase 1 report |
-| Build | 2. Analysis | built: site data and reference numbers (PR #18), the model (PR #19), free games count all reviews (PR #20), reviews by language sample (PR #21). Left: the free recount and language sample running on the Pi, then a model rerun. See [phase2-plan.md](phase2-plan.md) and [methods.md](methods.md) |
-| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 (pipeline additions) merged in PR #23; step 2 (JavaScript ports with shared test cases) merged in PR #24; step 3 (page shell, styles, top bar) merged in PR #25; step 4 part 1 (Competition ahead, the 13-week heatmap; sections reordered with history first) merged in PR #26; step 4 part 2 (What history says, Typical for this time of year, the niche trend line) in review in PR #27 |
+| Build | 2. Analysis | built: site data and reference numbers (PR #18), the model (PR #19), free games count all reviews (PR #20), reviews by language sample (PR #21). The free recount (data commit 8593cd4) and the language sample (eff1bc5) are in, and the model was rerun (79cca10). Left: writing up the language sample (Phase 3 step 5, Methods). See [phase2-plan.md](phase2-plan.md) and [methods.md](methods.md) |
+| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 (pipeline additions) merged in PR #23; step 2 (JavaScript ports with shared test cases) merged in PR #24; step 3 (page shell, styles, top bar) merged in PR #25; step 4 part 1 (Competition ahead, the 13-week heatmap; sections reordered with history first) merged in PR #26; step 4 part 2 (What history says, Typical for this time of year, top bar section links) in review in PR #27 |
 | Build | 4. Agent and Worker | not started |
 
 ## Where things stand
@@ -43,7 +43,7 @@ free model was fitted on 2026-10-13 (status ok; its sales and themed fests show 
 difference, and its US holiday dips are not confirmed by the chance test).
 
 **Data branch** (`origin/data`): daily upcoming snapshots since 2026-10-11, and
-`history/games.csv`: 83,128 games launched 2022-01-01 to 2026-10-10.
+`history/games.csv`: 83,219 rows (launches 2022-01-01 to 2026-10-10).
 
 **Raspberry Pi (2026-10-12 to 13):** `scripts/server/run_review_jobs.sh` recounted
 all reviews for the free launches, then counted reviews by language for 1,000 paid launches.
@@ -58,8 +58,7 @@ and nothing on either machine may call steamcommunity.com.
 - On: `COLLECT_DAILY`, `COLLECT_GP`, `PUBLISH_DATASET`, `ENDPOINT_CHECK`, `MODEL_RUN`
   (first run 2026-10-13 wrote `site/model.json`; a rerun after the free recount fitted the
   free model the same day).
-- Off: `COLLECT_HISTORY`, since 2026-10-12, so the weekly history run does not race the
-  Pi. Turn it back on after the copy-back.
+- `COLLECT_HISTORY` is on again since 2026-10-13 (it was off while the Pi ran).
 - Other: `HF_DATASET_REPO`. Secrets: `STEAM_API_KEY`, `HF_TOKEN`, `HF_DATASET_REPO`,
   `GP_API_KEY`.
 - GitHub runs schedules in UTC and can start them hours late, so the weekly publish starts
@@ -102,10 +101,12 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 
 ## Next steps, in order
 
-1. **Now that the Pi jobs are in:** set `COLLECT_HISTORY` back on and look at the reviews
-   by language sample. The next model run also writes `demo_with_fest` (PR #27).
-2. **Phase 3 steps 4 to 6** (sections 01 and 02 are in review in PR #27): sections
-   01 to 03, then the Methods page and the deploy workflow.
+1. **Phase 3 steps 4 to 6** (step 4 part 2 is in review in PR #27): then the Methods page
+   (with the reviews by language sample written up; both Pi jobs are done and committed,
+   recount 8593cd4, language sample eff1bc5; the model rerun is 79cca10) and the deploy
+   workflow. The next model run also writes `demo_with_fest` (PR #27).
+2. **Around 2027-01-10:** calibrate the niche trend line on daily snapshots against launches
+   (13 weeks of snapshots by then), then decide whether to show it.
 3. **Phase 4: agent and Cloudflare Worker,** free tier only. For Chinese users, the agent
    also gets a Tencent Cloud SCF function in a mainland China region (Workers are often
    slow or blocked there; GitHub Pages works). Check the SCF billing page once when
@@ -119,7 +120,6 @@ Optional later, on the Pi: first-day and first-week review counts for all launch
 | When | What |
 |---|---|
 | now | Drop the token's user-wide write scope; remove the Pi backfill service (`systemctl --user disable --now steam-history-backfill`) |
-| when the Pi finishes | Copy back `games.csv`, `reviews_by_language.csv`, `language_sample_games.csv` to `_data/history/` |
 | within days | When Games Popularity cuts the free limits, tell me the new numbers to set `GP_DAILY_BUDGET` (or pay) |
 | any time | Check the "Data rights" wording on the dataset card, with the Games Popularity credit |
 | Phase 4 | Set up the Tencent SCF function (mainland region) for the agent's China endpoint |
