@@ -1,12 +1,12 @@
 // The numbered sections and the footer. Each section has a body that step 4
-// fills (heatmap, outlook, history panel); until the data is in it says so. A
+// fills (heatmap, outlook, history panel, trends); until the data is in it says so. A
 // section that draws itself marks its body `data-drawn`.
 
 import { REPO } from "./masthead.js";
 import { h } from "./dom.js";
 
 // page order; the numbers (01, 02, ...) follow it
-export const SECTIONS = ["history", "ahead", "season"];
+export const SECTIONS = ["trends", "history", "ahead", "season"];
 
 export function sectionNumber(key) {
   return String(SECTIONS.indexOf(key) + 1).padStart(2, "0");

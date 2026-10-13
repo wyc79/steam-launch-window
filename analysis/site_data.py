@@ -8,7 +8,10 @@ Writes, as compact JSON:
   upcoming.json  one row per game in the newest snapshot that has a date or a
                  wishlist rank (day dates more than 30 days past are stale pages
                  and left out)
-  history.json   one row per past launch, except `ea_exit` (not a first launch)
+  history.json   one row per past launch, except `ea_exit` (not a first launch);
+                 `listed` when the game was in the newest listing run (its
+                 `last_listed` is the newest in the file, or empty): Trends counts
+                 only those, so every quarter holds games still on Steam
   events.json    events.yaml with each event's window in UTC
 
 upcoming.json and history.json are {"columns": [...], "rows": [[...], ...]}.
@@ -40,7 +43,8 @@ MOVED_DAYS = 30
 MIN_FIT = 30
 UPCOMING_COLUMNS = ["appid", "name", "precision", "date", "date_end", "tags", "langs", "free", "ea",
                     "wishlist_rank", "followers", "hype_src", "moved"]
-HISTORY_COLUMNS = ["appid", "launch_date", "launch_type", "tags", "langs", "free", "price_cents", "reviews_30d"]
+HISTORY_COLUMNS = ["appid", "launch_date", "launch_type", "tags", "langs", "free", "price_cents", "reviews_30d",
+                   "listed"]
 DATE_FIELDS = ("precision", "date", "date_end")  # a change in these is a move; wording alone is not
 
 log = logging.getLogger("site_data")
@@ -146,7 +150,10 @@ def build(data_dir: Path, events_path: Path, out: Path, gp_dir: Path | None = No
                 g["hype_src"] = "r"
 
     history = []
-    for r in storage.read_csv(data_dir / "history" / "games.csv"):
+    rows = storage.read_csv(data_dir / "history" / "games.csv")
+    # the newest listing run: a game it no longer lists keeps its row with an older last_listed
+    newest = max((r.get("last_listed") or "" for r in rows), default="")
+    for r in rows:
         if r["launch_type"] == "ea_exit":
             continue
         tags = tag_ids(r["tags"])
@@ -154,6 +161,7 @@ def build(data_dir: Path, events_path: Path, out: Path, gp_dir: Path | None = No
             "appid": int(r["appid"]), "launch_date": r["launch_date"], "launch_type": r["launch_type"],
             "tags": tags, "langs": [x for x in r["languages"].split("|") if x], "free": is_free(r["is_free"], tags),
             "price_cents": _int(r["price_cents"]), "reviews_30d": _int(r["reviews_30d"]),
+            "listed": (r.get("last_listed") or newest) == newest,
         })
 
     # shared lists: tags (every known tag, then any unknown ones) and languages, by first use

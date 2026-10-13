@@ -91,7 +91,7 @@ export function aheadSection(s, body) {
   // Desktop rows: 1 the dates; then, with events, the "Events" label, one row per
   // lane and a rule; then the heatmap rows. Phones put weeks in rows and the
   // heatmap rows in columns 2 on (--tc); the lanes are hidden there.
-  // what past launches during a lane's event did (section 01's rules), or null
+  // what past launches during a lane's event did (What history says' rules), or null
   function effectOf(e) {
     return eventEffect(model, st.group, e, { languages: st.languages }, s);
   }

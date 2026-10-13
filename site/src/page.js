@@ -14,6 +14,7 @@ export function afterPaint(fn) {
 // setSummary). parts: settle. history (What history says): start, setModel, draw,
 // busy. season (Typical for this time of year): start, setEvents, pending, draw,
 // busy. ahead (Competition ahead): start, setEvents, setModel (optional), draw, busy.
+// trends (Trends): start, draw, busy.
 // Returns a promise for the shared numbers (null if the data failed).
 export function connect({
   data,
@@ -24,6 +25,7 @@ export function connect({
   history = null,
   season = null,
   ahead = null,
+  trends = null,
   s,
   later = afterPaint,
 }) {
@@ -47,6 +49,7 @@ export function connect({
     const numbers = createNumbers(games, past, meta.snapshot_date);
     bar.setTagCounts((st) => numbers.tagCounts(st));
     history?.start(numbers);
+    trends?.start(numbers);
     for (const part of [season, ahead]) {
       if (!part) continue;
       part.start(numbers, meta);
@@ -67,16 +70,21 @@ export function connect({
       history?.draw(st);
       season?.draw(st);
       ahead?.draw(st);
+      trends?.draw(st);
     };
     // already known (paid / free, or back to an earlier pick): drawn now
     const known = (st) =>
-      numbers.has(st) && (!ahead || numbers.hasHeatmap(st)) && (!season || !season.pending(st));
+      numbers.has(st) &&
+      (!ahead || numbers.hasHeatmap(st)) &&
+      (!season || !season.pending(st)) &&
+      (!trends || numbers.hasTrends(st));
     selection.subscribe((st) => {
       if (known(st)) draw();
       else {
         history?.busy();
         season?.busy();
         ahead?.busy();
+        trends?.busy();
         if (!waiting) {
           waiting = true;
           later(draw);

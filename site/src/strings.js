@@ -281,6 +281,50 @@ export const en = {
     eventsFailed: "Steam events could not be loaded, so this pattern leaves them out.",
   },
 
+  // Trends: past launches per quarter since 2022
+  trends: {
+    show: "Show",
+    views: { share: "Share of all launches", count: "Per quarter", cumulative: "Cumulative" },
+    label: "Quarters since 2022",
+    quarter: (year, q) => `${year} Q${q}`,
+    soFar: "so far",
+    // recent quarters' names say why they are hatched, for screen readers too
+    soFarName: (name, from, to) => `${name} so far (${from} to ${to}; recent, tags may still change)`,
+    recentName: (name) => `${name} (recent, tags may still change)`,
+    justStarted: (name) => `${name} (just started)`,
+    // over the recent quarters
+    recent: "recent: tags may still change",
+    // one quarter, in the readout and its label: "2024 Q3: 412 of 7,350 paid launches (5.6%)"
+    of: (name, n, all, group, pct) => `${name}: ${n} of ${all} ${group} launches (${pct})`,
+    plain: (name, n, count, group) => `${name}: ${n} ${group} ${count === 1 ? "launch" : "launches"}`,
+    none: (name, group) => `${name}: no ${group} launches`,
+    since: (name, total, group, n) => `${name}: ${total} ${group} launches since 2022 (${n} that quarter)`,
+    // the quarter under way, when its few days run off the scale the full quarters set
+    offScale: (label) => `${label}, above the scale`,
+    // the line over the chart
+    who: (group, langs) => `${group} launches ${langs} with your tags`,
+    whoAll: (group, langs) => `All ${group} launches ${langs}`,
+    // span: the four full quarters before the recent ones, "2025 Q2 to 2026 Q1"
+    span: (from, to) => `${from} to ${to}`,
+    summaryShare: (group, langs, first, firstN, last, lastN, span) =>
+      `Your tags' share of ${group} launches ${langs}: ${first} in 2022 (${firstN} launches), ${last} in ${span} (${lastN}).`,
+    summaryCount: (who, first, last, span) => `${who}: ${first} a quarter in 2022, ${last} a quarter in ${span}.`,
+    summaryCumulative: (who, total) => `${who}: ${total} since 2022.`,
+    tooFew: (n) => `Too few launches to compare 2022 with recent years (each needs ${n}).`,
+    noShare: "Pick a tag to see its share of all launches.",
+    empty: "No past launches match. Try fewer tags, Any of these, or more languages.",
+    // one line each under the chart
+    partial: (name, days, length) =>
+      `Hatched: recent quarters; their tags may still change as players vote. ${name} is not over (${days} of ${length} days so far).`,
+    partialStart: (name) => `Hatched: recent quarters; their tags may still change as players vote. ${name} has just started.`,
+    removed:
+      "Counts only games still on Steam today. Games Steam removed earlier are missing, so older quarters look smaller and shares shift a little.",
+    noForecast: "No forecast: dates for upcoming games are too incomplete to extend the line.",
+    tags: "Tags are today's Steam tags, which player votes reshape over time.",
+    which: (num) =>
+      `Full and Early Access launches, with or without 30 days of reviews yet. Section ${num} uses only those with reviews.`,
+  },
+
   // Competition ahead: the niche trend line
   trend: {
     line: (row, ratio) => `${row} is ${ratio}x as large a share of upcoming games (exact dates) as of last year's launches.`,
@@ -309,8 +353,14 @@ export const en = {
       langs: (names) => (names.length ? `in ${names.join(" or ")}` : "in any language"),
       nLangs: (n) => `in ${n} languages`,
     },
+    trends: {
+      title: "Trends",
+      short: "Trends",
+      intro:
+        "Past launches with your tags in each quarter since 2022, and their share of all launches. Steam grows every year, so the share is the fairer comparison.",
+    },
   },
-  // the links to the sections in the top bar: "01 History"
+  // the links to the sections in the top bar: "01 Trends"
   nav: { label: "Sections", link: (num, name) => `${num} ${name}` },
 
   footer: {

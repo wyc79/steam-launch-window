@@ -215,3 +215,30 @@ launches against launches it flags 4.4% of tags, but on today's upcoming list it
 about a fifth, so it mostly measures how announced dates and developer-set tags differ
 from launches. It waits for a calibration on daily snapshots against launches, possible
 once 13 weeks of snapshots exist (about 2027-01-10).
+
+## Trends
+
+The Trends chart counts past launches per quarter, from 2022 Q1 (where the data starts) to
+the current quarter, for the picked tags, languages and group (paid or free). Launches are full
+and Early Access launches, including the last month, whose 30-day reviews are not in yet. Its
+default view is the share: the selection's launches divided by all launches of the same group
+and languages that quarter, since Steam's launches grow every year. Nothing is drawn ahead:
+upcoming dates are too incomplete, and a trend from announced games waits for the calibration
+above.
+
+- **Only games still on Steam.** The launch history was first listed in October 2026, so each
+  quarter holds only games Steam still listed then; Steam removes many low-effort games over
+  time, so older quarters have lost more. Paid launches per month run about 1,100 to 1,500 for
+  most of 2025 (1,700 to 1,850 in October and November), 1,700 to 2,050 from March to June
+  2026 and 2,400 to 2,650 from July to September 2026. The weekly history run lists every month
+  again and keeps a game's row when Steam removes it (its `last_listed` stops moving), so the
+  chart counts only rows the newest run still lists (`listed` in `history.json`; none are
+  dropped yet). That keeps later quarters from holding games older ones have lost. Shares
+  shift too, since removed games lean toward some tags.
+- **Recent quarters are marked.** The current quarter and the two full ones before it are
+  hatched: new games still carry the tags their developers set, and player votes reshape them
+  over time. The line over the chart compares 2022 with the four full quarters before them,
+  and only when each window has at least 20 launches.
+
+After a few months of weekly runs, the rows whose `last_listed` stops show how many games Steam
+removes per quarter, so the chart can be corrected or recalibrated.

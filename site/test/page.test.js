@@ -251,3 +251,35 @@ describe("What history says and Typical for this time of year", () => {
     expect(season.calls.at(-1)).toBe("busy");
   });
 });
+
+describe("Trends", () => {
+  test("starts with the numbers, then draws each selection, after the paint when not yet cached", async () => {
+    const calls = [];
+    const trends = {
+      start: () => calls.push("start"),
+      draw: (st) => calls.push(`draw ${st.group} ${st.tags.join(",")}`),
+      busy: () => calls.push("busy"),
+    };
+    const { files, data } = fakeData();
+    const { bar } = fakeBar();
+    const queue = [];
+    const selection = createState();
+    const parts = { settle: vi.fn() };
+    const numbers = connect({ data, selection, bar, parts, trends, s: en, later: (fn) => queue.push(fn) });
+    const flush = () => queue.splice(0).forEach((fn) => fn());
+    files.meta.resolve(META);
+    files.upcoming.resolve(GAMES);
+    files.history.resolve(HISTORY);
+    const shared = await numbers;
+    flush();
+    expect(calls).toEqual(["start", "busy", "draw paid "]);
+    shared.trends(selection.get()); // what the real section computes when it draws
+    shared.get(selection.get());
+    selection.set({ group: "free" }); // cached: drawn at once
+    expect(calls.at(-1)).toBe("draw free ");
+    selection.addTag(1); // new numbers: busy, then drawn after the paint
+    expect(calls.at(-1)).toBe("busy");
+    flush();
+    expect(calls.at(-1)).toBe("draw free 1");
+  });
+});
