@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); step 1 built (PR #23); step 2 built (site-js-ports PR, waiting for review).
+Status: decided (2026-10-13); step 1 built (PR #23); step 2 built (PR #24, waiting for review).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
