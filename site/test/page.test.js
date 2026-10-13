@@ -115,3 +115,65 @@ describe("drawing the count", () => {
     expect(shared.get(selection.get())).toBe(before);
   });
 });
+
+describe("section 01", () => {
+  // a fake section: records what connect asks of it
+  function fakeAhead() {
+    const calls = [];
+    return {
+      calls,
+      start: (numbers, meta) => calls.push(`start ${meta.snapshot_date}`),
+      setEvents: (events) => calls.push(`events ${events.length}`),
+      draw: (st) => calls.push(`draw ${st.group} ${st.tags.join(",")}`),
+      busy: () => calls.push("busy"),
+    };
+  }
+
+  function startWith(ahead) {
+    const { files, data } = fakeData();
+    const { bar, calls } = fakeBar();
+    bar.setSummary = (line) => calls.push(`summary ${line}`);
+    const queue = [];
+    const selection = createState();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const parts = { settle: vi.fn() };
+    const numbers = connect({ data, selection, bar, parts, ahead, s: en, later: (fn) => queue.push(fn) });
+    const flush = () => queue.splice(0).forEach((fn) => fn());
+    return { files, calls, selection, numbers, flush };
+  }
+
+  test("gets the numbers, the events, and each selection after the paint, with the summary", async () => {
+    const ahead = fakeAhead();
+    const { files, calls, selection, numbers, flush } = startWith(ahead);
+    files.meta.resolve(META);
+    files.upcoming.resolve(GAMES);
+    files.history.resolve(HISTORY);
+    files.events.resolve([{ name: "x" }]);
+    const shared = await numbers;
+    await tick();
+    expect(ahead.calls.slice(0, 3)).toEqual(["start 2026-10-13", "busy", "events 1"]);
+    flush();
+    expect(ahead.calls.at(-1)).toBe("draw paid ");
+    expect(calls.at(-1)).toBe("summary All tags · Paid · 1 upcoming");
+    shared.heatmap(selection.get()); // what the real section computes when it draws
+    selection.set({ group: "free" }); // both cached: drawn at once
+    expect(ahead.calls.at(-1)).toBe("draw free ");
+    selection.addTag(1); // new numbers: busy, then drawn after the paint
+    expect(ahead.calls.at(-1)).toBe("busy");
+    flush();
+    expect(ahead.calls.at(-1)).toBe("draw free 1");
+  });
+
+  test("never draws after a file fails", async () => {
+    const ahead = fakeAhead();
+    const { files, numbers, flush } = startWith(ahead);
+    files.meta.resolve(META);
+    files.events.reject(new Error("events.json: HTTP 404"));
+    await tick();
+    files.upcoming.resolve(GAMES);
+    files.history.resolve(HISTORY);
+    expect(await numbers).toBeNull();
+    flush();
+    expect(ahead.calls).toEqual([]);
+  });
+});

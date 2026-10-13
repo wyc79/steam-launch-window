@@ -7,6 +7,7 @@ import { loadData } from "./load.js";
 import { connect } from "./page.js";
 import { selection } from "./state.js";
 import { strings as s } from "./strings.js";
+import { aheadSection } from "./ui/ahead.js";
 import { h } from "./ui/dom.js";
 import { masthead } from "./ui/masthead.js";
 import { footer, sections } from "./ui/sections.js";
@@ -17,6 +18,7 @@ document.documentElement.lang = s.lang;
 const bar = topbar(s, selection);
 const parts = sections(s);
 const foot = footer(s);
+const ahead = aheadSection(s, parts.bodies.ahead);
 
 document.getElementById("app").replaceChildren(
   h("div", { class: "wrap" }, masthead(s)),
@@ -27,6 +29,7 @@ document.getElementById("app").replaceChildren(
     h("p", { class: "lede" }, s.hero.lede),
     h("p", { class: "caveat" }, s.hero.caveat),
   ),
+  bar.summary,
   bar.el,
   h("main", { class: "wrap" }, parts.els),
   h("div", { class: "wrap" }, foot.el),
@@ -37,4 +40,4 @@ new ResizeObserver(([entry]) => {
   document.documentElement.style.setProperty("--bar-h", `${entry.borderBoxSize[0].blockSize}px`);
 }).observe(bar.el);
 
-connect({ data: loadData(`${import.meta.env.BASE_URL}data/`), selection, bar, parts, foot, s });
+connect({ data: loadData(`${import.meta.env.BASE_URL}data/`), selection, bar, parts, foot, ahead, s });

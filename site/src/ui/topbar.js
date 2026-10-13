@@ -252,7 +252,7 @@ export function topbar(s, state) {
 
   const el = h(
     "div",
-    { class: "bar", role: "region", "aria-label": s.bar.label },
+    { class: "bar", role: "region", "aria-label": s.bar.label, tabindex: "-1" },
     h(
       "div",
       { class: "wrap bar-grid" },
@@ -265,8 +265,37 @@ export function topbar(s, state) {
   );
   let failed = false;
 
+  // Phones: the bar does not stick, so a one-line summary stays on top once it has
+  // scrolled away (CSS shows it only under 640px); tapping it goes back.
+  const summaryText = h("span", { class: "summary-text" });
+  const summary = h(
+    "button",
+    {
+      type: "button",
+      class: "summary",
+      hidden: true,
+      onclick: () => {
+        const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        el.scrollIntoView({ block: "start", behavior: smooth ? "smooth" : "auto" });
+        el.focus({ preventScroll: true });
+      },
+    },
+    summaryText,
+  );
+  new IntersectionObserver(([entry]) => {
+    summary.classList.toggle("is-away", !entry.isIntersecting && entry.boundingClientRect.bottom <= 0);
+  }).observe(el);
+
   return {
     el,
+    summary,
+    // summaryLine's text
+    setSummary(line) {
+      if (failed) return;
+      summaryText.textContent = line;
+      summary.setAttribute("aria-label", s.bar.summaryLabel(line));
+      summary.hidden = false;
+    },
     setMeta(meta) {
       tags.setTags(meta);
       langs.setLanguages(meta.languages);
@@ -285,6 +314,7 @@ export function topbar(s, state) {
     },
     setError() {
       failed = true;
+      summary.hidden = true;
       const input = el.querySelector(".tag-input");
       if (input.disabled) input.placeholder = "";
       count.replaceChildren(h("span", { class: "error" }, s.bar.error));

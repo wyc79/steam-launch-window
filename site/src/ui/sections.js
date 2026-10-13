@@ -1,5 +1,6 @@
 // The numbered sections and the footer. Each section has a body that step 4
-// fills (heatmap, outlook, history panel); until the data is in it says so.
+// fills (heatmap, outlook, history panel); until the data is in it says so. A
+// section that draws itself marks its body `data-drawn`.
 
 import { REPO } from "./masthead.js";
 import { h } from "./dom.js";
@@ -24,8 +25,10 @@ export function sections(s) {
     els,
     bodies,
     // the data is in (or failed, which the top bar reports): drop the loading line
+    // of each section that has not drawn itself yet
     settle() {
       for (const body of Object.values(bodies)) {
+        if (body.dataset.drawn) continue;
         body.removeAttribute("aria-busy");
         body.replaceChildren();
       }

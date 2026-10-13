@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); steps 1 and 2 built (PR #23, PR #24); step 3 built (PR #25, waiting for review).
+Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (section 01) built (PR #26, waiting for review).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -74,7 +74,10 @@ below it.
   "sometime in 2027: N games" line beside the heatmap.
 - An event band above the weeks: Steam sales, Next Fests, themed fests whose
   tags match. Chinese holidays only when Simplified Chinese is among the picked
-  languages, marked unconfirmed.
+  languages, marked unconfirmed. Rule (`src/events.js`): a themed fest shows when one of
+  the picked tags is among its tags, the model's rule with the picked tags in place of a
+  game's top 10 (no tags picked, or a fest without tags: not shown); other holidays and
+  releases are left out.
 - Click or focus a week: its games, with the "moved here from October 2026, 3
   days ago" marker and the follower count when known (marked when it is an
   estimate from wishlist rank). Order: games whose top 10 tags match first, then
@@ -180,7 +183,18 @@ A `site` workflow builds and deploys to GitHub Pages:
    Analytics are not loaded on localhost. The theme choice is kept under its own key
    (`slw-theme`), since wyc79.github.io writes `yc-theme` on the same origin and defaults
    it to light.
-4. Sections 01 to 03.
+4. Sections 01 to 03. Part 1 built: section 01 and the phone summary bar. `src/ui/ahead.js` draws
+   the event band, the heatmap and the week's games; `src/heatview.js` and `src/weekdetail.js`
+   turn the numbers into text, shade steps and labels; `src/events.js` picks the band's events.
+   The heatmap is a plain HTML grid (ARIA `grid`, arrow keys, Enter opens a week), not SVG: the
+   numbers are real text in every cell, focus is native, and phones swap rows and columns in
+   CSS. Shades: 8 steps from paper to ink, cut at 0.1, 0.25, 0.5, 1, 1.5, 2 and 3 (raw counts:
+   the same cuts times the combination's usual week); from 1.0 the shade turns dark, which
+   also skips the greys where no text passes 4.5:1. Far weeks use lighter steps with ink text.
+   `numbers.js` caches each heatmap row (a picked tag's row is reused when more tags are
+   added); a week's games are computed when it opens, for the picked group. On phones a
+   one-line summary ("3 tags · Paid · 1,204 upcoming") stays on top once the controls scroll
+   away; tapping it goes back. Part 2: sections 02 and 03.
 5. Methods page.
 6. The deploy workflow, then a review of the live site.
 

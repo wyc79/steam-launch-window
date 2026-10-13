@@ -24,3 +24,13 @@ export function countLine(counts, group, s = en) {
 export function tooFewPast(panel, group) {
   return !panel[group].shown;
 }
+
+// The phone's one-line summary: "3 tags · Paid · 1,204 upcoming" (upcoming games
+// of the picked group, as in the count line).
+export function summaryLine(st, counts, s = en) {
+  return [
+    s.bar.summaryTags(st.tags.length),
+    s.bar[st.group],
+    s.bar.summaryUpcoming(formatNumber(counts[st.group].upcoming[0], s)),
+  ].join(s.bar.sep);
+}
