@@ -424,6 +424,7 @@ def trend_cases() -> Cases:
     c.add("quarters: mid-quarter", "quarters", today=today)
     c.add("quarters: a quarter's first day", "quarters", today="2026-10-01")
     c.add("quarters: the data's first day", "quarters", today="2022-01-01")
+    c.add("quarters: fewer than the recent ones", "quarters", today="2022-04-02")
     c.add("no tags", "quarterly", history="$history", today=today)
     c.add("shooter", "quarterly", history="$history", today=today, selection=[SHOOTER])
     c.add("cozy: starts in 2024 Q2", "quarterly", history="$history", today=today, selection=[COZY])

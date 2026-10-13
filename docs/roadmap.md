@@ -107,7 +107,10 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
    workflow. The next model run also writes `demo_with_fest` (PR #27).
 2. **Around 2027-01-10:** calibrate the niche trend line on daily snapshots against launches
    (13 weeks of snapshots by then), then decide whether to show it.
-3. **Phase 4: agent and Cloudflare Worker,** free tier only. For Chinese users, the agent
+3. **After a few months of weekly history runs:** measure how many games Steam removes per
+   quarter (rows whose `last_listed` stops) and correct or recalibrate the Trends chart, whose
+   older quarters miss removed games.
+4. **Phase 4: agent and Cloudflare Worker,** free tier only. For Chinese users, the agent
    also gets a Tencent Cloud SCF function in a mainland China region (Workers are often
    slow or blocked there; GitHub Pages works). Check the SCF billing page once when
    setting it up. Chinese text for the page comes after the English site.

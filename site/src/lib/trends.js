@@ -7,11 +7,13 @@ import { makeDay, parts, toDay, toIso } from "./dates.js";
 import { GROUPS, PANEL_TYPES, groupOf, matches, speaks } from "./heatmap.js";
 
 export const TREND_FROM = "2022-01-01"; // the history data starts here, on a quarter's first day
+export const RECENT_FULL = 2; // full quarters before the partial one that are marked recent (trends.py)
 
 const quarterOf = (month) => Math.floor((month - 1) / 3) + 1;
 
 // 2022 Q1 to the quarter that holds `today`: label parts, first and last day, its
-// length, how many of its days are counted, and whether it is the partial one
+// length, how many of its days are counted, whether it is the partial one, and
+// whether it is recent (the partial one and the RECENT_FULL before it: may still change)
 export function quarters(today) {
   const now = toDay(today);
   const { year: thisYear, month } = parts(now);
@@ -34,6 +36,7 @@ export function quarters(today) {
     start = next;
     [year, q] = q === 4 ? [year + 1, 1] : [year, q + 1];
   }
+  out.forEach((x, i) => (x.recent = i >= out.length - 1 - RECENT_FULL));
   return out;
 }
 

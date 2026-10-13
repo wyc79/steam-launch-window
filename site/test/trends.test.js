@@ -48,13 +48,14 @@ const readout = () => body.querySelector(".tr-readout").textContent;
 describe("the quarters", () => {
   beforeEach(() => start());
 
-  test("are 20 options in one listbox, the last full quarter picked and the only tab stop", () => {
+  test("are 20 options in one listbox, the last quarter before the recent ones picked and the only tab stop", () => {
     expect(body.querySelectorAll('[role="listbox"]')).toHaveLength(1);
     expect(options()).toHaveLength(20);
-    expect(picked()).toBe(18);
+    expect(picked()).toBe(16);
     expect(options().filter((o) => o.getAttribute("tabindex") === "0")).toHaveLength(1);
-    expect(options()[18].getAttribute("aria-label")).toBe("2026 Q3: 1 of 2 paid launches (50.0%)");
-    expect(readout()).toBe("2026 Q3: 1 of 2 paid launches (50.0%)");
+    expect(options()[16].getAttribute("aria-label")).toBe("2026 Q1: 1 of 2 paid launches (50.0%)");
+    expect(options()[18].getAttribute("aria-label")).toBe("2026 Q3 (recent): 1 of 2 paid launches (50.0%)");
+    expect(readout()).toBe("2026 Q1: 1 of 2 paid launches (50.0%)");
   });
 
   test("the quarter under way is marked partial and says so far", () => {
@@ -62,16 +63,20 @@ describe("the quarters", () => {
     expect(last.classList.contains("is-partial")).toBe(true);
     expect(last.getAttribute("aria-label")).toMatch(/^2026 Q4 so far \(Oct 1 to Oct 12\): /);
     expect(last.querySelector(".tr-sofar").textContent).toBe("so far");
-    expect(body.querySelector(".tr-notes").textContent).toContain("Hatched: 2026 Q4 is not over (12 of 92 days so far).");
+    expect(options().map((o) => o.classList.contains("is-recent"))).toEqual([...Array(17).fill(false), true, true, true]);
+    expect(body.querySelector(".tr-recent-label").textContent).toBe("recent: may still change");
+    expect(body.querySelector(".tr-recent").getAttribute("style")).toBe("--from:19;--span:3");
+    expect(body.querySelector(".tr-notes").textContent).toContain("Hatched: recent quarters, which may still change; 2026 Q4 is not over (12 of 92 days so far).");
+    expect(body.querySelector(".tr-notes").textContent).toContain(en.trends.removed);
     expect(body.querySelector(".tr-notes").textContent).toContain(en.trends.noForecast);
   });
 
   test("move with the arrow keys, Home and End", () => {
-    options()[18].focus();
+    options()[16].focus();
     key("ArrowLeft");
     key("ArrowUp");
-    expect(picked()).toBe(16);
-    expect(document.activeElement).toBe(options()[16]);
+    expect(picked()).toBe(14);
+    expect(document.activeElement).toBe(options()[14]);
     key("End");
     expect(picked()).toBe(19);
     key("ArrowRight");
@@ -86,7 +91,7 @@ describe("the quarters", () => {
     options()[3].dispatch("mouseenter");
     expect(readout()).toMatch(/^2022 Q4: /);
     body.querySelector(".tr").dispatch("mouseleave");
-    expect(readout()).toMatch(/^2026 Q3: /);
+    expect(readout()).toMatch(/^2026 Q1: /);
   });
 
   test("keep the picked quarter when paid / free changes", () => {
@@ -108,7 +113,7 @@ describe("the view switch", () => {
     expect(radio("share").checked).toBe(true);
     radio("cumulative").dispatch("change");
     expect(radio("cumulative").checked).toBe(true);
-    expect(readout()).toBe("2026 Q3: 19 paid launches since 2022 (1 that quarter)");
+    expect(readout()).toBe("2026 Q1: 17 paid launches since 2022 (1 that quarter)");
     radio("count").dispatch("change");
     expect(body.querySelector(".tr-summary").textContent).toMatch(/^Paid launches in English with your tags: 1 a quarter/);
   });
@@ -118,7 +123,7 @@ describe("the view switch", () => {
     expect(radio("share").disabled).toBe(true);
     expect(radio("count").checked).toBe(true);
     expect(body.querySelector(".tr-fallback").textContent).toBe(en.trends.fallback);
-    expect(readout()).toBe("2026 Q3: 2 paid launches");
+    expect(readout()).toBe("2026 Q1: 2 paid launches");
     section.draw({ ...DEFAULT, tags: [1] }); // a tag picked: back to the share
     expect(radio("share").checked).toBe(true);
     expect(radio("share").disabled).toBe(false);

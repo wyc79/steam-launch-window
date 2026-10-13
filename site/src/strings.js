@@ -289,6 +289,9 @@ export const en = {
     quarter: (year, q) => `${year} Q${q}`,
     soFar: "so far",
     soFarName: (name, from, to) => `${name} so far (${from} to ${to})`,
+    recentName: (name) => `${name} (recent)`,
+    // over the recent quarters, which may still change
+    recent: "recent: may still change",
     justStarted: (name) => `${name} (just started)`,
     // one quarter, in the readout and its label: "2024 Q3: 412 of 7,350 paid launches (5.6%)"
     of: (name, n, all, group, pct) => `${name}: ${n} of ${all} ${group} launches (${pct})`,
@@ -298,14 +301,18 @@ export const en = {
     // the line over the chart
     who: (group, langs) => `${group} launches ${langs} with your tags`,
     whoAll: (group, langs) => `All ${group} launches ${langs}`,
-    summaryShare: (group, langs, first, last) =>
-      `Your tags' share of ${group} launches ${langs}: ${first} in 2022, ${last} in the last four full quarters.`,
-    summaryCount: (who, first, last) => `${who}: ${first} a quarter in 2022, ${last} a quarter in the last four full quarters.`,
+    // span: the four full quarters before the recent ones, "2025 Q2 to 2026 Q1"
+    span: (from, to) => `${from} to ${to}`,
+    summaryShare: (group, langs, first, last, span) =>
+      `Your tags' share of ${group} launches ${langs}: ${first} in 2022, ${last} in ${span}.`,
+    summaryCount: (who, first, last, span) => `${who}: ${first} a quarter in 2022, ${last} a quarter in ${span}.`,
     summaryCumulative: (who, total) => `${who}: ${total} since 2022.`,
     fallback: "No tags picked, so the share is 100% in every quarter: showing launches per quarter.",
     empty: "No past launches match. Try fewer tags, Any of these, or more languages.",
     // one line each under the chart
-    partial: (name, days, length) => `Hatched: ${name} is not over (${days} of ${length} days so far).`,
+    partial: (name, days, length) =>
+      `Hatched: recent quarters, which may still change; ${name} is not over (${days} of ${length} days so far).`,
+    removed: "Older quarters miss games Steam has since removed, so counts rise toward today; the share view is less affected.",
     noForecast: "No forecast: dates for upcoming games are too incomplete to extend the line.",
     tags: "Tags are today's Steam tags: player votes reshape them over time, so the newest quarters rest more on developers' own picks.",
     which: (num) =>

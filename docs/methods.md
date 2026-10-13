@@ -223,7 +223,20 @@ the current quarter, for the picked tags, languages and group (paid or free). La
 and Early Access launches, as in the top bar's count, including the last month, whose 30-day
 reviews are not in yet. Its default view is the share: the selection's launches divided by all
 launches of the same group and languages that quarter, since Steam's launches grow every year.
-The current quarter is partial and marked so. Nothing is drawn ahead: upcoming dates are too
-incomplete, and a trend from announced games waits for the calibration above. Tags are today's,
-so recent launches, whose tags players have shaped less, rest more on developers' own picks,
-and games delisted since launch are missing, which thins older quarters a little.
+Nothing is drawn ahead: upcoming dates are too incomplete, and a trend from announced games
+waits for the calibration above. The current quarter and the two full ones before it are marked
+recent, "may still change", and the line over the chart compares 2022 with the four full
+quarters before them. Two reasons:
+
+- **Games Steam has removed are missing.** The launch history was listed in October 2026, so
+  each quarter holds only games still on Steam then, and Steam removes many low-effort games
+  over time. Older quarters have lost more, so counts rise toward today: paid launches per
+  month run about 1,100 to 1,500 through 2025, 1,700 to 2,050 from March to June 2026 and 2,400
+  to 2,650 from July to September 2026. The share view is less affected, since removals thin
+  all launches of a quarter, not just one niche (unless a niche is removed more often).
+- **Tags are today's.** Recent launches carry the tags their developers set; player votes
+  reshape them over time.
+
+The weekly history runs keep delisted games from October 2026 on (`last_listed` stops moving),
+so after a few months the share Steam removes per quarter can be measured, and the chart
+corrected or recalibrated.

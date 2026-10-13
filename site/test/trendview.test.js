@@ -54,13 +54,21 @@ describe("the share view", () => {
   test("the quarter under way is partial, labelled so far with its days", () => {
     const v = view("share");
     expect(v.bars.at(-1)).toMatchObject({ partial: true, label: "2026 Q4 so far (Oct 1 to Oct 12): 1 of 2 paid launches (50.0%)" });
-    expect(v.partial).toBe("Hatched: 2026 Q4 is not over (12 of 92 days so far).");
+    expect(v.partial).toBe("Hatched: recent quarters, which may still change; 2026 Q4 is not over (12 of 92 days so far).");
     expect(v.bars.filter((b) => b.partial)).toHaveLength(1);
   });
 
-  test("says how 2022 compares with the last four full quarters", () => {
+  test("the partial quarter and the two full ones before it are recent, and say so", () => {
+    const v = view("share");
+    expect(v.recent).toEqual({ from: 17, span: 3 });
+    expect(v.bars.map((b) => b.recent).lastIndexOf(false)).toBe(16);
+    expect(v.bars[17].label).toBe("2026 Q2 (recent): 3 of 4 paid launches (75.0%)");
+    expect(v.bars[16].label).toBe("2026 Q1: 3 of 4 paid launches (75.0%)");
+  });
+
+  test("says how 2022 compares with the four full quarters before the recent ones", () => {
     expect(view("share").summary).toBe(
-      "Your tags' share of paid launches in English: 25.0% in 2022, 75.0% in the last four full quarters.",
+      "Your tags' share of paid launches in English: 25.0% in 2022, 50.0% in 2025 Q2 to 2026 Q1.",
     );
   });
 
@@ -80,7 +88,7 @@ describe("with no tags", () => {
     const v = view("share", { tags: [], languages: ["english"] }, []);
     expect(v).toMatchObject({ view: "count", fallback: true });
     expect(v.bars[0].label).toBe("2022 Q1: 4 paid launches");
-    expect(v.summary).toBe("All paid launches in English: 4 a quarter in 2022, 4 a quarter in the last four full quarters.");
+    expect(v.summary).toBe("All paid launches in English: 4 a quarter in 2022, 4 a quarter in 2025 Q2 to 2026 Q1.");
   });
 });
 
@@ -90,7 +98,7 @@ describe("the other views", () => {
     expect(v.ticks.map((t) => t.text)).toEqual(["0", "1", "2", "3"]);
     expect(v.bars[18].value).toBe(1);
     expect(v.summary).toBe(
-      "Paid launches in English with your tags: 1 a quarter in 2022, 3 a quarter in the last four full quarters.",
+      "Paid launches in English with your tags: 1 a quarter in 2022, 2 a quarter in 2025 Q2 to 2026 Q1.",
     );
   });
 
@@ -107,7 +115,7 @@ describe("the other views", () => {
     expect(v.bars[10].label).toBe("2024 Q3: 1 of 1 free launches (100.0%)");
     expect(v.bars[0].label).toBe("2022 Q1: no free launches");
     expect(v.summary).toBe(
-      "Free launches in any language with your tags: 0 a quarter in 2022, 0 a quarter in the last four full quarters.",
+      "Free launches in any language with your tags: 0 a quarter in 2022, 0 a quarter in 2025 Q2 to 2026 Q1.",
     );
   });
 });

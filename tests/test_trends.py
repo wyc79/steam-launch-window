@@ -15,11 +15,18 @@ def test_quarters_run_from_2022_q1_to_the_partial_quarter_of_today():
     qs = tr.quarters(TODAY)
     assert len(qs) == 20
     assert qs[0] == {"year": 2022, "q": 1, "start": "2022-01-01", "end": "2022-03-31", "length": 90, "days": 90,
-                     "partial": False}
+                     "partial": False, "recent": False}
     assert qs[8]["start"] == "2024-01-01" and qs[8]["length"] == 91  # a leap year's Q1
     assert qs[-1] == {"year": 2026, "q": 4, "start": "2026-10-01", "end": "2026-12-31", "length": 92, "days": 12,
-                      "partial": True}
+                      "partial": True, "recent": True}
     assert [q["partial"] for q in qs].count(True) == 1
+
+
+def test_the_partial_quarter_and_the_two_full_ones_before_it_are_recent():
+    qs = tr.quarters(TODAY)
+    assert [f"{q['year']} Q{q['q']}" for q in qs if q["recent"]] == ["2026 Q2", "2026 Q3", "2026 Q4"]
+    early = tr.quarters(date(2022, 4, 2))  # fewer quarters than the recent ones: all recent
+    assert [q["recent"] for q in early] == [True, True]
 
 
 def test_on_a_quarters_first_day_the_new_quarter_is_there_with_no_days_yet():

@@ -8,6 +8,11 @@ bar's past launch count.
 - Quarters run from TREND_FROM (2022 Q1, where the data starts) to the quarter
   that holds `today`. That last quarter is `partial`: it counts launches before
   `today` only, so `days` says how many of its days are in.
+- The partial quarter and the RECENT_FULL full quarters before it are `recent`:
+  they may still change. The history was listed in October 2026, so older
+  quarters hold only games still on Steam then (Steam removes many games over
+  time) and counts rise toward today; recent games also still carry the tags
+  their developers set, before player votes reshape them.
 - Per group (paid, free): `niche` the selection's launches, `all` every launch
   of the group in the picked languages (any tags), `share` niche / all (None
   when no launch), and running totals of both from 2022 Q1 on.
@@ -21,6 +26,7 @@ from datetime import date, timedelta
 from .heatmap import GROUPS, PANEL_TYPES, group_of, matches, speaks
 
 TREND_FROM = date(2022, 1, 1)  # the history data starts here, on a quarter's first day
+RECENT_FULL = 2  # full quarters before the partial one that are marked recent
 
 
 def quarter_start(d: date) -> date:
@@ -34,7 +40,8 @@ def next_quarter(d: date) -> date:
 
 def quarters(today: date) -> list[dict]:
     """2022 Q1 to the quarter that holds `today`: label parts, first and last day,
-    its length, how many of its days are counted, and whether it is the partial one."""
+    its length, how many of its days are counted, whether it is the partial one, and
+    whether it is recent (the partial one and the RECENT_FULL before it)."""
     out, start, current = [], TREND_FROM, quarter_start(today)
     while start <= current:
         end = next_quarter(start) - timedelta(days=1)
@@ -43,6 +50,8 @@ def quarters(today: date) -> list[dict]:
                     "end": end.isoformat(), "length": (end - start).days + 1,
                     "days": (today - start).days if partial else (end - start).days + 1, "partial": partial})
         start = next_quarter(start)
+    for i, q in enumerate(out):
+        q["recent"] = i >= len(out) - 1 - RECENT_FULL
     return out
 
 

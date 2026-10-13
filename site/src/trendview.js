@@ -50,15 +50,16 @@ const cap = (x) => x.charAt(0).toUpperCase() + x.slice(1);
 function quarterName(q, s) {
   const t = s.trends;
   const name = t.quarter(q.year, q.q);
-  if (!q.partial) return name;
+  if (!q.partial) return q.recent ? t.recentName(name) : name;
   if (!q.days) return t.justStarted(name);
   return t.soFarName(name, formatDate(q.start, s), formatDate(toIso(toDay(q.start) + q.days - 1), s));
 }
 
 // q: quarterly's result. view: the view asked for (share, count or cumulative); with
 // no tags the share is 100% everywhere, so "share" shows the counts (`fallback`).
-// Returns { view, fallback, empty, bars, ticks, years, summary, partial }: one bar per
-// quarter with its height (0 to 1 of the axis), its label and short name.
+// Returns { view, fallback, empty, bars, ticks, years, recent, summary, partial }: one
+// bar per quarter with its height (0 to 1 of the axis), its label and short name;
+// `recent` the first recent quarter and how many (they may still change).
 export function trendView(q, group, view, s = en, { tags = [], languages = [] } = {}) {
   const t = s.trends;
   const fallback = view === "share" && !tags.length;
@@ -79,7 +80,7 @@ export function trendView(q, group, view, s = en, { tags = [], languages = [] } 
     else if (shown === "cumulative") label = t.since(name, f(r.cumulative), word, f(r.niche));
     else if (tags.length) label = t.of(name, f(r.niche), f(r.all), word, formatShare(r.share, s));
     else label = t.plain(name, f(r.niche), r.niche, word);
-    return { year: qq.year, short: `Q${qq.q}`, partial: qq.partial, value: value(r) / top, label };
+    return { year: qq.year, short: `Q${qq.q}`, partial: qq.partial, recent: qq.recent, value: value(r) / top, label };
   });
 
   const years = [];
@@ -88,21 +89,24 @@ export function trendView(q, group, view, s = en, { tags = [], languages = [] } 
     else years.push({ year: qq.year, from: i, span: 1 });
   });
 
-  // the first year against the last four full quarters
-  const full = q.quarters.map((qq, i) => [qq, rows[i]]).filter(([qq]) => !qq.partial);
-  const first = full.filter(([qq]) => qq.year === full[0]?.[0].year).map(([, r]) => r);
-  const last = full.slice(-4).map(([, r]) => r);
+  // the first year against the four full quarters before the recent ones
+  const settled = q.quarters.map((qq, i) => [qq, rows[i]]).filter(([qq]) => !qq.recent);
+  const first = settled.filter(([qq]) => qq.year === settled[0]?.[0].year).map(([, r]) => r);
+  const base = settled.slice(-4);
+  const last = base.map(([, r]) => r);
+  const named = ([qq]) => t.quarter(qq.year, qq.q);
+  const span = base.length ? t.span(named(base[0]), named(base.at(-1))) : "";
   const sum = (list, k) => list.reduce((a, r) => a + r[k], 0);
   const langs = langsText(languages, s);
   const who = tags.length ? cap(t.who(word, langs)) : t.whoAll(word, langs);
   let summary = null;
-  if (full.length >= 8) {
+  if (settled.length >= 8) {
     if (shown === "share") {
       const share = (list) => (sum(list, "all") ? formatShare(sum(list, "niche") / sum(list, "all"), s) : "n/a");
-      summary = t.summaryShare(word, langs, share(first), share(last));
+      summary = t.summaryShare(word, langs, share(first), share(last), span);
     } else if (shown === "count") {
       const avg = (list) => f(Math.round(sum(list, "niche") / list.length));
-      summary = t.summaryCount(who, avg(first), avg(last));
+      summary = t.summaryCount(who, avg(first), avg(last), span);
     } else {
       summary = t.summaryCumulative(who, f(rows.at(-1).cumulative));
     }
@@ -116,6 +120,7 @@ export function trendView(q, group, view, s = en, { tags = [], languages = [] } 
     bars,
     ticks: ticks.map((x) => ({ at: x / top, text: tickText(x, whole, s) })),
     years,
+    recent: { from: bars.findIndex((b) => b.recent), span: bars.filter((b) => b.recent).length },
     summary,
     partial: now?.partial ? t.partial(t.quarter(now.year, now.q), f(now.days), f(now.length)) : null,
   };

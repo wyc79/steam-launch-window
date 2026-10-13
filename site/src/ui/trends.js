@@ -1,7 +1,8 @@
 // Trends: the selection's past launches per quarter since 2022, as a share of all
 // launches (the default: Steam grows every year, so raw counts rise for almost every
-// tag), as counts, or added up. A bar per quarter up from 0; the quarter now under
-// way is hatched and labelled "so far"; nothing is drawn ahead. The quarters are a
+// tag), as counts, or added up. A bar per quarter up from 0; the recent quarters (the
+// one under way, labelled "so far", and the two before it) are hatched and marked
+// "may still change"; nothing is drawn ahead. The quarters are a
 // listbox (one tab stop, arrow keys), each labelled with its numbers, and the line
 // over the chart reads out the picked or pointed-at quarter. Numbers come from
 // numbers.js (lib/trends.js quarterly), text from trendview.js.
@@ -17,7 +18,7 @@ export function trendsSection(s, body) {
   let numbers = null;
   let st = null;
   let view = "share"; // the view asked for; with no tags "share" shows the counts
-  let picked = -1; // -1 until the first draw picks the last full quarter
+  let picked = -1; // -1 until the first draw picks the last quarter before the recent ones
   let options = [];
   let bars = [];
   let drawnFor = null;
@@ -56,6 +57,7 @@ export function trendsSection(s, body) {
     partial,
     h("p", {}, t.noForecast),
     h("p", {}, t.tags),
+    h("p", {}, t.removed),
     h("p", {}, t.which(sectionNumber("history"))),
   );
   const frame = [h("p", { id: labelId, class: "visually-hidden" }, t.label), switcher, fallback, summary, readout, chart, notes];
@@ -92,7 +94,7 @@ export function trendsSection(s, body) {
       "div",
       {
         role: "option",
-        class: `tr-q${b.partial ? " is-partial" : ""}${i === picked ? " is-picked" : ""}`,
+        class: `tr-q${b.recent ? " is-recent" : ""}${b.partial ? " is-partial" : ""}${i === picked ? " is-picked" : ""}`,
         style: `--i:${i + 2};--h:${pct(b.value)}`,
         tabindex: i === picked ? "0" : "-1",
         "aria-selected": String(i === picked),
@@ -113,13 +115,17 @@ export function trendsSection(s, body) {
 
   function draw(v) {
     bars = v.bars;
-    if (picked < 0 || picked >= bars.length) picked = Math.max(0, bars.length - (bars.at(-1)?.partial ? 2 : 1));
+    if (picked < 0 || picked >= bars.length) picked = Math.max(0, (v.recent.span ? v.recent.from : bars.length) - 1);
     options = bars.map(option);
     fill(
       chart,
       h(
         "div",
         { class: "tr", style: `--n:${bars.length}`, onmouseleave: () => showReadout(picked) },
+        v.recent.span > 0 && [
+          h("span", { class: "tr-recent-label", "aria-hidden": "true" }, t.recent),
+          h("span", { class: "tr-recent", style: `--from:${v.recent.from + 2};--span:${v.recent.span}`, "aria-hidden": "true" }),
+        ],
         h(
           "div",
           { class: "tr-grid", "aria-hidden": "true" },

@@ -173,16 +173,25 @@ Access, with or without a 30-day review count yet).
   every year, so raw counts rise for almost every tag), launches per quarter, and the running
   total. Axes start at 0. With no tags the share is 100% everywhere: the switch shows the
   counts, with one line saying why.
-- No line ahead: the chart ends at the current quarter, hatched and labelled "so far" (its
-  days so far in the key). Upcoming dates are too incomplete further out, and a niche trend
-  from announced games waits for the calibration around 2027-01-10.
+- No line ahead: the chart ends at the current quarter, labelled "so far" (its days so far in
+  the key). Upcoming dates are too incomplete further out, and a niche trend from announced
+  games waits for the calibration around 2027-01-10.
+- Recent quarters (decided 2026-10-13): the current quarter and the two full ones before it
+  are hatched, like the far weeks' "dates still being set", and marked "recent: may still
+  change" (`trends.py` `recent`). The history was listed in October 2026, so older quarters
+  miss games Steam has since removed and counts rise toward today; recent games also still
+  carry developer-set tags. The line over the chart compares 2022 with the four full quarters
+  before the recent ones (Cozy, paid, English: "1.0% in 2022, 3.7% in 2025 Q2 to 2026 Q1").
 - Bars drawn by hand in HTML, like the outlook: the quarters are a listbox (one tab stop,
   arrow keys), each labelled with its numbers ("2024 Q3: 412 of 7,350 paid launches (5.6%)"),
-  and a line over the chart reads out the picked or pointed-at quarter. A line over that
-  compares 2022 with the last four full quarters. Phones keep all 20 quarters, with the years
-  as the only labels under them.
-- One line each: the quarter under way, no forecast, tags are today's (player votes reshape
-  them, so recent quarters rest more on developers' own picks), and which launches count.
+  and a line over the chart reads out the picked or pointed-at quarter (at first the last
+  quarter before the recent ones). Phones keep all 20 quarters, with the years as the only
+  labels under them.
+- One line each: the hatched quarters, no forecast, tags are today's (player votes reshape
+  them, so recent quarters rest more on developers' own picks), removed games ("Older quarters
+  miss games Steam has since removed, so counts rise toward today; the share view is less
+  affected."), and which launches count (every full or Early Access launch, as the top bar;
+  the owner agreed, 2026-10-13).
 
 **Methods (separate page).** Built from `docs/methods.md`: sources, what each
 number means, the caveats in full, and credit to Games Popularity.
@@ -302,7 +311,7 @@ A `site` workflow builds and deploys to GitHub Pages:
    per languages, so a tag pick never recomputes it. The niche trend is `heatmap.py`
    `niche_trend` / `trend_from`, ported to `heatmap.js` with golden cases. Section 04 Trends
    built: `analysis/trends.py` `quarterly` (per group and quarter: the selection's launches, all
-   launches, share, running totals, the partial quarter), ported to `src/lib/trends.js` with
+   launches, share, running totals, the partial and recent quarters), ported to `src/lib/trends.js` with
    golden cases (`site/test/golden/trends.json`); `numbers.js` caches it per tags, mode and
    languages (about 11 to 20 ms on the real history, after the paint); `src/trendview.js` makes
    the text and the scale, `src/ui/trends.js` draws it.
