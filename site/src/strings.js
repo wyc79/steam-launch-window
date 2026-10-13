@@ -168,7 +168,7 @@ export const en = {
     demoAdvice: "If you have a demo, show it in Next Fest.",
     demoVsSkipped: (change) => `Launches whose demo was in the last Next Fest got ${change} than those whose demo skipped it`,
     demoVsNone: (change) => `${change} than launches with no demo`,
-    demoAsNone: "about as many as launches with no demo",
+    demoAsNone: "no clear difference from launches with no demo",
     demoSkipped: (change) => `A demo that skipped Next Fest went with ${change} than no demo.`,
     competition: "Weekly competition",
     crowdSmall: "small, mostly general crowding",

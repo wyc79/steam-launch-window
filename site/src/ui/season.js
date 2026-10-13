@@ -12,6 +12,7 @@ import { fill, h, uid } from "./dom.js";
 import { laneItems } from "./lanes.js";
 
 const NONE = []; // the events when events.json failed: one list, so the cached outlook is kept
+const NARROW = "(max-width: 1023px)"; // weeks run down the page (styles.css)
 
 export function seasonSection(s, body) {
   const t = s.season;
@@ -23,6 +24,8 @@ export function seasonSection(s, body) {
   let drawnFor = null; // [outlook, group, band] last drawn
   let picked = 0;
   let options = [];
+  let list = null; // the listbox
+  const narrow = window.matchMedia(NARROW);
 
   const keyLine = h("p", { class: "ol-key" }, t.key);
   const from = h("p", { class: "ol-from quiet" });
@@ -114,25 +117,32 @@ export function seasonSection(s, body) {
     const months = view.weeks.map(
       (w, i) => w.month && h("span", { class: "ol-month", style: `--wk:${i + 2}`, "aria-hidden": "true" }, w.month),
     );
+    list = h(
+      "div",
+      { class: "ol-list", role: "listbox", "aria-labelledby": labelId, onkeydown: keys },
+      options,
+    );
+    orient();
     fill(
       chart,
       h(
         "div",
-        { class: "ol", style: `--weeks:${view.weeks.length}` },
+        { class: "ol", style: `--weeks:${view.weeks.length}`, onmouseleave: () => showDetail(picked) },
         h("span", { class: "ol-corner", "aria-hidden": "true" }, s.ahead.corner),
         months,
         h("span", { class: "ol-axis", "aria-hidden": "true" }, "1.0"),
-        h(
-          "div",
-          { class: "ol-list", role: "listbox", "aria-labelledby": labelId, "aria-orientation": "horizontal", onkeydown: keys },
-          options,
-        ),
+        list,
         h("div", { class: "ol-band", "aria-hidden": "true" }, laneItems(band, 3, s)),
       ),
     );
-    chart.querySelector(".ol").addEventListener("mouseleave", () => showDetail(picked));
     showDetail(picked);
   }
+
+  // weeks run across on wide screens and down under 1024px; every arrow key works either way
+  function orient() {
+    list?.setAttribute("aria-orientation", narrow.matches ? "vertical" : "horizontal");
+  }
+  narrow.addEventListener?.("change", orient);
 
   function redraw() {
     if (events === undefined) return; // the pattern uses the events: wait for them
@@ -140,9 +150,9 @@ export function seasonSection(s, body) {
       body.dataset.drawn = "true";
       fill(body, frame);
     }
-    const list = events ?? NONE;
-    const outlook = numbers.outlook(st, list);
-    const band = bandEvents(list, outlook.weeks[0], outlook.weeks.length, {
+    const eventList = events ?? NONE;
+    const outlook = numbers.outlook(st, eventList);
+    const band = bandEvents(eventList, outlook.weeks[0], outlook.weeks.length, {
       tagNames: st.tags.map((x) => names.get(x)).filter(Boolean),
       languages: st.languages,
     });
@@ -153,7 +163,7 @@ export function seasonSection(s, body) {
     if (drawnFor && key.every((k, i) => k === drawnFor[i])) return;
     drawnFor = key;
     const hadFocus = chart.contains(document.activeElement);
-    view = outlookView(outlook, st.group, { events: list, band: band.events, languages: st.languages }, s);
+    view = outlookView(outlook, st.group, { events: eventList, band: band.events, languages: st.languages }, s);
     picked = Math.min(picked, view.weeks.length - 1);
     draw(band);
     if (hadFocus) options[picked].focus({ preventScroll: true });

@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26, waiting for review).
+Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (sections 01 and 02, the niche trend line) built (PR #27, waiting for review).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -77,7 +77,16 @@ scrolled away; tapping it goes back and focuses the tag field.
 - Launch timing, from the model, as short lines with the size and its range:
   launching in a seasonal sale, in a themed fest that matches your tags, after
   a demo in the last Next Fest. Weekly competition: "small, mostly general
-  crowding". Free games: "not ready yet" until their recount lands.
+  crowding". A size shows only when its range leaves out 1.0; otherwise the line
+  says "no clear effect" or is left out. A group whose status is not "ok" (or no
+  `model.json`) gets one line, "Not ready yet", and none of its numbers.
+- Free games (decided 2026-10-13, now that their recount has landed): the same
+  lines from the free model. Sales and themed fests read "no clear effect". The US
+  holiday weeks (Thanksgiving to Cyber Monday, Christmas to New Year) are shown as
+  advice when their range leaves out 1.0, with one short caution that each rests on
+  only 4 years.
+- Chinese holidays only when Simplified Chinese is picked, from the model's effect
+  for games with Simplified Chinese, marked unconfirmed and never as advice.
 
 **02 Typical for this time of year.** The seasonal outlook for the next 26
 weeks (the all-games pattern for the picked languages, paid or free): a value
@@ -100,6 +109,11 @@ yet set do not thin it out.
   more or less would swing their ratio wildly.
 - Year-only dates: a hatched layer behind a toggle, off by default, and a
   "sometime in 2027: N games" line that names the row it counts (the combination).
+- The niche trend (added 2026-10-13): one line per row whose share of upcoming
+  games differs clearly from its share of past launches ("Cozy: 2.0x its share of
+  past launches among upcoming games"), with the caveat "Announced games: not all
+  will launch." Defined in `analysis/heatmap.py` `niche_trend` (test in
+  `docs/methods.md`).
 - Events lanes under the dates, in the same week columns, with their own
   "Events" label and a rule before the heatmap rows: Steam sales, Next Fests,
   themed fests whose tags match, and Chinese holidays only when Simplified Chinese
@@ -215,7 +229,20 @@ A `site` workflow builds and deploys to GitHub Pages:
    `numbers.js` caches each heatmap row (a picked tag's row is reused when more tags are
    added); a week's games are computed when it opens, for the picked group. `heatmap.py` and
    `heatmap.js` `WEEKS` went from 26 to 13 (golden cases rewritten); the seasonal outlook keeps
-   its own 26. Part 2: sections 01 and 02.
+   its own 26. Part 2 built: sections 01 and 02 and the niche trend line. `src/ui/history.js`
+   draws the history panel (the object `numbers.js` already computed for the count's red;
+   text from `src/panelview.js`) as a table with hand-drawn bars, its raw counts toggle setting
+   the shared measure, and the model's lines (`src/timing.js`: which lines show, the words for
+   a rate ratio and its range). A demo in Next Fest against no demo multiplies two effects;
+   its range treats them as independent, which is wider than the true one (cautious).
+   "Mostly general crowding" and "small" follow the model's placebo check. `src/ui/season.js`
+   draws the outlook as a bar from 1.0 per week with the spread across years behind it, the
+   events lanes (`src/ui/lanes.js`, shared with Competition ahead) and what each week rests on
+   (`src/outlookview.js`, from the parts `season.estimate` already names); the weeks are an
+   ARIA listbox (one tab stop, arrow keys), drawn down the page under 1024px. Chinese holiday
+   parts are named only when Simplified Chinese is picked. `numbers.js` caches the outlook
+   per languages, so a tag pick never recomputes it. The niche trend is `heatmap.py`
+   `niche_trend` / `trend_from`, ported to `heatmap.js` with golden cases.
 5. Methods page.
 6. The deploy workflow, then a review of the live site.
 

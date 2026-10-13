@@ -80,7 +80,7 @@ describe("paid games", () => {
     expect(v.lines).toEqual([
       "Avoid launching during a Steam seasonal sale: such launches got 37% fewer reviews (24% to 47% fewer).",
       "Avoid a themed fest that matches your tags: such launches got 45% fewer reviews (35% to 54% fewer).",
-      "If you have a demo, show it in Next Fest. Launches whose demo was in the last Next Fest got 71% more reviews (36% to 115% more) than those whose demo skipped it, and about as many as launches with no demo.",
+      "If you have a demo, show it in Next Fest. Launches whose demo was in the last Next Fest got 71% more reviews (36% to 115% more) than those whose demo skipped it, and no clear difference from launches with no demo.",
       "A demo that skipped Next Fest went with 40% fewer reviews (28% to 51% fewer) than no demo.",
       "Weekly competition: small, mostly general crowding. Each extra launch in your niche and price tier that week: 0.9% fewer reviews (0.6% to 1.2% fewer).",
     ]);
@@ -115,7 +115,7 @@ describe("free games", () => {
     expect(v.lines).toEqual([
       "Steam seasonal sales: no clear effect.",
       "Themed fests for your tags: no clear effect.",
-      "If you have a demo, show it in Next Fest. Launches whose demo was in the last Next Fest got 95% more reviews (9% to 247% more) than those whose demo skipped it, and about as many as launches with no demo.",
+      "If you have a demo, show it in Next Fest. Launches whose demo was in the last Next Fest got 95% more reviews (9% to 247% more) than those whose demo skipped it, and no clear difference from launches with no demo.",
       "A demo that skipped Next Fest went with 62% fewer reviews (37% to 77% fewer) than no demo.",
       "Weekly competition: mostly general crowding. Each extra launch in your niche that week: 4.8% fewer reviews (3.4% to 6.2% fewer).",
       "Avoid US Thanksgiving to Cyber Monday: such launches got 52% fewer reviews (35% to 64% fewer).",

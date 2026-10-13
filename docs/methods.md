@@ -172,3 +172,13 @@ competition (log-likelihood per game -3.690 against -3.697), so it is the main
 measure, but it ranked them very slightly worse (0.485 against 0.489). The model
 explains who gets more reviews in general far better than it explains anything
 about timing.
+
+## The niche trend (Competition ahead)
+
+A niche's share of upcoming games (exact and month or quarter dates in the
+next 13 weeks, counted as the heatmap counts them) divided by its share of the
+launches in the last 52 weeks, for the same languages and paid or free. The site
+names it only when it is clearly different: at least 10 niche games with exact
+dates, at least one niche launch a week last year, a ratio of 1.25 or more (or
+0.8 or less), and a two-proportion test on exact-date counts at p < 0.05.
+Announced games are not launches: not all will launch.
