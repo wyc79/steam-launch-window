@@ -31,7 +31,7 @@ export function percentOf(x) {
   return Math.floor(x * 100 + 0.5 + EPSILON);
 }
 
-function percent(x, s) {
+export function percent(x, s = en) {
   return numberFormat(s.locale, { style: "percent", maximumFractionDigits: 0 }).format(percentOf(x) / 100);
 }
 

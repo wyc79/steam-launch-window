@@ -96,11 +96,11 @@ describe("the weeks", () => {
     section.draw({ ...DEFAULT, languages: [], group: "free" });
     expect(picked()).toBe(3);
     expect(intro.textContent).toBe(
-      "How busy each coming week usually is across Steam (all free games in any language, not just your tags).",
+      "How busy each coming week usually is, from past years' launches of free games in any language.",
     );
     section.draw({ ...DEFAULT, languages: ["english", "schinese"] });
     expect(intro.textContent).toBe(
-      "How busy each coming week usually is across Steam (all paid games in English or Simplified Chinese, not just your tags).",
+      "How busy each coming week usually is, from past years' launches of paid games in English or Simplified Chinese.",
     );
   });
 

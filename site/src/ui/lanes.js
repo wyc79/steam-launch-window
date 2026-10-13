@@ -9,8 +9,9 @@ import { eventText, formatDate } from "../heatview.js";
 import { h } from "./dom.js";
 
 // band: bandEvents' result. fit: names stay inside their own block (narrow weeks),
-// cut short with an ellipsis; the full name is in the title.
-export function laneItems(band, first, s, { fit = false } = {}) {
+// cut short with an ellipsis; the full name is in the title. note: e -> a sentence
+// added to the title (what past launches during the event did), or null.
+export function laneItems(band, first, s, { fit = false, note = () => null } = {}) {
   const a = s.ahead;
   if (!band.lanes.length) return [];
   const out = [h("div", { class: "hm-band-label", style: `--tr:${first}` }, a.eventsLabel)];
@@ -18,7 +19,9 @@ export function laneItems(band, first, s, { fit = false } = {}) {
     const tr = first + 1 + i;
     out.push(h("div", { class: "hm-lane-name", style: `--tr:${tr}` }, lane.row === 0 ? a.kinds[lane.kind] : ""));
     for (const e of band.events.filter((x) => x.lane === i)) {
-      const full = `${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`;
+      const dates = `${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`;
+      const said = note(e);
+      const full = said ? `${dates}. ${said}` : dates;
       const end = fit ? e.weeks[1] + 1 : e.room; // where the name may run to (a week index)
       out.push(
         h("div", {

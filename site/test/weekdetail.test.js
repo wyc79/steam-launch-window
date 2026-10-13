@@ -134,7 +134,7 @@ describe("the list in parts", () => {
       ["spread", "Month or quarter dates (26, together 26 games' worth)", 26], // no shares given: 1 each
     ]);
     expect(parts[1].items[0].appid).toBe(1); // not re-sorted
-    expect(listParts(items, { year: true }).at(-1).heading).toBe("Year only (1, together 1 games' worth)");
+    expect(listParts(items, { year: true }).at(-1).heading).toBe("Year only (1, together 1 game's worth)");
   });
 
   test("empty parts are left out", () => {

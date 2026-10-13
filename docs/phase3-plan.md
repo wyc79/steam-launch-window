@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year, section links, the week row and searchable week list) built (PR #27, waiting for review).
+Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year for all games, section links, event effects in the lanes and the searchable week list) built (PR #27, waiting for review).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -75,8 +75,8 @@ stays on top once the bar has scrolled away, with the section numbers beside it;
 tapping the summary goes back and focuses the tag field.
 
 Section order (decided 2026-10-13): 01 What history says, 02 Competition ahead, 03
-Typical for this time of year. Reviews in the first 30 days stand in for sales; the
-masthead says so, and so do section 01 and the heatmap's week row where reviews appear.
+Typical for this time of year, for all games. Reviews in the first 30 days stand in for sales; the
+masthead says so, and so do section 01 and the event tooltips in section 02, where reviews appear.
 
 **01 What history says.**
 - The history panel for the selection: quiet, normal and busy launch weeks
@@ -124,13 +124,12 @@ masthead says so, and so do section 01 and the heatmap's week row where reviews 
   more or less would swing their ratio wildly.
 - Year-only dates: a hatched layer behind a toggle, off by default, and a
   "sometime in 2027: N games" line that names the row it counts (the combination).
-- "Past launches in a week like this" (decided 2026-10-13): one row under the events
-  lanes with section 01's event effects for the picked group: the multiplier ("0.63x")
-  in weeks of an event whose line is advice, each event on its own when two overlap; an
-  "unconf." mark for an unconfirmed pattern (or a China holiday with Simplified
-  Chinese); "usual" otherwise. Competition is never a number here. Not ready: no row,
-  one line. Phones show it in each week's row. `src/weekeffects.js`, on `timing.js`'s
-  rules.
+- What past launches during an event did (decided 2026-10-13, in place of a row of its
+  own): in the event block's tooltip and its week's label, never drawn in the lanes. An
+  event whose line in section 01 is advice gets its size ("Past paid launches during a
+  seasonal sale got 37% fewer reviews."); an unconfirmed pattern, or a China holiday with
+  Simplified Chinese, gets "(unconfirmed)" without a number; others nothing. Competition
+  is never a number here. `src/eventeffects.js`, on `timing.js`'s rules.
 - The niche trend line is built (`analysis/heatmap.py` `niche_trend`, ported, with
   `analysis/trend_calibration.py`) but held back (`SHOW_TREND` in `ui/ahead.js`): it
   flags about a fifth of tags on today's upcoming list against 4.4% on launches, so it
@@ -157,8 +156,9 @@ masthead says so, and so do section 01 and the heatmap's week row where reviews 
   from wishlist rank). Order inside each part: games whose top 10 tags match first,
   then the most followers (unknown last), then name, then appid.
 
-**03 Typical for this time of year.** The seasonal outlook for the next 26
-weeks (the all-games pattern for the picked languages, paid or free; the intro names
+**03 Typical for this time of year, for all games.** The seasonal outlook for the next 26
+weeks (the all-games pattern for the picked languages, paid or free; the intro, "How busy
+each coming week usually is, from past years' launches of paid games in English.", names
 them): a value and its spread per week, with the events that drive it on hover
 ("after Next Fest October"). It stays at 26 weeks: it comes from past years, so dates
 not yet set do not thin it out. China's holidays enter the pattern only when
@@ -271,8 +271,8 @@ A `site` workflow builds and deploys to GitHub Pages:
    clustered covariance); without it the site multiplies the two effects with a cautious
    range. The raw counts toggle is in the top bar (`ui/topbar.js`) and sets the shared
    measure for sections 01 and 02; the section links sit beside it (an IntersectionObserver
-   marks the one in view). `src/weekeffects.js` maps the model's event verdicts
-   (`timing.js` `verdict`, `chinaVerdict`) to the heatmap's weeks. A cell's raw numbers
+   marks the one in view). `src/eventeffects.js` turns the model's event verdicts
+   (`timing.js` `verdict`, `chinaVerdict`) into the lanes' tooltips. A cell's raw numbers
    (`heatview.js` `countsText`) go in its label and a fixed tooltip. `src/ui/season.js`
    draws the outlook as a bar from 1.0 per week with the spread across years behind it, the
    events lanes (`src/ui/lanes.js`, shared with Competition ahead) and what each week rests on

@@ -9,7 +9,7 @@ import { bandEvents } from "../events.js";
 import { buildView, countText, CUTS, eventText, formatCut, formatDate, formatValue, trendLines } from "../heatview.js";
 import { WEEKS } from "../lib/heatmap.js";
 import { tagNames } from "../tags.js";
-import { weekEffects } from "../weekeffects.js";
+import { eventEffect } from "../eventeffects.js";
 import { detailItems, findGames, listParts } from "../weekdetail.js";
 import { fill, h, uid } from "./dom.js";
 import { laneItems } from "./lanes.js";
@@ -28,7 +28,6 @@ export function aheadSection(s, body) {
   let names = new Map();
   let events; // undefined while loading, null if events.json failed
   let model; // model.json: undefined while loading, null if missing
-  let like; // weekEffects for the weeks drawn: undefined (not yet), null (model not ready)
   let st = null; // the selection last drawn or asked for
   let rows = null; // heatmapRows drawn (an object from the cache)
   let band = { events: [], lanes: [] };
@@ -64,7 +63,6 @@ export function aheadSection(s, body) {
   );
   const status = h("p", { class: "ah-status", role: "status" });
   const eventsNote = h("p", { class: "ah-events-note quiet" });
-  const likeNote = h("p", { class: "ah-events-note quiet" });
   const keyId = uid("hm-key");
   const scroller = h("div", { class: "hm-scroll" });
   const notes = h("div", { class: "ah-notes" });
@@ -77,19 +75,27 @@ export function aheadSection(s, body) {
   // screen so the grid's scroll area cannot clip it. The cell's label holds the same
   // text, so screen readers skip the box.
   const tip = h("div", { class: "hm-tip", "aria-hidden": "true", hidden: true });
-  const frame = [controls, status, trend, eventsNote, likeNote, scroller, notes, detail, announce, tip];
+  const frame = [controls, status, trend, eventsNote, scroller, notes, detail, announce, tip];
 
   // ---------- the grid ----------
   // Desktop rows: 1 the dates; then, with events, the "Events" label, one row per
   // lane and a rule; then the heatmap rows. Phones put weeks in rows and the
   // heatmap rows in columns 2 on (--tc); the lanes are hidden there.
+  // what past launches during a lane's event did (section 01's rules), or null
+  function effectOf(e) {
+    return eventEffect(model, st.group, e, { languages: st.languages }, s);
+  }
+
+  function withEffect(text, e) {
+    const effect = effectOf(e);
+    return effect ? `${text}. ${effect}` : text;
+  }
+
   function weekHead(w, i) {
     const label = [a.week(w.date, w.to)];
     if (w.current) label.push(a.thisWeek);
     if (w.far) label.push(a.far);
-    if (w.events.length) label.push(a.events(w.events.map((e) => eventText(e, s)).join(", ")));
-    const effect = like?.[i];
-    if (effect) label.push(effect.label);
+    if (w.events.length) label.push(a.events(w.events.map((e) => withEffect(eventText(e, s), e)).join("; ")));
     return h(
       "div",
       {
@@ -109,9 +115,6 @@ export function aheadSection(s, body) {
           { class: "hm-week-events", "aria-hidden": "true" },
           w.events.map((e) => h("span", { class: `hm-tag is-${e.kind}` }, eventText({ ...e, name: e.short }, s))),
         ),
-      effect &&
-        effect.kind !== "usual" &&
-        h("span", { class: `hm-week-like is-${effect.kind}`, "aria-hidden": "true" }, `${a.like.row}: ${effect.text}`),
     );
   }
 
@@ -161,20 +164,8 @@ export function aheadSection(s, body) {
 
   function drawGrid() {
     const nRows = view.rows.length;
-    const after = band.lanes.length ? band.lanes.length + 4 : 2; // the line after the dates and lanes
-    const top = like ? after + 1 : after; // the first heatmap row's line
+    const top = band.lanes.length ? band.lanes.length + 4 : 2; // the first heatmap row's line
     cells = view.rows.map((row, r) => row.cells.map((c, w) => cell(c, r, w, top + r)));
-    // "past launches in a week like this", drawn for the eye; each week's label says it
-    const likeRow =
-      like &&
-      h(
-        "div",
-        { class: "hm-likes", "aria-hidden": "true" },
-        h("div", { class: "hm-like-name", style: `--tr:${after}` }, a.like.row),
-        like.map((x, i) =>
-          h("div", { class: `hm-like is-${x.kind}`, style: `--tr:${after};--wk:${i + 2}`, title: x.label }, x.text),
-        ),
-      );
     const grid = h(
       "div",
       {
@@ -200,8 +191,7 @@ export function aheadSection(s, body) {
         view.weeks.map(weekHead),
       ),
       // the lanes are drawn for the eye; their events are in each week's label
-      h("div", { class: "hm-band", "aria-hidden": "true" }, laneItems(band, 2, s)),
-      likeRow,
+      h("div", { class: "hm-band", "aria-hidden": "true" }, laneItems(band, 2, s, { note: effectOf })),
       view.rows.map((row, r) => h("div", { role: "row", class: "hm-row" }, rowHead(row, r, top + r), cells[r])),
     );
     const far = firstFar(view);
@@ -299,8 +289,9 @@ export function aheadSection(s, body) {
   }
 
   function drawNotes() {
-    const key = [a.key, local.year && a.keyYear, a.typicalNote, view.anyCounts && a.countsNote, like && a.like.key];
-    const caveats = [a.caveatNear, a.caveatFar, local.year && a.caveatYear, like && a.like.caveat];
+    const effects = band.events.some((e) => effectOf(e)); // an event tooltip speaks of reviews
+    const key = [a.key, local.year && a.keyYear, a.typicalNote, view.anyCounts && a.countsNote, effects && a.effectKey];
+    const caveats = [a.caveatNear, a.caveatFar, local.year && a.caveatYear];
     fill(
       notes,
       h("p", { id: keyId, class: "ah-key" }, key.filter(Boolean).join(" ")),
@@ -439,7 +430,7 @@ export function aheadSection(s, body) {
           h("span", { class: "label" }, a.detailEvents),
           " ",
           w.events
-            .map((e) => `${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`)
+            .map((e) => withEffect(`${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`, e))
             .join("; "),
         ),
       h("p", { class: "ah-detail-count" }, items.length ? listed(items, row) : a.detailNone),
@@ -473,10 +464,6 @@ export function aheadSection(s, body) {
       rows = map;
     }
     pickBand();
-    // the model's event effects per week, once model.json and events.json are both in
-    const picked = { tagNames: st.tags.map((t) => names.get(t)).filter(Boolean), languages: st.languages };
-    const both = model !== undefined && events !== undefined;
-    like = both ? weekEffects(model, st.group, events ?? [], rows[0].weeks[0], WEEKS, picked, s) : undefined;
     const hadFocus = scroller.contains(document.activeElement);
     view = buildView(rows, {
       group: st.group,
@@ -502,7 +489,6 @@ export function aheadSection(s, body) {
       ],
     );
     eventsNote.textContent = events === null ? a.eventsFailed : "";
-    likeNote.textContent = like === null ? a.like.notReady : "";
     const nothing = view.empty === a.empty;
     scroller.hidden = nothing;
     detail.hidden = nothing;
@@ -526,7 +512,7 @@ export function aheadSection(s, body) {
       events = list;
       if (st && numbers) redraw();
     },
-    // model.json, or null when it is missing: the "past launches in a week like this" row
+    // model.json, or null when it is missing: what past launches during each event did
     setModel(m) {
       model = m;
       if (st && numbers) redraw();

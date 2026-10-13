@@ -1,6 +1,9 @@
 // Every piece of text the site shows. English now; Chinese comes later as a
 // second object with the same keys. Functions take numbers already formatted.
 
+// "1 game's worth", "about 1 game's worth", "about 38 games' worth"
+const gamesWorth = (n) => (/^(about )?1$/.test(n) ? `${n} game's worth` : `${n} games' worth`);
+
 export const en = {
   lang: "en",
   locale: "en-US",
@@ -95,7 +98,7 @@ export const en = {
     cellPart: (name, value) => `${name} ${value}`,
     // the raw numbers behind a cell (its tooltip, and the end of its label)
     counts: (week, exact, spread, year, typical) =>
-      `Week of ${week}: ${exact} with exact dates, ${spread} games' worth from month or quarter dates${year === null ? "" : `, ${year} from year-only dates`}, ${typical} in a typical week.`,
+      `Week of ${week}: ${exact} with exact dates, ${gamesWorth(spread)} from month or quarter dates${year === null ? "" : `, ${year} from year-only dates`}, ${typical} in a typical week.`,
     about: (n) => `about ${n}`,
     unitNormal: "(1.0 = as many as a typical week)",
     unitRaw: "games",
@@ -119,20 +122,20 @@ export const en = {
     // the week's list: "2,206 games listed: 274 with exact dates · ..."
     detailListed: (total, parts) => `${total} games listed: ${parts}.`,
     listedExact: (n) => `${n} with exact dates`,
-    listedSpread: (n, worth) => `${n} dated only by month or quarter (together ${worth} games' worth)`,
-    listedYear: (n, worth) => `${n} dated only by year (together ${worth} games' worth)`,
+    listedSpread: (n, worth) => `${n} dated only by month or quarter (together ${gamesWorth(worth)})`,
+    listedYear: (n, worth) => `${n} dated only by year (together ${gamesWorth(worth)})`,
     listedTypical: (n) => `${n} in a typical week`,
     detailHow: (sum) =>
       `A month or quarter date is divided across the weeks it covers. Exact and spread are each compared with the same typical week, so they add up: ${sum}.`,
     sumNormal: (parts, total) => `${parts} = about ${total} typical weeks`,
-    sumRaw: (parts, total) => `${parts} = ${total} games' worth`,
+    sumRaw: (parts, total) => `${parts} = ${gamesWorth(total)}`,
     detailNone: "No games in this week.",
     detailEvents: "Events",
     // the week's list, in parts: exact dates always shown in full
     listParts: {
       exact: (n) => `Exact dates (${n})`,
-      spread: (n, worth) => `Month or quarter dates (${n}, together ${worth} games' worth)`,
-      year: (n, worth) => `Year only (${n}, together ${worth} games' worth)`,
+      spread: (n, worth) => `Month or quarter dates (${n}, together ${gamesWorth(worth)})`,
+      year: (n, worth) => `Year only (${n}, together ${gamesWorth(worth)})`,
     },
     announce: (row, week, count) => `${row}, ${week}. ${count}`,
     quarter: (q, year) => `Q${q} ${year}`,
@@ -147,27 +150,16 @@ export const en = {
     searchCount: (shown, total) => `${shown} of ${total} games`,
     listLabel: (week) => `Games in the week of ${week}`,
     noMatch: "No game in this week matches.",
-    // "Past launches in a week like this": the model's event effects by week (weekeffects.js)
-    like: {
-      row: "Past launches in a week like this",
-      ratio: (r) => `${r}x`,
-      effect: (name, change) => `Past launches ${name} got ${change}`,
-      apart: "(each event on its own, not combined)",
-      unconfirmed: "unconf.",
-      unconfirmedLabel: (names) => `An unconfirmed pattern in past launches: ${names}`,
-      usual: "usual",
-      usualLabel: "About usual for past launches",
-      notReady: "Past launches in a week like this: not ready yet.",
-      caveat: "That row: patterns in past launches, against similar games launched in other weeks. Not a forecast.",
-      key: "x = 30-day reviews (our stand-in for sales) against similar launches in other weeks (0.63x = 37% fewer).",
+    // what past launches during a lane's event did, in its tooltip and label (eventeffects.js)
+    effectKey: "An event's tooltip says how past launches during it did: 30-day reviews, our stand-in for sales.",
+    effect: {
+      advice: (who, name, pct, dir) => `Past ${who} launches ${name} got ${pct} ${dir} reviews.`,
+      unconfirmed: (who, name, dir) => `Past ${who} launches ${name}: ${dir} reviews (unconfirmed).`,
+      china: (dir) => `Past launches of games with Simplified Chinese during this holiday: ${dir} reviews (unconfirmed).`,
       names: {
-        sale: "in a Steam seasonal sale",
-        themed_fest: "in a themed fest matching your tags",
+        sale: "during a seasonal sale",
+        themed_fest: "during a themed fest matching their tags",
         next_fest: "during Next Fest",
-        us_thanksgiving: "from US Thanksgiving to Cyber Monday",
-        xmas_newyear: "from Christmas to New Year",
-        cn_spring: "in China's Spring Festival (games with Simplified Chinese)",
-        cn_national: "in China's National Day holiday (games with Simplified Chinese)",
       },
     },
   },
@@ -308,12 +300,11 @@ export const en = {
       intro: "Games in your niche with dates in each of the next 13 weeks.",
     },
     season: {
-      title: "Typical for this time of year",
+      title: "Typical for this time of year, for all games",
       short: "Season",
-      intro: "How busy each coming week usually is across Steam.",
+      intro: "How busy each coming week usually is, from past years' launches.",
       // with the picked group and languages filled in, once the data is in
-      introFor: (group, langs) =>
-        `How busy each coming week usually is across Steam (all ${group} games ${langs}, not just your tags).`,
+      introFor: (group, langs) => `How busy each coming week usually is, from past years' launches of ${group} games ${langs}.`,
       langs: (names) => (names.length ? `in ${names.join(" or ")}` : "in any language"),
       nLangs: (n) => `in ${n} languages`,
     },

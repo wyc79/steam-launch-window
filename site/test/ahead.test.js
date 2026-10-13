@@ -139,7 +139,7 @@ describe("an opened week", () => {
   });
 });
 
-describe("past launches in a week like this", () => {
+describe("what past launches during an event did", () => {
   const MODEL = {
     paid: {
       status: "ok",
@@ -159,21 +159,21 @@ describe("past launches in a week like this", () => {
     return body;
   }
 
-  test("a row under the lanes: the fest's effect in its weeks, usual elsewhere, said in each week's label", () => {
+  test("no row of its own: an advice event's effect goes in its block's tooltip and its week's label", () => {
     const body = drawWith(MODEL);
-    expect(body.querySelector(".hm-like-name").textContent).toBe("Past launches in a week like this");
-    const texts = body.querySelectorAll(".hm-like").map((x) => x.textContent);
-    expect(texts.slice(0, 4)).toEqual(["usual", "usual", "0.55x", "usual"]);
-    expect(body.querySelectorAll(".hm-week")[2].getAttribute("aria-label")).toContain(
-      "Past launches in a themed fest matching your tags got 45% fewer reviews",
+    expect(body.querySelector(".hm-like")).toBeNull();
+    expect(body.querySelector(".hm-block-name").getAttribute("title")).toBe(
+      "Steam Scream V Fest 2026, Oct 26 to Nov 2. Past paid launches during a themed fest matching their tags got 45% fewer reviews.",
     );
-    expect(body.querySelector(".ah-caveats").textContent).toContain("Not a forecast.");
+    expect(body.querySelector(".hm-block-name").textContent).toBe("Scream V Fest"); // no number drawn
+    expect(body.querySelectorAll(".hm-week")[2].getAttribute("aria-label")).toContain(
+      "Events: Steam Scream V Fest 2026. Past paid launches during a themed fest matching their tags got 45% fewer reviews.",
+    );
   });
 
-  test("a group whose model is not ready: no row, one line", () => {
-    const body = drawWith(MODEL, "free");
-    expect(body.querySelector(".hm-like")).toBeNull();
-    expect(body.textContent).toContain("Past launches in a week like this: not ready yet.");
+  test("a group whose model is not ready: the tooltip has only the event", () => {
+    const body = drawWith({ ...MODEL, paid: { status: "unreliable" } });
+    expect(body.querySelector(".hm-block-name").getAttribute("title")).toBe("Steam Scream V Fest 2026, Oct 26 to Nov 2");
   });
 });
 
