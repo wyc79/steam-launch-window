@@ -1,13 +1,21 @@
 // The selection's numbers, computed once and shared: the top bar's count and its
-// red, the heatmap (Competition ahead), and (later) the history panel read the same
-// cached objects. Each result holds both groups, so paid / free costs nothing.
+// red and the history panel (What history says) read the same cached objects, as do
+// the heatmap and its trend line (Competition ahead) and the outlook (Typical for
+// this time of year). Each result holds both groups, so paid / free costs nothing.
 
-import { groupOf, heatmap, historyPanel, matchCount, speaks, weekGames } from "./lib/heatmap.js";
+import { groupOf, heatmap, historyPanel, matchCount, speaks, trendFrom, weekGames } from "./lib/heatmap.js";
+import { outlook } from "./lib/season.js";
 import { query } from "./state.js";
 
 const KEEP = 20; // recent selections kept; older ones are computed again
+export const OUTLOOK_WEEKS = 26; // the outlook comes from past years, so it can look further than the heatmap
 
 const sorted = (list) => [...list].sort();
+
+// what the outlook depends on: the languages (it is the all-games pattern)
+export function outlookKey(st) {
+  return JSON.stringify(sorted(st.languages));
+}
 
 // what the numbers depend on: tags, mode, languages and the panel's measure (not
 // the group, and not the order tags or languages were picked in)
@@ -52,6 +60,9 @@ export function createNumbers(games, history, today) {
   const perTag = new Map();
   const maps = new Map();
   const perRow = new Map();
+  const trends = new Map();
+  const outlooks = new Map();
+  let outlookEvents = null;
   let byId = null;
   // one heatmap row, kept on its own: picking a second tag reuses the first tag's row
   const row = (tags, st) =>
@@ -59,7 +70,7 @@ export function createNumbers(games, history, today) {
       tags,
       ...heatmap(games, today, { selection: tags, mode: st.mode, languages: st.languages, history }),
     }));
-  return {
+  const numbers = {
     has: (st) => results.has(numbersKey(st)),
     hasHeatmap: (st) => maps.has(heatmapKey(st)),
     // what heatmapRows(...) gives with the typical week, for the heatmap (each
@@ -70,6 +81,25 @@ export function createNumbers(games, history, today) {
         if (st.tags.length !== 1) rows.push(row([...st.tags], st));
         return rows;
       }),
+    // the niche trend for each heatmap row, in the same order (null for the all-games
+    // row): trendFrom(row, all games' row), what nicheTrend(...) gives
+    trend: (st) =>
+      remember(trends, heatmapKey(st), () => {
+        const everyone = row([], st);
+        return numbers.heatmap(st).map((r) => (r.tags.length ? trendFrom(r, everyone) : null));
+      }),
+    // the seasonal outlook (both groups) for the selection's languages, from the
+    // pattern of all games; events: events.json's list ([] when it failed)
+    hasOutlook: (st, events) => outlookEvents === events && outlooks.has(outlookKey(st)),
+    outlook: (st, events) => {
+      if (outlookEvents !== events) {
+        outlooks.clear();
+        outlookEvents = events;
+      }
+      return remember(outlooks, outlookKey(st), () =>
+        outlook(history, events, today, { weeks: OUTLOOK_WEEKS, languages: st.languages }),
+      );
+    },
     // one row's games in one week, for the picked group, in weekGames' order; on
     // demand, not cached (one pass over the upcoming games)
     weekGames: (st, tags, week, year) =>
@@ -91,4 +121,5 @@ export function createNumbers(games, history, today) {
     tagCounts: (st) =>
       remember(perTag, JSON.stringify([sorted(st.languages), st.group]), () => tagCounts(games, st)),
   };
+  return numbers;
 }

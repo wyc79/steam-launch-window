@@ -41,12 +41,17 @@ export function weeklyRatios(history, { selection = [], mode = "and", languages 
   return out;
 }
 
+// an event's name without its year: the name of its series
+export function seriesName(name) {
+  return name.replace(YEAR, "").trim();
+}
+
 // Start weeks of each recurring event, by name without the year.
 export function eventSeries(events) {
   const series = {};
   for (const e of events) {
     if (EVENT_TYPES.includes(e.type)) {
-      (series[e.name.replace(YEAR, "").trim()] ??= []).push(weekStartDay(toDay(e.start)));
+      (series[seriesName(e.name)] ??= []).push(weekStartDay(toDay(e.start)));
     }
   }
   return Object.fromEntries(

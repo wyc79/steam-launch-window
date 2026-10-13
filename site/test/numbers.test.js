@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { heatmapRows, matchCount, weekGames } from "../src/lib/heatmap.js";
+import { heatmapRows, matchCount, nicheTrend, weekGames } from "../src/lib/heatmap.js";
+import { outlook } from "../src/lib/season.js";
 import { createNumbers, heatmapKey, numbersKey, tagCounts } from "../src/numbers.js";
 import { DEFAULT } from "../src/state.js";
 
@@ -144,6 +145,20 @@ describe("the heatmap's numbers", () => {
     expect(shared.hasHeatmap(pick({ tags: [1] }))).toBe(false);
   });
 
+  test("the trend line's numbers are nicheTrend for each row, none for all games", () => {
+    const shared = numbers();
+    const st = pick({ tags: [1, 2], mode: "or" });
+    const trends = shared.trend(st);
+    const q = { mode: "or", languages: ["english"] };
+    expect(trends).toEqual([
+      nicheTrend(UP, HISTORY, TODAY, { ...q, selection: [1] }),
+      nicheTrend(UP, HISTORY, TODAY, { ...q, selection: [2] }),
+      nicheTrend(UP, HISTORY, TODAY, { ...q, selection: [1, 2] }),
+    ]);
+    expect(shared.trend({ ...st, group: "free" })).toBe(trends);
+    expect(shared.trend(pick({}))).toEqual([null]);
+  });
+
   test("a week's games are weekGames' list for the picked group, in its order", () => {
     const shared = numbers();
     const paid = shared.weekGames(pick({}), [1], "2026-10-12", false);
@@ -151,5 +166,26 @@ describe("the heatmap's numbers", () => {
     expect(paid.map((g) => g.appid)).toEqual(all.filter((g) => !g.free).map((g) => g.appid));
     expect(shared.weekGames(pick({ group: "free" }), [1], "2026-10-12", false).map((g) => g.appid)).toEqual([3]);
     expect(shared.game(2).name).toBe("G2");
+  });
+});
+
+describe("the outlook", () => {
+  const EVENTS = [{ name: "Steam Next Fest October 2024", type: "next_fest", start: "2024-10-14" }];
+
+  test("is season.outlook for 26 weeks from the snapshot, for the languages", () => {
+    const shared = createNumbers([], HISTORY, "2026-10-13");
+    const st = pick({ languages: ["schinese"] });
+    expect(shared.outlook(st, EVENTS)).toEqual(outlook(HISTORY, EVENTS, "2026-10-13", { weeks: 26, languages: ["schinese"] }));
+  });
+
+  test("is cached per languages: tags, mode, group and measure reuse it", () => {
+    const shared = createNumbers([], HISTORY, "2026-10-13");
+    const first = shared.outlook(pick({}), EVENTS);
+    for (const patch of [{ tags: [1] }, { mode: "or" }, { group: "free" }, { measure: "raw" }]) {
+      expect(shared.hasOutlook(pick(patch), EVENTS)).toBe(true);
+      expect(shared.outlook(pick(patch), EVENTS)).toBe(first);
+    }
+    expect(shared.hasOutlook(pick({ languages: [] }), EVENTS)).toBe(false);
+    expect(shared.hasOutlook(pick({}), [])).toBe(false); // other events: computed again
   });
 });

@@ -113,7 +113,7 @@ describe("drawing the count", () => {
   });
 });
 
-describe("section 01", () => {
+describe("Competition ahead", () => {
   // a fake section: records what connect asks of it
   function fakeAhead() {
     const calls = [];
@@ -186,5 +186,68 @@ describe("section 01", () => {
     flush();
     expect(ahead.calls).toContain("events failed");
     expect(ahead.calls.at(-1)).toBe("draw paid ");
+  });
+});
+
+describe("What history says and Typical for this time of year", () => {
+  function fakePart(pending = () => false) {
+    const calls = [];
+    return {
+      calls,
+      start: () => calls.push("start"),
+      setModel: (model) => calls.push(`model ${model ? model.paid.status : "missing"}`),
+      setEvents: (events) => calls.push(`events ${events?.length ?? "failed"}`),
+      pending,
+      draw: (st) => calls.push(`draw ${st.measure}`),
+      busy: () => calls.push("busy"),
+    };
+  }
+
+  function startWith(history, season) {
+    const { files, data } = fakeData();
+    const { bar } = fakeBar();
+    const queue = [];
+    const selection = createState();
+    const parts = { settle: vi.fn() };
+    const numbers = connect({ data, selection, bar, parts, history, season, s: en, later: (fn) => queue.push(fn) });
+    const flush = () => queue.splice(0).forEach((fn) => fn());
+    return { files, selection, numbers, flush };
+  }
+
+  test("the history section hears model.json (or its absence) and draws each selection", async () => {
+    const history = fakePart();
+    const { files, selection, numbers, flush } = startWith(history, null);
+    files.meta.resolve(META);
+    files.upcoming.resolve(GAMES);
+    files.history.resolve(HISTORY);
+    files.model.resolve(null);
+    await numbers;
+    await tick();
+    flush();
+    expect(history.calls).toEqual(["start", "busy", "model missing", "draw relative"]);
+    selection.set({ measure: "raw" }); // a new panel: computed after the paint
+    expect(history.calls.at(-1)).toBe("busy");
+    flush();
+    expect(history.calls.at(-1)).toBe("draw raw");
+  });
+
+  test("the outlook waits for the paint only when it has to be computed", async () => {
+    let pending = true;
+    const season = fakePart(() => pending);
+    const { files, selection, numbers, flush } = startWith(null, season);
+    files.meta.resolve(META);
+    files.upcoming.resolve(GAMES);
+    files.history.resolve(HISTORY);
+    files.events.resolve([]);
+    await numbers;
+    await tick();
+    flush();
+    expect(season.calls).toEqual(["start", "busy", "events 0", "draw relative"]);
+    pending = false;
+    selection.set({ group: "free" });
+    expect(season.calls.at(-1)).toBe("draw relative"); // drawn at once
+    pending = true;
+    selection.toggleLanguage("schinese");
+    expect(season.calls.at(-1)).toBe("busy");
   });
 });

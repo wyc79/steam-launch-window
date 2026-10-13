@@ -131,6 +131,97 @@ export const en = {
     showAll: (n) => `Show all ${n}`,
   },
 
+  // What history says: the panel and the model's lines
+  history: {
+    panelTitle: "Quiet, normal and busy weeks",
+    panelFor: (group, n) => `${group} games like yours: ${n} past launches with a 30-day review count.`,
+    raw: "Raw counts",
+    caption: "30-day reviews of past launches, by how busy their launch week was",
+    heads: { part: "Launch week", p75: "75th percentile", p90: "90th percentile", median: "Median", games: "Launches" },
+    headsShort: { p75: "75th", p90: "90th", median: "Median", games: "Games" },
+    parts: { quiet: "Quiet", normal: "Normal", busy: "Busy" },
+    range: (lo, hi) => (lo === hi ? lo : `${lo} to ${hi}`),
+    read: "1 in 4 launches got more reviews than the 75th percentile, 1 in 10 more than the 90th.",
+    barsKey: "Bars: solid to the 75th, faint to the 90th, a gap at the median.",
+    cutsRelative: (quiet, busy) =>
+      `Busy: other launches like yours that week, against the average week in the 13 weeks before. Quiet is up to ${quiet} times that, busy over ${busy}.`,
+    cutsRaw: (quiet, busy) => `Busy: how many other launches like yours that week. Quiet is up to ${quiet}, busy over ${busy}.`,
+    none: "No past launches match. Try fewer tags or Any of these.",
+    tooFew: (min) =>
+      `Too few past launches to split into quiet, normal and busy weeks (each needs ${min}). Try fewer tags or Any of these.`,
+    timingTitle: "Launch timing",
+    timingFor: (group) => `${group} games, compared with otherwise similar launches:`,
+    notReady: "Not ready yet.",
+    // a rate ratio as words: "37% fewer reviews (24% to 47% fewer)"
+    change: (pct, dir, lo, hi) => `${pct} ${dir} reviews (${lo} to ${hi} ${dir})`,
+    fewer: "fewer",
+    more: "more",
+    noClear: "no clear effect",
+    noEffect: (what) => `${what}: no clear effect.`,
+    sale: "Steam seasonal sales",
+    saleAvoid: (change) => `Avoid launching during a Steam seasonal sale: such launches got ${change}.`,
+    saleGood: (change) => `Launches during a Steam seasonal sale got ${change}.`,
+    fest: "Themed fests for your tags",
+    festAvoid: (change) => `Avoid a themed fest that matches your tags: such launches got ${change}.`,
+    festGood: (change) => `Launches during a themed fest that matched their tags got ${change}.`,
+    demoFest: "A demo in Next Fest",
+    demoAdvice: "If you have a demo, show it in Next Fest.",
+    demoVsSkipped: (change) => `Launches whose demo was in the last Next Fest got ${change} than those whose demo skipped it`,
+    demoVsNone: (change) => `${change} than launches with no demo`,
+    demoAsNone: "about as many as launches with no demo",
+    demoSkipped: (change) => `A demo that skipped Next Fest went with ${change} than no demo.`,
+    competition: "Weekly competition",
+    crowdSmall: "small, mostly general crowding",
+    crowd: "mostly general crowding",
+    perLaunch: { comp_tier: "in your niche and price tier", competition: "in your niche" },
+    competitionLine: (desc, where, change) =>
+      `Weekly competition${desc ? `: ${desc}` : ""}. Each extra launch ${where} that week: ${change}.`,
+    holidays: {
+      us_thanksgiving: (change) => `Avoid US Thanksgiving to Cyber Monday: such launches got ${change}.`,
+      xmas_newyear: (change) => `Avoid Christmas to New Year: such launches got ${change}.`,
+    },
+    holidaysGood: {
+      us_thanksgiving: (change) => `Launches from US Thanksgiving to Cyber Monday got ${change}.`,
+      xmas_newyear: (change) => `Launches from Christmas to New Year got ${change}.`,
+    },
+    holidayYears: (n) => `The US holiday lines rest on only ${n} years each.`,
+    china: "China holidays, for games with Simplified Chinese (unconfirmed, not advice):",
+    chinaLine: { cn_spring: "Spring Festival", cn_national: "National Day" },
+    chinaChange: (name, change) => `${name}: ${change}.`,
+    caveat: "These are patterns in past launches, not proof of cause.",
+  },
+
+  // Typical for this time of year: the seasonal outlook
+  season: {
+    key: "1.0 = as many launches as the average week in the 13 weeks before. The bar: the usual value. The box behind it: how much it varied across years.",
+    from: (group) => `From all ${group} games in your languages, not just your tags.`,
+    paid: "paid",
+    free: "free",
+    label: "The next 26 weeks, how busy each usually is",
+    value: (v) => v,
+    none: "–",
+    noneSaid: "not enough past years",
+    spread: (lo, hi) => `${lo} to ${hi} across years`,
+    usually: (v) => `usually ${v}`,
+    calendar: "the same week in past years",
+    at: (name) => `the week of ${name}`,
+    after: (n, name) => (n === 1 ? `1 week after ${name}` : `${n} weeks after ${name}`),
+    before: (n, name) => (n === 1 ? `1 week before ${name}` : `${n} weeks before ${name}`),
+    drivers: (list) => `From ${list}.`,
+    unconfirmed: "unconfirmed",
+    detail: (week, value, spread) => (spread ? `${week}: ${value} (${spread}).` : `${week}: ${value}.`),
+    option: (week, value, spread, drivers) =>
+      `${week}: ${value}${spread ? `, ${spread}` : ""}.${drivers ? ` ${drivers}` : ""}`,
+    eventsFailed: "Steam events could not be loaded, so this pattern leaves them out.",
+    hint: "Point at or focus a week to see what it rests on.",
+  },
+
+  // Competition ahead: the niche trend line
+  trend: {
+    line: (row, ratio) => `${row}: ${ratio}x its share of past launches among upcoming games.`,
+    caveat: "Announced games: not all will launch.",
+  },
+
   // numbered in page order (ui/sections.js SECTIONS)
   sections: {
     history: {

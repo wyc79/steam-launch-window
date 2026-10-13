@@ -106,6 +106,27 @@ describe("the grid", () => {
     expect(body.querySelector(".hm-row-note").textContent).toBe("about 1.0 launches in a typical week");
   });
 
+  test("draws no trend line when the niche's share is as usual", () => {
+    expect(draw().querySelector(".ah-trend").textContent).toBe("");
+  });
+
+  test("names a niche whose share of upcoming games differs clearly, with its caveat", () => {
+    // Horror: 20 of 40 upcoming games with exact dates, 52 of 208 past launches
+    const games = Array.from({ length: 40 }, (_, i) =>
+      game(500 + i, "day", "2026-10-20", "2026-10-20", { tags: i < 20 ? [1] : [2] }),
+    );
+    const history = Array.from({ length: 208 }, (_, i) => ({ ...HISTORY[i % 52], tags: i < 52 ? [1] : [2] }));
+    const body = h("div");
+    const section = aheadSection(en, body);
+    section.start(createNumbers(games, history, TODAY), { ...META, tags: [...META.tags, [2, "Puzzle", 20, 156]] });
+    section.setEvents([]);
+    section.draw({ ...DEFAULT, tags: [1] });
+    expect(body.querySelectorAll(".ah-trend p").map((p) => p.textContent)).toEqual([
+      "Horror: 2.0x its share of past launches among upcoming games.",
+      "Announced games: not all will launch.",
+    ]);
+  });
+
   test("without events.json, draws the heatmap and says the lanes are missing", () => {
     const body = draw(null);
     expect(body.querySelectorAll(".hm-cell").length).toBeGreaterThan(0);

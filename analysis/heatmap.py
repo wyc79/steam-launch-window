@@ -35,6 +35,9 @@ MIN_GROUP = 30
 RELATIVE_WEEKS = 13  # the relative busy measure compares a week with this many weeks before it
 TYPICAL_WEEKS = 52  # the heatmap's normalized view compares with launches over this many weeks
 LATER_AFTER = 2  # year-only dates more than this many years ahead ("2099") are summed as "later"
+TREND_MIN_EXACT = 10  # the niche trend needs this many niche games with exact dates
+TREND_RATIO = 1.25  # and a share at least this many times the past one (or at most its inverse)
+TREND_Z = 1.959964  # and a two-proportion z-test at p < 0.05, two-sided
 
 
 def week_start(d: date) -> date:
@@ -156,6 +159,55 @@ def heatmap_rows(games, today: date, selection=(), mode: str = "and", languages=
     if len(selection) != 1:
         out.append({"tags": list(selection), **heatmap(games, today, selection, mode, languages, history)})
     return out
+
+
+def trend_from(niche: dict, everyone: dict) -> dict:
+    """The niche trend from two heatmaps (with `history`) for the same languages and
+    today: the niche's and all games'. See `niche_trend`."""
+    out = {}
+    for g in GROUPS:
+        up = sum(c["exact"] + c["spread"] for c in niche[g])
+        up_all = sum(c["exact"] + c["spread"] for c in everyone[g])
+        exact = sum(c["exact"] for c in niche[g])
+        exact_all = sum(c["exact"] for c in everyone[g])
+        past = round(niche["typical"][g] * TYPICAL_WEEKS)
+        past_all = round(everyone["typical"][g] * TYPICAL_WEEKS)
+        share_up = up / up_all if up_all else None
+        share_past = past / past_all if past_all else None
+        ratio = share_up / share_past if share_up is not None and share_past else None
+        z = None
+        if exact_all and past_all:
+            pooled = (exact + past) / (exact_all + past_all)
+            se = (pooled * (1 - pooled) * (1 / exact_all + 1 / past_all)) ** 0.5
+            z = (exact / exact_all - past / past_all) / se if se else 0.0
+        clear = (ratio is not None and z is not None and exact >= TREND_MIN_EXACT and past >= TYPICAL_WEEKS
+                 and (ratio >= TREND_RATIO or ratio <= 1 / TREND_RATIO)
+                 and abs(z) >= TREND_Z and (z > 0) == (ratio > 1))
+        out[g] = {"ratio": ratio, "upcoming": up, "upcoming_all": up_all, "exact": exact, "exact_all": exact_all,
+                  "past": past, "past_all": past_all, "z": z, "clear": clear}
+    return out
+
+
+def niche_trend(games, history, today: date, selection=(), mode: str = "and", languages=()) -> dict | None:
+    """Per group, how the niche's share of upcoming games compares with its share of
+    past launches: (niche / all games among the upcoming games with exact or spread
+    dates in the heatmap's WEEKS, counted as `heatmap` counts them) divided by (niche
+    / all games among the launches of the last TYPICAL_WEEKS, as in `typical`). All
+    games means the same languages and group, any tags. 2.0 means the niche is twice
+    as large a part of what is coming as of what launched.
+
+    `clear` (the site shows the line only then): at least TREND_MIN_EXACT niche games
+    with exact dates, at least one niche launch a week in the past year (the heatmap's
+    own rule for comparing at all), a ratio of at least TREND_RATIO either way, and a
+    two-proportion z-test on exact-date counts (exact niche / exact all against past
+    niche / past all, pooled) at p < 0.05 two-sided (|z| >= TREND_Z) that points the
+    same way. Exact dates only, since spread dates are fractions of games. Also
+    returned: `upcoming`, `exact`, `past` and their `_all`, and `z`. No tags: None
+    (the niche would be all games)."""
+    if not selection:
+        return None
+    return trend_from(heatmap(games, today, selection, mode, languages, history),
+                      heatmap(games, today, (), "and", languages, history))
 
 
 def normalized(h: dict) -> dict | None:

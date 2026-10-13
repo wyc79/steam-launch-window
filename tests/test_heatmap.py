@@ -278,3 +278,55 @@ def test_unknown_mode_or_measure_is_an_error():
         hm.matches([1], [1], "xor")
     with pytest.raises(ValueError):
         hm.history_panel([], measure="ratio")
+
+
+def _trend_data(niche_exact, other_exact, niche_past, other_past):
+    """Upcoming games with exact dates this week (shooters and cozy games) and past
+    launches in the last 52 weeks."""
+    games = [game("day", "2026-10-14")] * niche_exact + [game("day", "2026-10-14", tags=(COZY,))] * other_exact
+    history = [past("2026-03-02", 10)] * niche_past + [past("2026-03-02", 10, tags=(COZY,))] * other_past
+    return games, history
+
+
+def test_niche_trend_compares_shares_of_upcoming_and_past():
+    games, history = _trend_data(30, 20, 52, 156)  # 60% of upcoming, 25% of past
+    t = hm.niche_trend(games, history, TODAY, [SHOOTER])["paid"]
+    assert t["ratio"] == pytest.approx(0.6 / 0.25)
+    assert (t["upcoming"], t["upcoming_all"], t["exact"], t["past"], t["past_all"]) == (30, 50, 30, 52, 208)
+    assert t["z"] > hm.TREND_Z and t["clear"] is True
+
+
+def test_niche_trend_counts_spread_dates_but_tests_exact_dates():
+    games, history = _trend_data(30, 20, 52, 156)
+    games += [game("month", "2026-10-01", "2026-10-31", tags=(COZY,))] * 40  # spread, all inside the 13 weeks
+    t = hm.niche_trend(games, history, TODAY, [SHOOTER])["paid"]
+    assert t["upcoming_all"] == pytest.approx(90)
+    assert t["ratio"] == pytest.approx((30 / 90) / 0.25)  # 1.33
+    assert t["exact_all"] == 50 and t["clear"] is True     # the test still sees 30 of 50 exact dates
+
+
+def test_niche_trend_needs_size_a_clear_test_and_a_big_enough_ratio():
+    # 9 exact dates: too few, however large the ratio
+    assert hm.niche_trend(*_trend_data(9, 1, 52, 156), TODAY, [SHOOTER])["paid"]["clear"] is False
+    # under one launch a week in the past year
+    assert hm.niche_trend(*_trend_data(30, 20, 51, 153), TODAY, [SHOOTER])["paid"]["clear"] is False
+    # a ratio of 1.15: under TREND_RATIO although the test is clear
+    t = hm.niche_trend(*_trend_data(300, 700, 1300, 3700), TODAY, [SHOOTER])["paid"]
+    assert t["ratio"] == pytest.approx(0.3 / 0.26) and t["z"] > hm.TREND_Z and t["clear"] is False
+    # a big ratio on few games: the test is not clear
+    t = hm.niche_trend(*_trend_data(12, 38, 52, 260), TODAY, [SHOOTER])["paid"]
+    assert t["ratio"] == pytest.approx(1.44) and abs(t["z"]) < hm.TREND_Z and t["clear"] is False
+
+
+def test_niche_trend_flags_a_smaller_share_too():
+    t = hm.niche_trend(*_trend_data(10, 190, 104, 104), TODAY, [SHOOTER])["paid"]
+    assert t["ratio"] == pytest.approx(0.1) and t["z"] < -hm.TREND_Z and t["clear"] is True
+
+
+def test_niche_trend_without_tags_or_history():
+    games, history = _trend_data(30, 20, 52, 156)
+    assert hm.niche_trend(games, history, TODAY) is None
+    t = hm.niche_trend(games, [], TODAY, [SHOOTER])
+    assert t["paid"]["ratio"] is None and t["paid"]["z"] is None and t["paid"]["clear"] is False
+    assert t["free"] == {"ratio": None, "upcoming": 0, "upcoming_all": 0, "exact": 0, "exact_all": 0,
+                         "past": 0, "past_all": 0, "z": None, "clear": False}

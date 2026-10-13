@@ -5,12 +5,14 @@ import {
   CUTS,
   formatCut,
   formatDate,
+  formatRatio,
   formatValue,
   rowLabel,
   shownValue,
   sometimeLines,
   spokenValue,
   step,
+  trendLines,
   weekHeads,
 } from "../src/heatview.js";
 import { heatmapRows, WEEKS } from "../src/lib/heatmap.js";
@@ -233,4 +235,32 @@ describe("the sometime lines", () => {
 
 test("the section's intro says how many weeks it shows", () => {
   expect(en.sections.ahead.intro).toContain(`${WEEKS} weeks`);
+});
+
+describe("the niche trend line", () => {
+  const t = (ratio, clear) => ({ ratio, clear });
+  const rows = [{ label: "Cozy" }, { label: "Card Game" }, { label: "Platformer" }, { label: "All of these" }];
+
+  test("names each row whose share differs clearly for the picked group", () => {
+    const trends = [
+      { paid: t(2.0137, true), free: t(1.1, false) },
+      { paid: t(1.3, false), free: t(3, true) },
+      { paid: t(0.6912, true), free: t(1, false) },
+      null,
+    ];
+    expect(trendLines(rows, trends, "paid")).toEqual([
+      "Cozy: 2.0x its share of past launches among upcoming games.",
+      "Platformer: 0.69x its share of past launches among upcoming games.",
+    ]);
+    expect(trendLines(rows, trends, "free")).toEqual(["Card Game: 3.0x its share of past launches among upcoming games."]);
+  });
+
+  test("says nothing for all games or when nothing is clear", () => {
+    expect(trendLines([{ label: "All games" }], [null], "paid")).toEqual([]);
+    expect(trendLines(rows.slice(0, 1), [{ paid: t(null, false), free: t(null, false) }], "paid")).toEqual([]);
+  });
+
+  test("ratios to two significant digits", () => {
+    expect([2, 1.25, 0.6912, 12.4].map((r) => formatRatio(r))).toEqual(["2.0", "1.3", "0.69", "12"]);
+  });
 });

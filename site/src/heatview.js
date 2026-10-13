@@ -142,6 +142,21 @@ export function buildView(rows, { group, raw = false, year = false, mode = "and"
   };
 }
 
+// "2.0", "1.3", "0.69": a share ratio to two significant digits
+export function formatRatio(ratio, s = en) {
+  return numberFormat(s.locale, { minimumSignificantDigits: 2, maximumSignificantDigits: 2 }).format(ratio);
+}
+
+// The niche trend lines, "Cozy: 2.0x its share of past launches among upcoming
+// games.", for the rows (buildView's) whose trend (numbers.trend, one per row, null
+// for all games) is clear for the picked group.
+export function trendLines(rows, trends, group, s = en) {
+  return rows.flatMap((r, i) => {
+    const t = trends[i]?.[group];
+    return t?.clear ? [s.trend.line(r.label, formatRatio(t.ratio, s))] : [];
+  });
+}
+
 // "sometime in 2027: 2,631 games", one per year, then "later: ..." (heatmap's
 // sometime), for one row
 export function sometimeLines(row, group, s = en) {

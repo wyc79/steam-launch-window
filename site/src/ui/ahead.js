@@ -6,11 +6,12 @@
 
 import { formatNumber } from "../count.js";
 import { bandEvents } from "../events.js";
-import { buildView, CUTS, eventText, formatCut, formatDate } from "../heatview.js";
+import { buildView, CUTS, eventText, formatCut, formatDate, trendLines } from "../heatview.js";
 import { WEEKS } from "../lib/heatmap.js";
 import { tagNames } from "../tags.js";
 import { detailItems, listParts } from "../weekdetail.js";
 import { fill, h, uid } from "./dom.js";
+import { laneItems } from "./lanes.js";
 
 const PHONE = "(max-width: 639px)";
 
@@ -60,7 +61,9 @@ export function aheadSection(s, body) {
   const detail = h("div", { class: "ah-detail" });
   // the opened week, said once (not the whole list) for screen readers
   const announce = h("p", { class: "visually-hidden", "aria-live": "polite" });
-  const frame = [controls, status, eventsNote, scroller, notes, detail, announce];
+  // the niche trend: lines only when a share differs clearly (heatmap.js trendFrom)
+  const trend = h("div", { class: "ah-trend" });
+  const frame = [controls, status, trend, eventsNote, scroller, notes, detail, announce];
 
   // ---------- the grid ----------
   // Desktop rows: 1 the dates; then, with events, the "Events" label, one row per
@@ -134,33 +137,6 @@ export function aheadSection(s, body) {
     );
   }
 
-  // the events lanes: a block over the weeks each event covers, its name from its
-  // first week up to the next event in the lane (cut short with an ellipsis there)
-  function lanes(first) {
-    if (!band.lanes.length) return [];
-    const out = [h("div", { class: "hm-band-label", style: `--tr:${first}` }, a.eventsLabel)];
-    band.lanes.forEach((lane, i) => {
-      const tr = first + 1 + i;
-      out.push(h("div", { class: "hm-lane-name", style: `--tr:${tr}` }, lane.row === 0 ? a.kinds[lane.kind] : ""));
-      for (const e of band.events.filter((x) => x.lane === i)) {
-        const full = `${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`;
-        out.push(
-          h("div", {
-            class: `hm-block is-${e.kind}`,
-            style: `--tr:${tr};--from:${e.weeks[0] + 2};--to:${e.weeks[1] + 3}`,
-          }),
-          h(
-            "div",
-            { class: "hm-block-name", style: `--tr:${tr};--from:${e.weeks[0] + 2};--to:${e.room + 2}`, title: full },
-            eventText({ ...e, name: e.short }, s),
-          ),
-        );
-      }
-    });
-    out.push(h("div", { class: "hm-band-rule", style: `--tr:${first + 1 + band.lanes.length}` }));
-    return out;
-  }
-
   function drawGrid() {
     const nRows = view.rows.length;
     const top = band.lanes.length ? band.lanes.length + 4 : 2; // the first heatmap row's line
@@ -186,7 +162,7 @@ export function aheadSection(s, body) {
         view.weeks.map(weekHead),
       ),
       // the lanes are drawn for the eye; their events are in each week's label
-      h("div", { class: "hm-band", "aria-hidden": "true" }, lanes(2)),
+      h("div", { class: "hm-band", "aria-hidden": "true" }, laneItems(band, 2, s)),
       view.rows.map((row, r) => h("div", { role: "row", class: "hm-row" }, rowHead(row, r, top + r), cells[r])),
     );
     const far = firstFar(view);
@@ -411,6 +387,14 @@ export function aheadSection(s, body) {
     };
     if (open && open.row >= view.rows.length) open = null;
     status.textContent = view.empty ?? "";
+    const trends = view.empty === a.empty ? [] : trendLines(view.rows, numbers.trend(st), st.group, s);
+    fill(
+      trend,
+      trends.length > 0 && [
+        trends.map((t) => h("p", { class: "ah-trend-line" }, t)),
+        h("p", { class: "ah-trend-caveat quiet" }, s.trend.caveat),
+      ],
+    );
     eventsNote.textContent = events === null ? a.eventsFailed : "";
     const nothing = view.empty === a.empty;
     scroller.hidden = nothing;

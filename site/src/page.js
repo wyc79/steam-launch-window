@@ -11,9 +11,22 @@ export function afterPaint(fn) {
 }
 
 // data: loadData's promises. bar: setMeta, setTagCounts, setCount, setError (and
-// setSummary). parts: settle. ahead (Competition ahead): start, setEvents, draw, busy.
+// setSummary). parts: settle. history (What history says): start, setModel, draw,
+// busy. season (Typical for this time of year): start, setEvents, pending, draw,
+// busy. ahead (Competition ahead): start, setEvents, draw, busy.
 // Returns a promise for the shared numbers (null if the data failed).
-export function connect({ data, selection, bar, parts, foot, ahead = null, s, later = afterPaint }) {
+export function connect({
+  data,
+  selection,
+  bar,
+  parts,
+  foot,
+  history = null,
+  season = null,
+  ahead = null,
+  s,
+  later = afterPaint,
+}) {
   let failed = false;
   const quiet = () => {}; // a failed file is reported once, by data.all below
 
@@ -29,13 +42,16 @@ export function connect({ data, selection, bar, parts, foot, ahead = null, s, la
     parts.settle();
   });
 
-  return Promise.all([data.meta, data.upcoming, data.history]).then(([meta, games, history]) => {
+  return Promise.all([data.meta, data.upcoming, data.history]).then(([meta, games, past]) => {
     if (failed) return null;
-    const numbers = createNumbers(games, history, meta.snapshot_date);
+    const numbers = createNumbers(games, past, meta.snapshot_date);
     bar.setTagCounts((st) => numbers.tagCounts(st));
-    if (ahead) {
-      ahead.start(numbers, meta);
-      data.events.then((events) => !failed && ahead.setEvents(events), quiet);
+    history?.start(numbers);
+    if (history) data.model.then((model) => !failed && history.setModel(model), quiet);
+    for (const part of [season, ahead]) {
+      if (!part) continue;
+      part.start(numbers, meta);
+      data.events.then((events) => !failed && part.setEvents(events), quiet);
     }
     let waiting = false;
     const draw = () => {
@@ -45,13 +61,18 @@ export function connect({ data, selection, bar, parts, foot, ahead = null, s, la
       const { counts, panel } = numbers.get(st);
       bar.setCount(countLine(counts, st.group, s), tooFewPast(panel, st.group));
       bar.setSummary?.(summaryLine(st, counts, s));
+      history?.draw(st);
+      season?.draw(st);
       ahead?.draw(st);
     };
     // already known (paid / free, or back to an earlier pick): drawn now
-    const known = (st) => numbers.has(st) && (!ahead || numbers.hasHeatmap(st));
+    const known = (st) =>
+      numbers.has(st) && (!ahead || numbers.hasHeatmap(st)) && (!season || !season.pending(st));
     selection.subscribe((st) => {
       if (known(st)) draw();
       else {
+        history?.busy();
+        season?.busy();
         ahead?.busy();
         if (!waiting) {
           waiting = true;
