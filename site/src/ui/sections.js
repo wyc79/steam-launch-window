@@ -6,7 +6,7 @@ import { REPO } from "./masthead.js";
 import { h } from "./dom.js";
 
 // page order; the numbers (01, 02, ...) follow it
-export const SECTIONS = ["history", "season", "ahead"];
+export const SECTIONS = ["history", "ahead", "season"];
 
 export function sectionNumber(key) {
   return String(SECTIONS.indexOf(key) + 1).padStart(2, "0");
@@ -14,22 +14,25 @@ export function sectionNumber(key) {
 
 export function sections(s) {
   const bodies = {};
+  const intros = {};
   const els = SECTIONS.map((key) => {
     const { title, intro } = s.sections[key];
     const num = sectionNumber(key);
     const titleId = `${key}-title`;
+    intros[key] = h("p", { class: "intro" }, intro);
     bodies[key] = h("div", { class: "section-body", "aria-busy": "true" }, h("p", { class: "quiet" }, s.bar.loading));
     return h(
       "section",
       { id: key, class: "page-section", "data-index": num, "aria-labelledby": titleId },
       h("h2", { id: titleId }, title),
-      h("p", { class: "intro" }, intro),
+      intros[key],
       bodies[key],
     );
   });
   return {
     els,
     bodies,
+    intros, // a section may fill in its intro (Typical for this time of year names the group)
     // the data is in (or failed, which the top bar reports): drop the loading line
     // of each section that has not drawn itself yet
     settle() {

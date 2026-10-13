@@ -35,6 +35,25 @@ def test_fit_nb_recovers_a_rate_ratio():
     assert np.exp(res.params["x"]) == pytest.approx(0.5, abs=0.1)
 
 
+def test_demo_with_fest_combines_the_two_demo_effects():
+    pd = pytest.importorskip("pandas")
+    rng = np.random.default_rng(2)
+    n = 4000
+    demo = rng.integers(0, 2, n)
+    fest = demo * rng.integers(0, 2, n)  # only games with a demo can have it out by Next Fest
+    mu = np.exp(1.0 + np.log(0.6) * demo + np.log(1.7) * fest)
+    s = pd.DataFrame({"y": rng.negative_binomial(1.0, 1 / (1 + mu)), "demo": demo, "demo_last_fest": fest,
+                      "week": rng.integers(0, 60, n)})
+    res = M.fit_nb(s, ["demo", "demo_last_fest"])
+    both = M.combined_effect(res, s, "demo", "demo_last_fest", key="demo_with_fest")
+    assert both["key"] == "demo_with_fest" and both["games_with"] == int(fest.sum())
+    assert both["rate_ratio"] == pytest.approx(np.exp(res.params["demo"] + res.params["demo_last_fest"]), rel=1e-3)
+    assert both["rate_ratio"] == pytest.approx(0.6 * 1.7, abs=0.15)
+    # the two estimates pull against each other, so the joint range is narrower than an independent one
+    se = np.sqrt(res.bse["demo"] ** 2 + res.bse["demo_last_fest"] ** 2)
+    assert np.log(both["high"]) - np.log(both["low"]) < 2 * 1.959964 * se
+
+
 def make_data(root, n=2500, seed=3, free_purchase=""):
     """Launches from 2022-09 to 2026-08 (some before REACH_FULL_FROM and some held out).
     free_purchase is the free rows' reviews_purchase ("all": recounted)."""
@@ -122,6 +141,14 @@ def test_model_cli_writes_model_json(data_dir, frames, tmp_path, capsys):
         assert "count_given_some" in g["hurdle"] and "converged" in g["hurdle"]["count_given_some"]
         assert {"model", "baseline"} <= set(g["held_out"])
         assert g["followers"]["games"] > 0
+        if {"demo", "demo_last_fest"} <= keys:  # a demo out by the last Next Fest against no demo
+            both = g["demo_with_fest"]
+            effects = {e["key"]: e for e in g["reviews"]["effects"]}
+            product = effects["demo"]["rate_ratio"] * effects["demo_last_fest"]["rate_ratio"]
+            assert both["key"] == "demo_with_fest" and both["rate_ratio"] == pytest.approx(product, rel=1e-2)
+            assert both["low"] < both["rate_ratio"] < both["high"]
+        else:  # demo_last_fest not fitted in this small data: written as null
+            assert g["demo_with_fest"] is None
     assert "revenue" in result["paid"] and "log_price" in {e["key"] for e in result["paid"]["reviews"]["effects"]}
     assert "log_price" not in {e["key"] for e in result["free"]["reviews"]["effects"]}
     assert "with_followers" in result["paid"]["followers"]
@@ -448,6 +475,9 @@ def test_combined_effect_uses_the_covariance():
     assert c["low"] == pytest.approx(np.exp(-0.4 - 1.959964 * se), rel=1e-3)
     assert c["high"] == pytest.approx(np.exp(-0.4 + 1.959964 * se), rel=1e-3)
     assert M.combined_effect(Res(), monkey, "a", "c") is None
+    assert c["key"] == "a_schinese"
+    named = M.combined_effect(Res(), monkey, "a", "b", key="demo_with_fest")
+    assert named["key"] == "demo_with_fest" and named["rate_ratio"] == c["rate_ratio"]
 
 
 def test_chance_test_pieces():

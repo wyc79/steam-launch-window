@@ -6,13 +6,30 @@
 
 import { formatNumber } from "../count.js";
 import { bandEvents } from "../events.js";
-import { buildView, CUTS, eventText, formatCut, formatDate } from "../heatview.js";
+import {
+  buildView,
+  countText,
+  CUTS,
+  eventText,
+  formatCut,
+  formatDate,
+  formatValue,
+  shownValue,
+  trendLines,
+} from "../heatview.js";
 import { WEEKS } from "../lib/heatmap.js";
 import { tagNames } from "../tags.js";
-import { detailItems, listParts } from "../weekdetail.js";
+import { eventEffect } from "../eventeffects.js";
+import { detailItems, findGames, listParts } from "../weekdetail.js";
 import { fill, h, uid } from "./dom.js";
+import { laneItems } from "./lanes.js";
 
 const PHONE = "(max-width: 639px)";
+// The niche trend line is held back (decided 2026-10-13): on today's upcoming games it
+// flags about a fifth of all tags, against 4.4% on real launches, so it mostly shows
+// how announced dates and developer-set tags differ from launches. It comes back once
+// it can be calibrated on daily snapshots against launches (about 2027-01-10).
+export const SHOW_TREND = false;
 
 export function aheadSection(s, body) {
   const a = s.ahead;
@@ -20,14 +37,16 @@ export function aheadSection(s, body) {
   let numbers = null;
   let names = new Map();
   let events; // undefined while loading, null if events.json failed
+  let model; // model.json: undefined while loading, null if missing
   let st = null; // the selection last drawn or asked for
   let rows = null; // heatmapRows drawn (an object from the cache)
   let band = { events: [], lanes: [] };
   let bandFor = null; // [rows, events] the band was picked for
   let view = null;
-  const local = { raw: false, year: false };
+  const local = { year: false }; // the raw view is the shared measure (top bar)
+  const raw = () => st?.measure === "raw";
   let focus = { row: 0, week: 0 };
-  let open = null; // { row, week, parts: Set of list parts shown in full }
+  let open = null; // { row, week, query: the search in its game list }
   let cells = []; // [row][week] gridcell elements
 
   // ---------- fixed parts: toggles, legend, notes, detail ----------
@@ -49,7 +68,7 @@ export function aheadSection(s, body) {
   const controls = h(
     "div",
     { class: "ah-controls" },
-    h("div", { class: "ah-toggles" }, toggle(a.raw, "raw"), toggle(a.yearLayer, "year"), sometime),
+    h("div", { class: "ah-toggles" }, toggle(a.yearLayer, "year"), sometime),
     legend,
   );
   const status = h("p", { class: "ah-status", role: "status" });
@@ -60,17 +79,33 @@ export function aheadSection(s, body) {
   const detail = h("div", { class: "ah-detail" });
   // the opened week, said once (not the whole list) for screen readers
   const announce = h("p", { class: "visually-hidden", "aria-live": "polite" });
-  const frame = [controls, status, eventsNote, scroller, notes, detail, announce];
+  // the niche trend: lines only when a share differs clearly (heatmap.js trendFrom)
+  const trend = h("div", { class: "ah-trend" });
+  // a cell's raw numbers on hover or keyboard focus: one shared box, fixed to the
+  // screen so the grid's scroll area cannot clip it. The cell's label holds the same
+  // text, so screen readers skip the box.
+  const tip = h("div", { class: "hm-tip", "aria-hidden": "true", hidden: true });
+  const frame = [controls, status, trend, eventsNote, scroller, notes, detail, announce, tip];
 
   // ---------- the grid ----------
   // Desktop rows: 1 the dates; then, with events, the "Events" label, one row per
   // lane and a rule; then the heatmap rows. Phones put weeks in rows and the
   // heatmap rows in columns 2 on (--tc); the lanes are hidden there.
+  // what past launches during a lane's event did (section 01's rules), or null
+  function effectOf(e) {
+    return eventEffect(model, st.group, e, { languages: st.languages }, s);
+  }
+
+  function withEffect(text, e) {
+    const effect = effectOf(e);
+    return effect ? `${text}. ${effect}` : text;
+  }
+
   function weekHead(w, i) {
     const label = [a.week(w.date, w.to)];
     if (w.current) label.push(a.thisWeek);
     if (w.far) label.push(a.far);
-    if (w.events.length) label.push(a.events(w.events.map((e) => eventText(e, s)).join(", ")));
+    if (w.events.length) label.push(a.events(w.events.map((e) => withEffect(eventText(e, s), e)).join("; ")));
     return h(
       "div",
       {
@@ -122,6 +157,9 @@ export function aheadSection(s, body) {
           moveTo(r, w);
           openWeek(r, w);
         },
+        // a mouse or pen resting on the cell; a tap goes straight to the week
+        onpointerenter: (e) => e.pointerType !== "touch" && showTip(r, w),
+        onpointerleave: hideTip,
       },
       c.parts.map((p) =>
         h(
@@ -132,33 +170,6 @@ export function aheadSection(s, body) {
         ),
       ),
     );
-  }
-
-  // the events lanes: a block over the weeks each event covers, its name from its
-  // first week up to the next event in the lane (cut short with an ellipsis there)
-  function lanes(first) {
-    if (!band.lanes.length) return [];
-    const out = [h("div", { class: "hm-band-label", style: `--tr:${first}` }, a.eventsLabel)];
-    band.lanes.forEach((lane, i) => {
-      const tr = first + 1 + i;
-      out.push(h("div", { class: "hm-lane-name", style: `--tr:${tr}` }, lane.row === 0 ? a.kinds[lane.kind] : ""));
-      for (const e of band.events.filter((x) => x.lane === i)) {
-        const full = `${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`;
-        out.push(
-          h("div", {
-            class: `hm-block is-${e.kind}`,
-            style: `--tr:${tr};--from:${e.weeks[0] + 2};--to:${e.weeks[1] + 3}`,
-          }),
-          h(
-            "div",
-            { class: "hm-block-name", style: `--tr:${tr};--from:${e.weeks[0] + 2};--to:${e.room + 2}`, title: full },
-            eventText({ ...e, name: e.short }, s),
-          ),
-        );
-      }
-    });
-    out.push(h("div", { class: "hm-band-rule", style: `--tr:${first + 1 + band.lanes.length}` }));
-    return out;
   }
 
   function drawGrid() {
@@ -176,8 +187,12 @@ export function aheadSection(s, body) {
         onkeydown: keys,
         onfocusin: (e) => {
           const at = findCell(e.target);
-          if (at) setFocus(at.row, at.week);
+          if (at) {
+            setFocus(at.row, at.week);
+            showTip(at.row, at.week);
+          }
         },
+        onfocusout: hideTip,
       },
       h(
         "div",
@@ -186,7 +201,7 @@ export function aheadSection(s, body) {
         view.weeks.map(weekHead),
       ),
       // the lanes are drawn for the eye; their events are in each week's label
-      h("div", { class: "hm-band", "aria-hidden": "true" }, lanes(2)),
+      h("div", { class: "hm-band", "aria-hidden": "true" }, laneItems(band, 2, s, { note: effectOf })),
       view.rows.map((row, r) => h("div", { role: "row", class: "hm-row" }, rowHead(row, r, top + r), cells[r])),
     );
     const far = firstFar(view);
@@ -198,6 +213,35 @@ export function aheadSection(s, body) {
     );
     fill(scroller, h("div", { class: "hm-wrap", style: `--rows:${nRows};--weeks:${WEEKS}` }, marks, grid));
   }
+
+  let tipAt = null; // [row, week] of the cell the box is for
+  function showTip(r, w) {
+    const el = cells[r]?.[w];
+    if (!el) return;
+    tipAt = [r, w];
+    tip.textContent = view.rows[r].cells[w].counts;
+    tip.hidden = false;
+    // above the cell, or under it when there is no room; kept inside the screen
+    const cellBox = el.getBoundingClientRect();
+    const box = tip.getBoundingClientRect();
+    const width = window.innerWidth ?? 1024;
+    const left = Math.max(8, Math.min(cellBox.left + cellBox.width / 2 - box.width / 2, width - box.width - 8));
+    const above = cellBox.top - box.height - 6;
+    const top = above >= 8 ? above : cellBox.bottom + 6;
+    tip.style.left = `${Math.round(left)}px`;
+    tip.style.top = `${Math.round(top)}px`;
+  }
+
+  function hideTip() {
+    tip.hidden = true;
+    tipAt = null;
+  }
+  document.addEventListener("keydown", (e) => e.key === "Escape" && hideTip());
+  // the box is fixed to the screen: it follows its cell when the page scrolls (a focused
+  // cell scrolls itself into view)
+  // (capture: also when the heatmap scrolls inside its own area)
+  const follow = () => tipAt && !tip.hidden && showTip(...tipAt);
+  window.addEventListener?.("scroll", follow, { passive: true, capture: true });
 
   function findCell(el) {
     for (let r = 0; r < cells.length; r++) {
@@ -246,7 +290,7 @@ export function aheadSection(s, body) {
       h("span", { class: "ah-swatch" }, h("span", { class: `hm-part ${cls}` }), h("span", {}, text));
     fill(
       legend,
-      h("span", { class: "ah-legend-text" }, local.raw ? a.scaleRaw : a.scaleNormal),
+      h("span", { class: "ah-legend-text" }, raw() ? a.scaleRaw : a.scaleNormal),
       h(
         "span",
         { class: "ah-scale", "aria-hidden": "true" },
@@ -257,7 +301,8 @@ export function aheadSection(s, body) {
   }
 
   function drawNotes() {
-    const key = [a.key, local.year && a.keyYear, a.typicalNote, view.anyCounts && a.countsNote];
+    const effects = band.events.some((e) => effectOf(e)); // an event tooltip speaks of reviews
+    const key = [a.key, local.year && a.keyYear, a.typicalNote, view.anyCounts && a.countsNote, effects && a.effectKey];
     const caveats = [a.caveatNear, a.caveatFar, local.year && a.caveatYear];
     fill(
       notes,
@@ -280,7 +325,7 @@ export function aheadSection(s, body) {
   function openWeek(row, week) {
     if (!view) return;
     const same = open && open.row === row && open.week === week;
-    if (!same) open = { row, week, parts: new Set() };
+    if (!same) open = { row, week, query: "" };
     for (const [r, list] of cells.entries())
       list.forEach((el, w) => el.setAttribute("aria-selected", String(r === row && w === week)));
     markOpenWeek();
@@ -311,6 +356,27 @@ export function aheadSection(s, body) {
     );
   }
 
+  // "2,206 games listed: 274 with exact dates · 1,932 dated only by month or quarter
+  // (together about 240 games' worth) · about 343 in a typical week."
+  function listed(items, row) {
+    const parts = listParts(items, { year: local.year }, s).map((p) => {
+      const n = formatNumber(p.items.length, s);
+      if (p.part === "exact") return a.listedExact(n);
+      return (p.part === "spread" ? a.listedSpread : a.listedYear)(n, countText(p.worth, s));
+    });
+    parts.push(a.listedTypical(countText(row.typical, s)));
+    return a.detailListed(formatNumber(items.length, s), parts.join(s.bar.sep));
+  }
+
+  // how the cell's parts add up: "0.8 + 0.7 = about 1.5 typical weeks", or in games
+  // the total is the sum of the parts as shown, so the line adds up as written
+  function sumText(c) {
+    const games = raw() || view.rows[open.row].counts;
+    const total = c.parts.reduce((sum, p) => sum + shownValue(p.value, games && p.part === "exact"), 0);
+    const shown = c.parts.map((p) => p.text).join(" + ");
+    return games ? a.sumRaw(shown, countText(total, s)) : a.sumNormal(shown, formatValue(total, s));
+  }
+
   function drawDetail() {
     if (!open) {
       fill(detail, h("p", { class: "quiet ah-hint" }, a.hint));
@@ -319,8 +385,49 @@ export function aheadSection(s, body) {
     const w = view.weeks[open.week];
     const row = view.rows[open.row];
     const items = detailItems(numbers.weekGames(st, row.tags, w.iso, local.year), numbers.game, s);
-    const parts = listParts(items, { year: local.year, open: open.parts }, s);
     const cellText = row.cells[open.week].parts.map((p) => `${a.parts[p.part]} ${p.text}`).join(s.bar.sep);
+    // the list: a search box, a live count, and the games in a scroll area; typing
+    // redraws only the list, so the box keeps its focus
+    const searching = document.activeElement?.classList?.contains("ah-search");
+    const listId = uid("ah-list");
+    const found = h("p", { class: "ah-found", "aria-live": "polite" });
+    const list = h("div", {
+      id: listId,
+      class: "ah-list",
+      role: "region",
+      tabindex: "0",
+      "aria-label": a.listLabel(w.date, w.to),
+    });
+    const drawList = () => {
+      const shown = findGames(items, open.query);
+      found.textContent = a.searchCount(formatNumber(shown.length, s), formatNumber(items.length, s));
+      fill(
+        list,
+        shown.length === 0 && h("p", { class: "quiet ah-none" }, a.noMatch),
+        listParts(shown, { year: local.year }, s).map((p) =>
+          h(
+            "div",
+            { class: `ah-part ah-part-${p.part}` },
+            h("h4", {}, p.heading),
+            h("ol", { class: "ah-games" }, p.items.map(gameLine)),
+          ),
+        ),
+      );
+    };
+    const search = h("input", {
+      type: "search",
+      class: "ah-search",
+      value: open.query,
+      "aria-label": a.search,
+      "aria-controls": listId,
+      placeholder: a.search,
+      autocomplete: "off",
+      spellcheck: "false",
+      oninput: (e) => {
+        open.query = e.target.value;
+        drawList();
+      },
+    });
     fill(
       detail,
       h(
@@ -328,7 +435,7 @@ export function aheadSection(s, body) {
         { class: "ah-detail-head" },
         h("h3", {}, a.week(w.date, w.to)),
         h("p", { class: "ah-detail-for" }, a.detailFor(row.label, s.bar[st.group])),
-        h("p", { class: "ah-detail-cell" }, cellText, local.raw || row.counts ? "" : ` ${a.unitNormal}`),
+        h("p", { class: "ah-detail-cell" }, cellText, raw() || row.counts ? "" : ` ${a.unitNormal}`),
       ),
       w.events.length > 0 &&
         h(
@@ -337,38 +444,15 @@ export function aheadSection(s, body) {
           h("span", { class: "label" }, a.detailEvents),
           " ",
           w.events
-            .map((e) => `${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`)
+            .map((e) => withEffect(`${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`, e))
             .join("; "),
         ),
-      h(
-        "p",
-        { class: "ah-detail-count" },
-        items.length ? a.detailCount(a.games(formatNumber(items.length, s), items.length)) : a.detailNone,
-      ),
-      parts.map((p) =>
-        h(
-          "div",
-          { class: `ah-part ah-part-${p.part}` },
-          h("h4", {}, p.heading),
-          h("ol", { class: "ah-games" }, p.items.map(gameLine)),
-          p.items.length < p.total &&
-            h(
-              "button",
-              {
-                type: "button",
-                class: "ah-more",
-                onclick: () => {
-                  const shown = p.items.length;
-                  open.parts.add(p.part);
-                  drawDetail();
-                  detail.querySelectorAll(`.ah-part-${p.part} .ah-game`)[shown]?.focus();
-                },
-              },
-              a.showAll(formatNumber(p.total, s)),
-            ),
-        ),
-      ),
+      h("p", { class: "ah-detail-count" }, items.length ? listed(items, row) : a.detailNone),
+      items.length > 0 && h("p", { class: "ah-detail-how quiet" }, a.detailHow(sumText(row.cells[open.week]))),
+      items.length > 0 && [h("div", { class: "ah-find" }, search, found), list],
     );
+    if (items.length) drawList();
+    if (searching) detail.querySelector(".ah-search")?.focus(); // a redraw keeps the search box in use
   }
 
   // ---------- drawing ----------
@@ -398,7 +482,7 @@ export function aheadSection(s, body) {
     const hadFocus = scroller.contains(document.activeElement);
     view = buildView(rows, {
       group: st.group,
-      raw: local.raw,
+      raw: raw(),
       year: local.year,
       mode: st.mode,
       names,
@@ -411,6 +495,14 @@ export function aheadSection(s, body) {
     };
     if (open && open.row >= view.rows.length) open = null;
     status.textContent = view.empty ?? "";
+    const trends = SHOW_TREND && view.empty !== a.empty ? trendLines(view.rows, numbers.trend(st), st.group, s) : [];
+    fill(
+      trend,
+      trends.length > 0 && [
+        trends.map((t) => h("p", { class: "ah-trend-line" }, t)),
+        h("p", { class: "ah-trend-caveat quiet" }, s.trend.caveat),
+      ],
+    );
     eventsNote.textContent = events === null ? a.eventsFailed : "";
     const nothing = view.empty === a.empty;
     scroller.hidden = nothing;
@@ -433,6 +525,11 @@ export function aheadSection(s, body) {
     // events.json's list, or null if it failed: the heatmap goes without lanes
     setEvents(list) {
       events = list;
+      if (st && numbers) redraw();
+    },
+    // model.json, or null when it is missing: what past launches during each event did
+    setModel(m) {
+      model = m;
       if (st && numbers) redraw();
     },
     // draws the selection (its numbers are computed here unless cached)

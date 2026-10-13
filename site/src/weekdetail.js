@@ -5,9 +5,7 @@ import { formatNumber } from "./count.js";
 import { dateFormat } from "./format.js";
 import { toDay } from "./lib/dates.js";
 import { en } from "./strings.js";
-import { formatDate } from "./heatview.js";
-
-export const FIRST = 20; // month, quarter or year games listed before "Show all"
+import { countText, formatDate } from "./heatview.js";
 
 export function storeUrl(appid) {
   return `https://store.steampowered.com/app/${appid}/`;
@@ -49,28 +47,38 @@ export function detailItems(list, gameOf, s = en) {
     name: g.name || s.ahead.unnamed(g.appid),
     url: storeUrl(g.appid),
     part: g.layer, // exact, spread or year
+    share: g.share, // what the game adds to the week: 1 for an exact date, a share for the rest
     date: dateText(gameOf(g.appid), s),
     followers: followersText(g.followers, g.hype_src, s),
     moved: movedText(g.moved, s),
   }));
 }
 
-// The list in parts, exact dates first, each keeping weekGames' order:
-// [{ part, heading: "Exact dates (3)", items, total }]. Exact dates are always
-// listed in full; the other parts show FIRST games unless `open` has their part.
-// Parts with no games are left out.
-export function listParts(items, { year = false, open = new Set() } = {}, s = en) {
+// a name or a query for matching: lower case, accents dropped ("Pokémon" finds "pokemon")
+export function fold(text) {
+  return text.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase();
+}
+
+// the games whose name holds the query (all of them for an empty query)
+export function findGames(items, query) {
+  const q = fold(query.trim());
+  return q ? items.filter((g) => fold(g.name).includes(q)) : items;
+}
+
+// The list in parts, exact dates first, each keeping weekGames' order and listed in
+// full (the page shows them in a scroll area with a search box):
+// [{ part, heading, items, worth }]: "Exact dates (3)", or for month, quarter and year
+// dates "Month or quarter dates (40, together about 3.2 games' worth)", worth being the
+// sum of their shares (what the heatmap cell counts). Parts with no games are left out.
+export function listParts(items, { year = false } = {}, s = en) {
   const names = year ? ["exact", "spread", "year"] : ["exact", "spread"];
   return names
     .map((part) => {
       const all = items.filter((g) => g.part === part);
-      const full = part === "exact" || open.has(part) || all.length <= FIRST;
-      return {
-        part,
-        heading: s.ahead.listParts[part](formatNumber(all.length, s)),
-        items: full ? all : all.slice(0, FIRST),
-        total: all.length,
-      };
+      const worth = all.reduce((sum, g) => sum + (g.share ?? 1), 0);
+      const n = formatNumber(all.length, s);
+      const heading = s.ahead.listParts[part](n, countText(worth, s));
+      return { part, heading, items: all, worth };
     })
-    .filter((p) => p.total > 0);
+    .filter((p) => p.items.length > 0);
 }

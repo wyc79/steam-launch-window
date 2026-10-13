@@ -117,12 +117,14 @@ export function buildView(rows, { group, raw = false, year = false, mode = "and"
       ];
       if (w.far) said.push(a.far);
       if (w.events.length) said.push(a.events(w.events.map((e) => eventText(e, s)).join(", ")));
-      return { parts: shown, label: a.cell(label, w.date, said.join(". ")) };
+      const raw = countsText(cell, typical, w.date, year, s);
+      return { parts: shown, counts: raw, label: `${a.cell(label, w.date, said.join(". "))}. ${raw}` };
     });
     return {
       tags: row.tags,
       label,
       counts,
+      typical, // launches in a typical week, for the week detail
       note: counts ? a.fewLaunches(Math.round(typical * TYPICAL_WEEKS)) : a.typical(formatValue(typical, s)),
       cells,
       matched: row.matched[group],
@@ -140,6 +142,42 @@ export function buildView(rows, { group, raw = false, year = false, mode = "and"
     anyCounts: out.some((r) => r.counts),
     sometime: { row: last.label, lines: sometimeLines(rows.at(-1), group, s) },
   };
+}
+
+// A count of games as words: whole games as they are ("298"), spread shares (fractions
+// of games) as "about 114", or "about 0.4" under 10.
+export function countText(value, s = en) {
+  if (Number.isInteger(value)) return formatNumber(value, s);
+  return s.ahead.about(value >= 10 - SMALL ? formatNumber(Math.round(value), s) : oneDecimal(s).format(value));
+}
+
+// The raw numbers behind a cell, for its tooltip and its label: "Week of Oct 19: 298
+// with exact dates, about 114 games' worth from month or quarter dates, about 343 in a
+// typical week." A month or quarter date adds only its share to each week it covers.
+// cell: a heatmap cell (exact, spread, year); typical: the row's typical week.
+export function countsText(cell, typical, date, year = false, s = en) {
+  return s.ahead.counts(
+    date,
+    countText(cell.exact, s),
+    countText(cell.spread, s),
+    year ? countText(cell.year, s) : null,
+    countText(typical, s),
+  );
+}
+
+// "2.0", "1.3", "0.69": a share ratio to two significant digits
+export function formatRatio(ratio, s = en) {
+  return numberFormat(s.locale, { minimumSignificantDigits: 2, maximumSignificantDigits: 2 }).format(ratio);
+}
+
+// The niche trend lines, "Cozy: 2.0x its share of past launches among upcoming
+// games.", for the rows (buildView's) whose trend (numbers.trend, one per row, null
+// for all games) is clear for the picked group.
+export function trendLines(rows, trends, group, s = en) {
+  return rows.flatMap((r, i) => {
+    const t = trends[i]?.[group];
+    return t?.clear ? [s.trend.line(r.label, formatRatio(t.ratio, s))] : [];
+  });
 }
 
 // "sometime in 2027: 2,631 games", one per year, then "later: ..." (heatmap's

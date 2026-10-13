@@ -9,7 +9,9 @@ import { selection } from "./state.js";
 import { strings as s } from "./strings.js";
 import { aheadSection } from "./ui/ahead.js";
 import { h } from "./ui/dom.js";
+import { historySection } from "./ui/history.js";
 import { masthead } from "./ui/masthead.js";
+import { seasonSection } from "./ui/season.js";
 import { footer, sections } from "./ui/sections.js";
 import { topbar } from "./ui/topbar.js";
 
@@ -18,6 +20,8 @@ document.documentElement.lang = s.lang;
 const bar = topbar(s, selection);
 const parts = sections(s);
 const foot = footer(s);
+const history = historySection(s, parts.bodies.history);
+const season = seasonSection(s, parts.bodies.season, parts.intros.season);
 const ahead = aheadSection(s, parts.bodies.ahead);
 
 document.getElementById("app").replaceChildren(
@@ -27,10 +31,11 @@ document.getElementById("app").replaceChildren(
   h("main", { class: "wrap" }, parts.els),
   h("div", { class: "wrap" }, foot.el),
 );
+bar.watchSections(parts.els);
 
 // the sticky bar's height, so a section scrolled to is not hidden under it
 new ResizeObserver(([entry]) => {
   document.documentElement.style.setProperty("--bar-h", `${entry.borderBoxSize[0].blockSize}px`);
 }).observe(bar.el);
 
-connect({ data: loadData(`${import.meta.env.BASE_URL}data/`), selection, bar, parts, foot, ahead, s });
+connect({ data: loadData(`${import.meta.env.BASE_URL}data/`), selection, bar, parts, foot, history, season, ahead, s });

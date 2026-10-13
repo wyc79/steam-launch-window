@@ -311,7 +311,7 @@ fieldset.ctl { display: block; }
 .ctl-mode { grid-column: 6 / span 3; }
 .ctl-group { grid-column: 9 / span 2; }
 .ctl-langs { grid-column: 11 / span 2; }
-.count { grid-column: 1 / -1; }
+.count-row { grid-column: 1 / -1; }
 @media (max-width: 1023px) {
   .ctl-tags { grid-column: 1 / -1; }
   .ctl-mode { grid-column: 1 / span 2; }
@@ -469,11 +469,25 @@ fieldset.ctl { display: block; }
   .pick-panel ul { columns: 1; }
 }
 
-/* The match count */
-.count {
-  margin: 0;
+/* The match count, the section links and the one raw counts toggle (history and heatmap) */
+.count-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s1) var(--s5);
   padding-top: var(--s2);
   border-top: 1px solid var(--rule-soft);
+}
+/* the section links, in the sticky bar */
+.bar-nav { display: flex; flex-wrap: wrap; gap: 0 var(--s4); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.bar-nav a { color: var(--ink-2); text-decoration: none; white-space: nowrap; }
+.bar-nav a:hover { color: var(--ink); text-decoration: underline; text-decoration-color: var(--accent-ui); }
+.bar-nav a[aria-current] { color: var(--ink); font-weight: 700; text-decoration: underline 2px var(--accent-ui); text-underline-offset: .3em; }
+.raw-toggle { display: inline-flex; align-items: center; gap: .5em; font-size: var(--fs-small); cursor: pointer; }
+.raw-toggle input { flex: none; width: 1rem; height: 1rem; margin: 0; accent-color: var(--ink); }
+.count {
+  margin: 0;
   font-size: var(--fs-small);
   font-variant-numeric: tabular-nums;
 }
@@ -636,6 +650,22 @@ main { display: block; }
 .hm-block.is-themed_fest { box-shadow: inset 3px 0 0 var(--ink-2); }
 .hm-block.is-cn_holiday, .hm-tag.is-cn_holiday { outline: 1px dashed var(--ink); outline-offset: -1px; }
 
+/* a cell's raw numbers on hover or focus (fixed, so the scroll area cannot clip it;
+   it never takes the pointer, so a tap still opens the week) */
+.hm-tip {
+  position: fixed;
+  z-index: 40;
+  max-width: min(20rem, calc(100vw - 16px));
+  padding: .4rem .6rem;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: var(--fs-small);
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.ah-detail-how { margin: 0 0 var(--s1); max-width: var(--measure); }
+
 .hm-rowhead {
   grid-row: var(--tr);
   grid-column: 1;
@@ -744,16 +774,33 @@ main { display: block; }
 }
 .ah-game-meta { color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; }
 .ah-moved { grid-column: 1 / -1; color: var(--ink-2); font-size: var(--fs-meta); }
-.ah-more {
-  margin-top: var(--s3);
+/* the week's games: a search box with a live count, then a scroll area */
+.ah-find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-top: var(--s3); }
+.ah-search {
+  flex: 0 1 22rem;
+  min-width: 0;
   min-height: var(--control);
-  padding: 0 var(--s4);
+  padding: 0 .6rem;
   border: 1px solid var(--ink);
+  border-radius: 0;
   background: var(--paper);
   font-size: var(--fs-small);
-  cursor: pointer;
 }
-.ah-more:hover { background: var(--tint); }
+.ah-search::placeholder { color: var(--ink-2); opacity: 1; }
+.ah-found { margin: 0; font-size: var(--fs-small); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ah-list {
+  max-width: 56rem;
+  max-height: 60vh;
+  overflow: auto;
+  margin-top: var(--s3);
+  padding-right: var(--s2);
+  border-top: 1px solid var(--rule-soft);
+  border-bottom: 1px solid var(--rule-soft);
+  overscroll-behavior: contain;
+}
+.ah-list:focus-visible { outline: 2px solid var(--accent-ui); outline-offset: 2px; }
+.ah-list .ah-part:first-child { margin-top: var(--s3); }
+.ah-none { margin: var(--s3) 0; }
 
 /* Tablets and small laptops: narrower weeks; the heatmap scrolls in its own area if it must */
 @media (max-width: 1023px) {
@@ -798,7 +845,7 @@ main { display: block; }
     justify-content: flex-end;
     padding: 0 0 var(--s1);
   }
-  .hm-row-name { font-size: var(--fs-meta); }
+  .hm-row-name { font-size: var(--fs-meta); overflow-wrap: anywhere; } /* narrow columns: a long tag may break */
   .hm-cell { grid-row: var(--wk); grid-column: var(--tc); scroll-margin: 3.5rem 0 var(--s2); }
   .hm-part { font-size: .75rem; flex-basis: 1.5rem; }
   /* the legend fits the width */
@@ -809,8 +856,194 @@ main { display: block; }
   .ah-game-meta { text-align: left; }
 }
 
+/* The niche trend line, above the heatmap */
+.ah-trend { margin: 0 0 var(--s4); max-width: var(--measure); }
+.ah-trend:empty { display: none; }
+.ah-trend-line { margin: 0; font-size: var(--fs-small); font-weight: 700; font-variant-numeric: tabular-nums; }
+.ah-trend-caveat { margin: var(--s1) 0 0; }
+
+/* ---------- What history says ---------- */
+/* the panel on the left, the model's lines on the right; stacked under 1024px */
+.hs {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--gap);
+  row-gap: var(--s6);
+  align-items: start;
+}
+.hs-col { min-width: 0; padding-top: var(--s2); border-top: 1px solid var(--rule-soft); }
+.hs-col-panel { grid-column: 1 / span 7; }
+.hs-col-timing { grid-column: 8 / span 5; }
+.hs-col > h3 {
+  margin-bottom: var(--s3);
+  font-size: var(--fs-meta);
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.hs-intro, .hs-for { margin: 0 0 var(--s3); font-size: var(--fs-small); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.hs-few, .hs-not-ready { margin: 0; font-weight: 700; max-width: var(--measure); }
+.hs-table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.hs-table th, .hs-table td { padding: var(--s2); border-top: 1px solid var(--rule-soft); text-align: left; vertical-align: middle; }
+.hs-table th:first-child { padding-left: 0; }
+.hs-table thead th, .hs-table thead td {
+  border-top: 0;
+  vertical-align: bottom;
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.hs-table .hs-num { text-align: right; white-space: nowrap; }
+.hs-lead { font-size: 1.125rem; font-weight: 700; }
+.hs-part { display: block; font-weight: 700; }
+.hs-range { display: block; font-size: var(--fs-meta); color: var(--ink-2); white-space: nowrap; }
+.hs-short { display: none; }
+/* the bars: dark to the 75th percentile, light to the 90th, a paper line at the median */
+.hs-bar-cell { width: 30%; }
+.hs-track { position: relative; display: block; height: 1.25rem; }
+.hs-bar { position: absolute; top: 0; bottom: 0; left: 0; width: var(--w); }
+.hs-bar.is-p90 { background: var(--heat-2); }
+.hs-bar.is-p75 { background: var(--ink-2); }
+.hs-tick { position: absolute; top: 0; bottom: 0; left: var(--x); width: 2px; background: var(--paper); }
+.hs-busy { margin: var(--s2) 0 0; font-size: var(--fs-small); max-width: var(--measure); }
+.hs-unit { margin: var(--s2) 0 0; font-size: var(--fs-small); color: var(--ink-2); max-width: var(--measure); }
+.hs-cuts { margin: var(--s2) 0 var(--s1); font-size: var(--fs-small); max-width: var(--measure); font-variant-numeric: tabular-nums; }
+.hs-read { margin: 0; max-width: var(--measure); }
+.hs-lines { margin: 0; padding: 0; list-style: none; }
+.hs-lines li { padding: var(--s2) 0; border-top: 1px solid var(--rule-soft); line-height: 1.45; font-variant-numeric: tabular-nums; }
+.hs-lines li:first-child { border-top: 0; padding-top: 0; }
+/* China's holidays: context, not advice, so set apart with the dashed line of the unconfirmed events */
+.hs-china { margin: var(--s4) 0 0; padding-top: var(--s2); border-top: 1px dashed var(--ink); font-size: var(--fs-small); max-width: var(--measure); }
+.hs-caveat { margin: var(--s4) 0 0; }
+@media (max-width: 1023px) {
+  .hs-col-panel, .hs-col-timing { grid-column: 1 / -1; }
+}
+@media (max-width: 639px) {
+  .hs-table th, .hs-table td { padding: var(--s2) .3rem; }
+  .hs-table th:last-of-type, .hs-table td:last-child { padding-right: 0; }
+  .hs-bar-cell, .hs-bars-key { display: none; }
+  .hs-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  .hs-short { display: inline; }
+  .hs-lead { font-size: 1rem; }
+}
+
+/* ---------- Typical for this time of year ---------- */
+/* Wide screens: one grid, a label column then a column per week. Row 1 the months,
+   row 2 the weeks (each a bar from 1.0, up for busier, down for quieter, with the
+   spread across years behind it), then the events lanes. */
+.ol-key { margin: 0 0 var(--s1); max-width: var(--measure); font-size: var(--fs-small); color: var(--ink-2); }
+.ol-good { margin: 0 0 var(--s1); font-size: var(--fs-small); font-weight: 700; }
+.ol-note { margin: 0 0 var(--s3); }
+.ol-note:empty { display: none; }
+.ol-scroll { padding: 4px; margin: -4px; }
+.ol {
+  --label-w: clamp(5rem, 9%, 8rem);
+  --plot-h: 9rem;
+  display: grid;
+  grid-template-columns: var(--label-w) repeat(var(--weeks, 26), minmax(0, 1fr));
+  row-gap: 4px;
+}
+.ol-list, .ol-band { display: contents; }
+.ol-corner, .ol-month {
+  grid-row: 1;
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.ol-corner { grid-column: 1; color: var(--ink-2); }
+.ol-month { grid-column: var(--wk) / span 3; padding-left: 4px; border-left: 1px solid var(--ink-2); white-space: nowrap; }
+.ol-axis {
+  grid-row: 2;
+  grid-column: 1;
+  align-self: start;
+  /* level with 1.0: the border, the date and the gap above the plot, then half the plot */
+  padding: calc(3px + 2px + .9rem + 4px + var(--plot-h) / 2 - .5lh) var(--s2) 0 0;
+  font-size: var(--fs-meta);
+  line-height: 1.2;
+  color: var(--ink-2);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ol-week {
+  grid-row: 2;
+  grid-column: var(--wk);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding-top: 2px;
+  border-top: 3px solid transparent;
+  cursor: pointer;
+}
+.ol-week:focus { outline: none; }
+.ol-week:focus-visible { outline: 2px solid var(--accent-ui); outline-offset: 2px; z-index: 1; }
+.ol-week.is-current { border-top-color: var(--accent-ui); }
+.ol-day { font-size: var(--fs-meta); line-height: 1.2; text-align: center; font-variant-numeric: tabular-nums; }
+.ol-date { display: none; }
+.ol-week.is-current .ol-day { color: var(--accent-ui); font-weight: 700; }
+.ol-plot { position: relative; display: block; height: var(--plot-h); margin: 4px 0; }
+.ol-week:hover .ol-plot { background: var(--tint); }
+.ol-mid { position: absolute; top: 50%; left: 0; right: 0; border-top: 1px solid var(--ink); }
+.ol-spread { position: absolute; left: 12%; right: 12%; bottom: var(--lo); height: calc(var(--hi) - var(--lo)); background: var(--heat-2); }
+.ol-bar { position: absolute; left: 30%; right: 30%; bottom: var(--a); height: calc(var(--b) - var(--a)); min-height: 1px; background: var(--ink-2); }
+.ol-week.is-picked .ol-bar { background: var(--accent-ui); }
+.ol-value { font-size: .6875rem; line-height: 1.2; text-align: center; font-variant-numeric: tabular-nums; }
+.ol-week.is-picked .ol-value { font-weight: 700; }
+.ol-events, .ol-drivers { display: none; }
+.ol .hm-band-label { padding-top: var(--s3); }
+.ol .hm-band-rule { display: none; } /* the detail under it has its own rule */
+.ol-detail {
+  min-height: 5.5em;
+  margin-top: var(--s4);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--rule-soft);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+}
+.ol-detail p { margin: 0 0 var(--s1); max-width: 56rem; }
+.ol-detail-week { font-weight: 700; }
+.ol-detail-from, .ol-detail-events { color: var(--ink-2); }
+
+/* Under 1024px the weeks run down: date, a bar across from 1.0, the value; the
+   picked week says what it rests on in its own row */
+@media (max-width: 1023px) {
+  .ol { display: block; }
+  .ol-corner, .ol-month, .ol-axis, .ol-band, .ol-detail { display: none; }
+  .ol-list { display: flex; flex-direction: column; gap: 2px; }
+  .ol-week {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr) 2.75rem;
+    column-gap: var(--s3);
+    row-gap: 2px;
+    align-items: center;
+    padding: 3px 0 3px 6px;
+    border-top: 0;
+    border-left: 3px solid transparent;
+  }
+  .ol-week.is-current { border-left-color: var(--accent-ui); }
+  .ol-week:hover { background: var(--tint); }
+  .ol-week:hover .ol-plot { background: none; }
+  .ol-day { grid-column: 1; grid-row: 1; font-size: var(--fs-small); text-align: left; }
+  .ol-date { display: inline; }
+  .ol-dom { display: none; }
+  .ol-plot { grid-column: 2; grid-row: 1; height: 1.25rem; margin: 0; }
+  .ol-mid { top: 0; bottom: 0; left: 50%; right: auto; border-top: 0; border-left: 1px solid var(--ink); }
+  .ol-spread { top: 10%; bottom: 10%; left: var(--lo); right: auto; width: calc(var(--hi) - var(--lo)); height: auto; }
+  .ol-bar { top: 28%; bottom: 28%; left: var(--a); right: auto; width: calc(var(--b) - var(--a)); height: auto; min-height: 0; min-width: 1px; }
+  .ol-value { grid-column: 3; grid-row: 1; font-size: var(--fs-small); text-align: right; }
+  .ol-events { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 2px; }
+  .ol-events span { padding: 0 .3rem; background: var(--tint); font-size: var(--fs-meta); line-height: 1.4; }
+  .ol-week.is-picked { background: var(--tint); }
+  .ol-week.is-picked .ol-drivers { display: block; grid-column: 1 / -1; font-size: var(--fs-meta); line-height: 1.4; color: var(--ink-2); }
+}
+
 /* ---------- The phone summary ---------- */
-/* one line on top once the controls have scrolled away (topbar.js) */
+/* one line on top once the controls have scrolled away (topbar.js): the summary,
+   which goes back to the controls, and the section links */
 .summary {
   display: none;
   position: fixed;
@@ -818,25 +1051,38 @@ main { display: block; }
   left: 0;
   right: 0;
   z-index: 25;
-  width: 100%;
-  margin: 0;
-  padding: .6rem var(--margin);
-  border: 0;
+  align-items: stretch;
   background: var(--ink);
   color: var(--paper);
   font-size: var(--fs-small);
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
+}
+.summary-button {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  padding: .6rem var(--s2) .6rem var(--margin);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
 }
-.summary:focus-visible { outline-offset: -4px; outline-color: var(--paper); }
+.summary-nav { flex: none; display: flex; padding-right: calc(var(--margin) - .4rem); }
+.summary-nav a { display: flex; align-items: center; padding: 0 .4rem; color: var(--paper); text-decoration: none; }
+.summary-nav a[aria-current] { text-decoration: underline 2px; text-underline-offset: .3em; font-weight: 700; }
+.summary-button:focus-visible, .summary-nav a:focus-visible { outline: 2px solid var(--paper); outline-offset: -4px; }
 @media (max-width: 639px) {
-  .summary.is-away { display: block; }
+  .summary.is-away { display: flex; }
   html { scroll-padding-top: 3rem; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
 }
 
 .visually-hidden {

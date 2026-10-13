@@ -74,6 +74,7 @@ LABELS = {
     "pre_sale": "launch in the 7 days before a seasonal sale",
     "next_fest": "launch during Next Fest",
     "demo_last_fest": "demo out during the last Next Fest before launch",
+    "demo_with_fest": "a demo out by the end of the last Next Fest, against no demo (demo times demo_last_fest)",
     "themed_fest": "launch during a themed fest for one of its top tags",
     "cn_spring": "launch during China's Spring Festival holiday (games without Simplified Chinese)",
     "cn_national": "launch during China's National Day holiday (games without Simplified Chinese)",
@@ -539,6 +540,8 @@ def run_group(s: pd.DataFrame, free: bool, events: list[dict] | None = None, tag
     log.info("%s: main fit, %d games", "free" if free else "paid", len(s))
     main = fit_nb(s, cols)
     out["reviews"] = summary(main, s)
+    # a demo that was out by the last Next Fest against no demo: the two effects add on the log scale
+    out["demo_with_fest"] = combined_effect(main, s, "demo", "demo_last_fest", key="demo_with_fest")
     out["genre"] = [{"tag": int(e["key"][4:]), **e} for e in effects(main, s, [f"tag_{t}" for t in s.attrs["genres"]])]
     if not free:
         out["revenue"] = summary(fit_nb(s, cols, y="revenue", start=main.params), s)
@@ -727,17 +730,19 @@ def holiday_summary(s: pd.DataFrame, g: dict, events: list[dict], res=None) -> d
     return out
 
 
-def combined_effect(res, s: pd.DataFrame, main: str, extra: str) -> dict | None:
+def combined_effect(res, s: pd.DataFrame, main: str, extra: str, key: str | None = None) -> dict | None:
     """The rate ratio of `main` plus `extra` (the effect for games that have both), with a
-    95% interval from the fit's (clustered) covariance. None if either was not fitted."""
+    95% interval from the fit's (clustered) covariance. None if either was not fitted.
+    `key` names it (default: `main` with "_schinese", the Chinese holidays' combination)."""
     from scipy import stats
 
     if main not in res.params.index or extra not in res.params.index:
         return None
+    key = key or f"{main}_schinese"
     V = res.cov_params()
     b = float(res.params[main] + res.params[extra])
     se = math.sqrt(float(V.loc[main, main] + V.loc[extra, extra] + 2 * V.loc[main, extra]))
-    return {"key": f"{main}_schinese", "label": LABELS.get(f"{main}_schinese", main), "rate_ratio": _r(math.exp(b)),
+    return {"key": key, "label": LABELS.get(key, main), "rate_ratio": _r(math.exp(b)),
             "low": _r(math.exp(b - 1.959964 * se)), "high": _r(math.exp(b + 1.959964 * se)),
             "p": float(f"{2 * stats.norm.sf(abs(b / se)):.3g}"), "games_with": int(s[extra].sum())}
 
@@ -958,6 +963,10 @@ def report(result: dict) -> str:
                          f"  {e.get('games_with', e.get('mean'))}{chance}")
         if "revenue" in g:
             lines.append("  revenue: " + _brief(g["revenue"]["effects"]))
+        if g.get("demo_with_fest"):
+            d = g["demo_with_fest"]
+            lines.append(f"  demo out by the last Next Fest, against no demo: {d['rate_ratio']:.3f} "
+                         f"[{d['low']:.3f}, {d['high']:.3f}]")
         if g.get("holidays", {}).get("with_schinese"):
             lines.append("  holidays, games with Simplified Chinese: "
                          + _brief(list(g["holidays"]["with_schinese"].values())))

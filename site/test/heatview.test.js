@@ -2,15 +2,19 @@ import { describe, expect, test } from "vitest";
 import { bandEvents } from "../src/events.js";
 import {
   buildView,
+  countsText,
+  countText,
   CUTS,
   formatCut,
   formatDate,
+  formatRatio,
   formatValue,
   rowLabel,
   shownValue,
   sometimeLines,
   spokenValue,
   step,
+  trendLines,
   weekHeads,
 } from "../src/heatview.js";
 import { heatmapRows, WEEKS } from "../src/lib/heatmap.js";
@@ -147,7 +151,7 @@ describe("the view", () => {
     ]);
     expect(view.parts).toEqual(["exact", "spread"]);
     expect(row.cells[0].label).toBe(
-      "Roguelike, week of Oct 12: exact dates 1.0, month or quarter dates 0 (1.0 = as many as a typical week)",
+      "Roguelike, week of Oct 12: exact dates 1.0, month or quarter dates 0 (1.0 = as many as a typical week). Week of Oct 12: 2 with exact dates, 0 games' worth from month or quarter dates, 2 in a typical week.",
     );
   });
 
@@ -156,7 +160,7 @@ describe("the view", () => {
     const raw = buildView(rowsFor([1]), { group: "paid", raw: true, names: NAMES }).rows[0];
     expect(raw.cells[0].parts[0].text).toBe("2"); // games 1 and 2
     expect(raw.cells.map((c) => c.parts.map((p) => p.step))).toEqual(normal.cells.map((c) => c.parts.map((p) => p.step)));
-    expect(raw.cells[3].label).toMatch(/month or quarter dates 0\.2 games$/); // 7 of the 30 November days
+    expect(raw.cells[3].label).toMatch(/month or quarter dates 0\.2 games. Week of /); // 7 of the 30 November days
   });
 
   test("a row with under one launch in a typical week shows counts, unshaded, and says so", () => {
@@ -168,7 +172,7 @@ describe("the view", () => {
       ["1", 0],
       ["0", 0],
     ]);
-    expect(combo.cells[0].label).toMatch(/exact dates 1, month or quarter dates 0 games$/);
+    expect(combo.cells[0].label).toMatch(/exact dates 1, month or quarter dates 0 games. Week of /);
     expect(view.anyCounts).toBe(true);
     expect(buildView(rowsFor([1]), { group: "paid", names: NAMES }).anyCounts).toBe(false);
   });
@@ -185,7 +189,7 @@ describe("the view", () => {
     const view = buildView(rowsFor([1]), { group: "paid", year: true, raw: true, names: NAMES });
     expect(view.parts).toEqual(["exact", "spread", "year"]);
     expect(view.rows[0].cells[12].parts[2].text).toBe("<0.1"); // 1/52 of a 2027 game in Jan 4 to 10 (6/365)
-    expect(view.rows[0].cells[12].label).toMatch(/year only under 0\.1 games\. Dates still being set$/);
+    expect(view.rows[0].cells[12].label).toMatch(/year only under 0\.1 games\. Dates still being set. Week of /);
   });
 
   test("events go into the cell's label", () => {
@@ -196,7 +200,7 @@ describe("the view", () => {
     ).events;
     const view = buildView(rowsFor([]), { group: "paid", band });
     expect(view.rows[0].label).toBe("All games");
-    expect(view.rows[0].cells[1].label).toMatch(/\. Events: Steam Next Fest October 2026$/);
+    expect(view.rows[0].cells[1].label).toMatch(/\. Events: Steam Next Fest October 2026. Week of /);
   });
 
   test("says when nothing matches, or only the combination is empty", () => {
@@ -233,4 +237,50 @@ describe("the sometime lines", () => {
 
 test("the section's intro says how many weeks it shows", () => {
   expect(en.sections.ahead.intro).toContain(`${WEEKS} weeks`);
+});
+
+describe("the niche trend line", () => {
+  const t = (ratio, clear) => ({ ratio, clear });
+  const rows = [{ label: "Cozy" }, { label: "Card Game" }, { label: "Platformer" }, { label: "All of these" }];
+
+  test("names each row whose share differs clearly for the picked group", () => {
+    const trends = [
+      { paid: t(2.0137, true), free: t(1.1, false) },
+      { paid: t(1.3, false), free: t(3, true) },
+      { paid: t(0.6912, true), free: t(1, false) },
+      null,
+    ];
+    expect(trendLines(rows, trends, "paid")).toEqual([
+      "Cozy is 2.0x as large a share of upcoming games (exact dates) as of last year's launches.",
+      "Platformer is 0.69x as large a share of upcoming games (exact dates) as of last year's launches.",
+    ]);
+    expect(trendLines(rows, trends, "free")).toEqual([
+      "Card Game is 3.0x as large a share of upcoming games (exact dates) as of last year's launches.",
+    ]);
+  });
+
+  test("says nothing for all games or when nothing is clear", () => {
+    expect(trendLines([{ label: "All games" }], [null], "paid")).toEqual([]);
+    expect(trendLines(rows.slice(0, 1), [{ paid: t(null, false), free: t(null, false) }], "paid")).toEqual([]);
+  });
+
+  test("ratios to two significant digits", () => {
+    expect([2, 1.25, 0.6912, 12.4].map((r) => formatRatio(r))).toEqual(["2.0", "1.3", "0.69", "12"]);
+  });
+});
+
+describe("a cell's raw numbers (the tooltip)", () => {
+  test("whole games as they are, spread shares as about", () => {
+    expect([298, 113.6, 0.44, 0, 9.96].map((x) => countText(x))).toEqual(["298", "about 114", "about 0.4", "0", "about 10"]);
+  });
+
+  test("exact, the spread's worth and the typical week, from the cell's own values", () => {
+    const cell = { exact: 274, spread: 240.3, year: 3.25 };
+    expect(countsText(cell, 343.4, "Oct 19")).toBe(
+      "Week of Oct 19: 274 with exact dates, about 240 games' worth from month or quarter dates, about 343 in a typical week.",
+    );
+    expect(countsText(cell, 0.5, "Oct 19", true)).toBe(
+      "Week of Oct 19: 274 with exact dates, about 240 games' worth from month or quarter dates, about 3.3 from year-only dates, about 0.5 in a typical week.",
+    );
+  });
 });

@@ -42,6 +42,8 @@ CALLS = {
     "match_count": lambda a: hm.match_count(a["games"], a["history"], a.get("selection", ()), a.get("mode", "and"),
                                             a.get("languages", ())),
     "normalized": lambda a: hm.normalized(CALLS["heatmap"](a)),
+    "niche_trend": lambda a: hm.niche_trend(a["games"], a["history"], _d(a["today"]), a.get("selection", ()),
+                                            a.get("mode", "and"), a.get("languages", ())),
     "week_games": lambda a: hm.week_games(a["games"], _d(a["today"]), _d(a["week"]), a.get("selection", ()),
                                           a.get("mode", "and"), a.get("languages", ()), a.get("year", False)),
     "percentile": lambda a: hm.percentile(a["values"], a["q"]),
@@ -140,6 +142,32 @@ TYPICAL = (
 )
 
 
+def _trend_games():
+    """For the niche trend: exact dates over the next weeks (shooters, cozy games and
+    a few free ones), month dates and a quarter that spread, and a far exact date."""
+    out = [game(100 + i, f"Trend {i}", "day", (date(2026, 10, 14) + timedelta(days=i * 3)).isoformat())
+           for i in range(30)]
+    out += [game(200 + i, f"Other {i}", "day", (date(2026, 10, 15) + timedelta(days=i * 4)).isoformat(),
+                 tags=(COZY,), langs=("english", "schinese")) for i in range(20)]
+    out += [game(300 + i, f"Month {i}", "month", "2026-11-01", "2026-11-30", tags=(COZY, PIXEL)) for i in range(15)]
+    out += [game(400, "Quarter", "quarter", "2026-10-01", "2026-12-31", tags=(SHOOTER, PIXEL)),
+            game(401, "Far", "day", "2027-06-01"),
+            *[game(500 + i, f"Free {i}", "day", "2026-10-20", tags=(PIXEL,), free=True) for i in range(12)]]
+    return out
+
+
+def _trend_history():
+    """52 shooters and 156 cozy launches in the 52 weeks before 2026-10-14, a few
+    Simplified Chinese ones, free pixel games, and launches outside the window."""
+    start = date(2025, 10, 16)
+    rows = [past((start + timedelta(days=i)).isoformat()) for i in range(0, 364, 7)]
+    rows += [past((start + timedelta(days=i % 364)).isoformat(), tags=(COZY,)) for i in range(0, 156 * 2, 2)]
+    rows += [past("2026-05-05", tags=(COZY,), langs=("schinese",))] * 5
+    rows += [past("2026-05-05", tags=(PIXEL,), free=True)] * 30 + [past("2026-05-05", free=True)] * 30
+    rows += [past("2025-10-14"), past("2026-10-14"), past("2026-05-05", launch_type="ea_exit")]
+    return rows
+
+
 def weekly(counts, start=date(2024, 1, 1), reviews=lambda i, j: (i * 37 + j * 11) % 101, **kw):
     """`counts[i]` launches in week i from `start`, spread over the week's days."""
     rows = []
@@ -225,7 +253,7 @@ def _days(week: date) -> set[tuple[int, int]]:
 
 
 def heatmap_cases() -> Cases:
-    c = Cases(games=UPCOMING, typical=TYPICAL)
+    c = Cases(games=UPCOMING, typical=TYPICAL, trend_games=_trend_games(), trend_history=_trend_history())
     today = "2026-10-14"  # a Wednesday: week 0 is partial for vague dates
     c.add("all games, no history", "heatmap", games="$games", today=today)
     c.add("shooter with the typical week", "heatmap", games="$games", today=today, selection=[SHOOTER],
@@ -252,6 +280,21 @@ def heatmap_cases() -> Cases:
     c.add("normalized: roguelike, both groups", "normalized", games="$games", today=today,
           selection=[ROGUELIKE], history="$typical")
     c.add("normalized: no history", "normalized", games="$games", today=today)
+    c.add("niche trend: no tags", "niche_trend", games="$trend_games", history="$trend_history", today=today)
+    c.add("niche trend: shooter, clear", "niche_trend", games="$trend_games", history="$trend_history",
+          today=today, selection=[SHOOTER])
+    c.add("niche trend: cozy, a smaller share, month dates left out", "niche_trend", games="$trend_games",
+          history="$trend_history", today=today, selection=[COZY])
+    c.add("niche trend: pixel, tiny niche, free group", "niche_trend", games="$trend_games",
+          history="$trend_history", today=today, selection=[PIXEL])
+    c.add("niche trend: shooter or pixel", "niche_trend", games="$trend_games", history="$trend_history",
+          today=today, selection=[SHOOTER, PIXEL], mode="or")
+    c.add("niche trend: schinese", "niche_trend", games="$trend_games", history="$trend_history",
+          today=today, selection=[COZY], languages=["schinese"])
+    c.add("niche trend: no history", "niche_trend", games="$trend_games", history=[], today=today,
+          selection=[SHOOTER])
+    c.add("niche trend: few games, the typical week", "niche_trend", games="$games", history="$typical",
+          today=today, selection=[SHOOTER])
     c.add("week games: this week, shooter", "week_games", games="$games", today=today, week="2026-10-12",
           selection=[SHOOTER])
     c.add("week games: next week, all", "week_games", games="$games", today=today, week="2026-10-19")

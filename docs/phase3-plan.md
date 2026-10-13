@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26, waiting for review).
+Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year for all games, section links, event effects in the lanes and the searchable week list) built (PR #27, waiting for review).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -66,40 +66,74 @@ removable chips), all of these / any of these, paid / free, languages (default E
 and the match count ("1,204 of 20,495 upcoming, 3,950 of 82,910
 past launches"), which turns red when past launches are too few for the history
 section ("Too few for section 01"). The count is for the picked group (paid or
-free), so it agrees with the heatmap. On phones, where the bar does not stick, a
-one-line summary ("3 tags · Paid · 1,204 upcoming") stays on top once the bar has
-scrolled away; tapping it goes back and focuses the tag field.
+free), so it agrees with the heatmap. Beside the count: links to the three sections
+("01 History · 02 Ahead · 03 Season", the one in view marked) and one "Raw counts"
+toggle (decided 2026-10-13, as the Phase 2 plan said) that switches both the history
+panel and the heatmap from "compared with a usual week" to plain counts. On phones,
+where the bar does not stick, a one-line summary ("3 tags · Paid · 1,204 upcoming")
+stays on top once the bar has scrolled away, with the section numbers beside it;
+tapping the summary goes back and focuses the tag field.
+
+Section order (decided 2026-10-13): 01 What history says, 02 Competition ahead, 03
+Typical for this time of year, for all games. Reviews in the first 30 days stand in for sales; the
+masthead says so, and so do section 01 and the event tooltips in section 02, where reviews appear.
 
 **01 What history says.**
 - The history panel for the selection: quiet, normal and busy launch weeks
-  (normalized by default), with the 75th and 90th percentile of 30-day reviews
-  leading and the median after it.
-- Launch timing, from the model, as short lines with the size and its range:
-  launching in a seasonal sale, in a themed fest that matches your tags, after
-  a demo in the last Next Fest. Weekly competition: "small, mostly general
-  crowding". Free games: "not ready yet" until their recount lands.
+  (normalized by default), with the median, then the 75th and 90th percentile of
+  30-day reviews (low to high, decided 2026-10-13), the launches, and one line: "Reviews
+  in the first 30 days, our stand-in for sales. Half of launches got the median or
+  fewer." With no tags picked it speaks of all paid (or free) games.
+- Launch timing, from the model's headline fit, as short lines with the size and
+  its range: launching in a seasonal sale, in a themed fest that matches your tags,
+  and a demo out by the end of the last Next Fest. One rule for advice (decided
+  2026-10-13): a line says "Avoid ..." only when its range leaves out 1.0 and, where
+  the model ran a chance test, that test agrees (p < 0.05). A range that leaves out
+  1.0 without that is an "unconfirmed" line, not advice; otherwise "no clear effect"
+  (or left out, for the US holidays). A group whose status is not "ok" (or no
+  `model.json`) gets one line, "Not ready yet", and none of its numbers.
+- Weekly competition is described, with no percentage, from the model's fit with the
+  placebo, and only called "general crowding" when the placebo goes the same way as
+  the launch week: "small at most; much of it is general crowding" when the launch week
+  is no longer clear there, "a clear effect for free games; part of it is general
+  crowding" when it is. The line says the model's niche (similar tags, a shared
+  language, same price tier for paid) is not just the picked tags.
+- Free games (now that their recount has landed): the same lines from the free model.
+  Sales and themed fests read "no clear effect". The US holiday dips (Thanksgiving to
+  Cyber Monday, Christmas to New Year) are not confirmed by the chance test, so they
+  show as unconfirmed lines, with the Steam sale those weeks fall in.
+- Chinese holidays only when Simplified Chinese is picked: one context line without
+  numbers, never advice. Each holiday is decided on its own, from the effect for games
+  with Simplified Chinese: named when that effect is clear, marked unconfirmed, with
+  "from few games" (under 100) and "not confirmed by a chance test" where they apply.
 
-**02 Typical for this time of year.** The seasonal outlook for the next 26
-weeks (the all-games pattern for the picked languages, paid or free): a value
-and its spread per week, with the events that drive it on hover ("after Next
-Fest October"). It stays at 26 weeks: it comes from past years, so dates not
-yet set do not thin it out.
-
-**03 Competition ahead.** The heatmap for the next 13 weeks (decided
+**02 Competition ahead.** The heatmap for the next 13 weeks (decided
 2026-10-13: beyond a quarter, announced dates say little).
 - Rows: each picked tag alone, then the combination (AND or OR). Columns: weeks
   from this one, the date on top. Phones turn it sideways (weeks as rows).
 - Each cell shows exact and spread dates as two visible parts (E and S on
   small screens). Normalized by default ("1.0 = as many as a typical week",
   a typical week being the row's average week of real launches over the last 52
-  weeks); a raw counts toggle, off by default, changes only the numbers, not the
-  shades. The shade follows the number as shown. Weeks more than 4 out are faded,
-  labelled "dates still being set".
+  weeks); the shared raw counts toggle, off by default, changes only the numbers,
+  not the shades. The shade follows the number as shown. Weeks more than 4 out are faded,
+  labelled "dates still being set". Hover or keyboard focus on a cell shows its raw
+  numbers in a small box (exact games, the spread's games' worth, the typical week);
+  the cell's label carries the same text.
 - Rows with under one launch in a typical week (or none) show plain counts,
   unshaded, and their row head says how few launches the year had: one launch
   more or less would swing their ratio wildly.
 - Year-only dates: a hatched layer behind a toggle, off by default, and a
   "sometime in 2027: N games" line that names the row it counts (the combination).
+- What past launches during an event did (decided 2026-10-13, in place of a row of its
+  own): in the event block's tooltip and its week's label, never drawn in the lanes. An
+  event whose line in section 01 is advice gets its size ("Past paid launches during a
+  seasonal sale got 37% fewer reviews."); an unconfirmed pattern, or a China holiday with
+  Simplified Chinese, gets "(unconfirmed)" without a number; others nothing. Competition
+  is never a number here. `src/eventeffects.js`, on `timing.js`'s rules.
+- The niche trend line is built (`analysis/heatmap.py` `niche_trend`, ported, with
+  `analysis/trend_calibration.py`) but held back (`SHOW_TREND` in `ui/ahead.js`): it
+  flags about a fifth of tags on today's upcoming list against 4.4% on launches, so it
+  waits for a calibration on snapshots against launches (about 2027-01-10).
 - Events lanes under the dates, in the same week columns, with their own
   "Events" label and a rule before the heatmap rows: Steam sales, Next Fests,
   themed fests whose tags match, and Chinese holidays only when Simplified Chinese
@@ -110,13 +144,25 @@ yet set do not thin it out.
   (no tags picked, or a fest without tags: not shown); other holidays and releases
   are left out. On phones the events are text in each week's row. If
   `events.json` fails, the heatmap draws without the lanes and says so in one line.
-- Enter or a click opens a week (arrow keys move between weeks and rows): its
-  games in parts, exact dates first and always in full, then month or quarter
-  dates (and year only, with the year layer), each part after 20 games behind
-  "Show all". Each game has its store link, date, the "moved here from October
-  2026, 3 days ago" marker and the follower count when known (marked when it is an
-  estimate from wishlist rank). Order inside each part: games whose top 10 tags
-  match first, then the most followers (unknown last), then name, then appid.
+- Enter or a click opens a week (arrow keys move between weeks and rows). Its header
+  says what the cell counts: "2,206 games listed: 274 with exact dates · 1,932 dated
+  only by month or quarter (together about 240 games' worth) · about 343 in a typical
+  week", and one line that a month or quarter date is divided across the weeks it
+  covers, so the cell's parts add up. The games sit in a scroll area (about 60% of the
+  screen high) with a search box (case and accents aside, a live "12 of 60 games"),
+  in parts, exact dates first, then month or quarter dates (and year only, with the
+  year layer). Each game has its store link, date, the "moved here from October 2026,
+  3 days ago" marker and the follower count when known (marked when it is an estimate
+  from wishlist rank). Order inside each part: games whose top 10 tags match first,
+  then the most followers (unknown last), then name, then appid.
+
+**03 Typical for this time of year, for all games.** The seasonal outlook for the next 26
+weeks (the all-games pattern for the picked languages, paid or free; the intro, "How busy
+each coming week usually is, from past years' launches of paid games in English.", names
+them): a value and its spread per week, with the events that drive it on hover
+("after Next Fest October"). It stays at 26 weeks: it comes from past years, so dates
+not yet set do not thin it out. China's holidays enter the pattern only when
+Simplified Chinese is picked. One line under the key: "Quiet is not the same as good."
 
 **Methods (separate page).** Built from `docs/methods.md`: sources, what each
 number means, the caveats in full, and credit to Games Popularity.
@@ -204,7 +250,7 @@ A `site` workflow builds and deploys to GitHub Pages:
    Analytics are not loaded on localhost. The theme choice is kept under its own key
    (`slw-theme`), since wyc79.github.io writes `yc-theme` on the same origin and defaults
    it to light.
-4. Sections 01 to 03. Part 1 built: Competition ahead (now section 03) and the phone summary
+4. Sections 01 to 03. Part 1 built: Competition ahead (now section 02) and the phone summary
    bar. `src/ui/ahead.js` draws the heatmap, the events lanes and the week's games;
    `src/heatview.js` and `src/weekdetail.js` turn the numbers into text, shade steps and labels;
    `src/events.js` picks the events. The heatmap is a plain HTML grid (ARIA `grid`, arrow keys,
@@ -215,7 +261,26 @@ A `site` workflow builds and deploys to GitHub Pages:
    `numbers.js` caches each heatmap row (a picked tag's row is reused when more tags are
    added); a week's games are computed when it opens, for the picked group. `heatmap.py` and
    `heatmap.js` `WEEKS` went from 26 to 13 (golden cases rewritten); the seasonal outlook keeps
-   its own 26. Part 2: sections 01 and 02.
+   its own 26. Part 2 built: What history says, Typical for this time of year, the section
+   links, and the niche trend line (held back). `src/ui/history.js`
+   draws the history panel (the object `numbers.js` already computed for the count's red;
+   text from `src/panelview.js`) as a table with hand-drawn bars, and the model's lines
+   (`src/timing.js`: which lines show, the words for a rate ratio and its range, one
+   rounding rule shared with `docs/methods.md`). A demo out by the last Next Fest against
+   no demo is `model.json` `demo_with_fest` (added to `analysis/model.py`, from the fit's
+   clustered covariance); without it the site multiplies the two effects with a cautious
+   range. The raw counts toggle is in the top bar (`ui/topbar.js`) and sets the shared
+   measure for sections 01 and 02; the section links sit beside it (an IntersectionObserver
+   marks the one in view). `src/eventeffects.js` turns the model's event verdicts
+   (`timing.js` `verdict`, `chinaVerdict`) into the lanes' tooltips. A cell's raw numbers
+   (`heatview.js` `countsText`) go in its label and a fixed tooltip. `src/ui/season.js`
+   draws the outlook as a bar from 1.0 per week with the spread across years behind it, the
+   events lanes (`src/ui/lanes.js`, shared with Competition ahead) and what each week rests on
+   (`src/outlookview.js`, from the parts `season.estimate` already names); the weeks are an
+   ARIA listbox (one tab stop, arrow keys), drawn down the page under 1024px. Chinese holiday
+   parts are named only when Simplified Chinese is picked. `numbers.js` caches the outlook
+   per languages, so a tag pick never recomputes it. The niche trend is `heatmap.py`
+   `niche_trend` / `trend_from`, ported to `heatmap.js` with golden cases.
 5. Methods page.
 6. The deploy workflow, then a review of the live site.
 
