@@ -589,7 +589,9 @@ Steam requests.
    launches, first-month reviews per language (about 10,000 Steam requests), run
    once on the Pi. First check on one game that the review endpoint accepts a
    language filter. Used to check whether Chinese localization raises reviews
-   more than sales.
+   more than sales. Built as `pipeline/sample_languages.py` (checked: the
+   review endpoint takes one language per request); it runs on the Pi with the
+   free-game recount (`scripts/server/run_review_jobs.sh`).
 
 5. ~~**Busy compared with what?**~~ Decided: normalized by default on the
    heatmap (section 2) and the panel (section 4); a "raw counts" toggle, off by

@@ -169,14 +169,14 @@ PURCHASE_ALL = 1    # everyone, including key activations and free-to-play playe
 
 
 def review_counts(client: Client, appid: int, start_ts: int, end_ts: int,
-                  purchase_type: int = PURCHASE_STEAM) -> dict:
+                  purchase_type: int = PURCHASE_STEAM, language: str = "all") -> dict:
     """Review totals for reviews written in [start_ts, end_ts] (both ends included) that still exist.
 
     By default counts Steam purchases only, with Steam's default off-topic
     filter, which is how the store's own review count works. Reviews from key
     activations (often curator or giveaway copies) are left out. Free games
     need PURCHASE_ALL: their players buy nothing, so a purchases-only count is
-    near zero.
+    near zero. `language` is one Steam language code (e.g. "schinese") or "all".
 
     Uses IUserReviewsService/GetAppReviews, which replaces store appreviews
     (retired 2026-10-22). No key: keyless calls share a lower rate limit and
@@ -185,7 +185,7 @@ def review_counts(client: Client, appid: int, start_ts: int, end_ts: int,
     so no cursor is sent; num_per_page=1 keeps the reply small (0 means 20).
     """
     res = client.get_json(f"{API}/IUserReviewsService/GetAppReviews/v1/", _input_json({
-        "appid": appid, "filter": 1, "languages": ["all"], "purchase_type": purchase_type, "num_per_page": 1,
+        "appid": appid, "filter": 1, "languages": [language], "purchase_type": purchase_type, "num_per_page": 1,
         "date_range_start": start_ts, "date_range_end": end_ts,
     })).get("response") or {}
     q = res.get("query_summary")
