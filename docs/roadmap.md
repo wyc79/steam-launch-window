@@ -18,7 +18,7 @@ ends with a report, and the next one starts only after a go-ahead.
 | Audit | 6. Implementation | [PR #13](https://github.com/wyc79/steam-launch-window/pull/13) merged 2026-10-12; fixes from the first Games Popularity run in [PR #14](https://github.com/wyc79/steam-launch-window/pull/14), merged 2026-10-12 |
 | Audit | 7. Deliverables | reported 2026-10-12 in [pipeline-report.md](pipeline-report.md), together with the build Phase 1 report |
 | Build | 2. Analysis | built: site data and reference numbers (PR #18), the model (PR #19), free games count all reviews (PR #20), reviews by language sample (PR #21). The free recount (data commit 8593cd4) and the language sample (eff1bc5) are in, and the model was rerun (79cca10). Left: writing up the language sample (Phase 3 step 5, Methods). See [phase2-plan.md](phase2-plan.md) and [methods.md](methods.md) |
-| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 (pipeline additions) merged in PR #23; step 2 (JavaScript ports with shared test cases) merged in PR #24; step 3 (page shell, styles, top bar) merged in PR #25; step 4 part 1 (Competition ahead, the 13-week heatmap; sections reordered with history first) merged in PR #26; step 4 part 2 (What history says, Typical for this time of year, top bar section links) in review in PR #27 |
+| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 (pipeline additions) merged in PR #23; step 2 (JavaScript ports with shared test cases) merged in PR #24; step 3 (page shell, styles, top bar) merged in PR #25; step 4 part 1 (Competition ahead, the 13-week heatmap; sections reordered with history first) merged in PR #26; step 4 part 2 (What history says, Typical for this time of year, top bar section links) merged in PR #27; section 04 Trends (past launches per quarter, share of all launches by default) in review |
 | Build | 4. Agent and Worker | not started |
 
 ## Where things stand
@@ -101,7 +101,7 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 
 ## Next steps, in order
 
-1. **Phase 3 steps 4 to 6** (step 4 part 2 is in review in PR #27): then the Methods page
+1. **Phase 3 steps 4 to 6** (section 04 Trends is in review): then the Methods page
    (with the reviews by language sample written up; both Pi jobs are done and committed,
    recount 8593cd4, language sample eff1bc5; the model rerun is 79cca10) and the deploy
    workflow. The next model run also writes `demo_with_fest` (PR #27).

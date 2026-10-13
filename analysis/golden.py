@@ -2,7 +2,7 @@
 
     python -m analysis.golden
 
-Runs analysis.heatmap, analysis.season and site_data.table_rows on small
+Runs analysis.heatmap, analysis.season, analysis.trends and site_data.table_rows on small
 hand-built inputs and writes the inputs with the expected outputs to
 site/test/golden/*.json. site/test/golden.test.js requires the JavaScript in
 site/src/lib/ to give the same results, and tests/test_golden.py fails when the
@@ -20,6 +20,7 @@ from pathlib import Path
 
 from . import heatmap as hm
 from . import season
+from . import trends
 from .site_data import table_rows
 
 OUT = Path(__file__).resolve().parent.parent / "site" / "test" / "golden"
@@ -61,6 +62,9 @@ CALLS = {
     "outlook": lambda a: season.outlook(a["history"], a["events"], _d(a["today"]), a.get("weeks", 26),
                                         a.get("languages", ())),
     "table_rows": lambda a: table_rows(a["table"], a.get("meta")),
+    "quarters": lambda a: trends.quarters(_d(a["today"])),
+    "quarterly": lambda a: trends.quarterly(a["history"], _d(a["today"]), a.get("selection", ()), a.get("mode", "and"),
+                                            a.get("languages", ())),
 }
 
 
@@ -394,6 +398,47 @@ def season_cases() -> Cases:
     return c
 
 
+def trend_history():
+    """Launches 2022 to 2026: shooters all along (more each year), cozy games from
+    2024 Q2 on, some with both tags, Simplified Chinese and free ones, Early Access
+    and ea_exit rows, launches without a review count yet, and launches outside the
+    window (2021, today and later)."""
+    rows, day = [], date(2022, 1, 1)
+    i = 0
+    while day < date(2026, 10, 20):
+        cozy = day >= date(2024, 4, 1)
+        tags = (COZY, SHOOTER) if cozy and i % 5 == 0 else (COZY,) if cozy and i % 3 == 0 else (SHOOTER,)
+        rows.append(past(day.isoformat(), tags=tags, langs=("english", "schinese") if i % 4 == 0 else ("english",),
+                         free=i % 7 == 0, launch_type="early_access" if i % 6 == 0 else "full",
+                         reviews=None if day >= date(2026, 9, 12) else i % 50))
+        i += 1
+        day += timedelta(days=max(1, 9 - (day.year - 2022) * 2))  # more launches each year
+    rows += [past("2021-12-31"), past("2024-05-05", launch_type="ea_exit"), past("2025-02-02", tags=(PIXEL,),
+                                                                                  langs=("schinese",))]
+    return rows
+
+
+def trend_cases() -> Cases:
+    c = Cases(history=trend_history())
+    today = "2026-10-14"
+    c.add("quarters: mid-quarter", "quarters", today=today)
+    c.add("quarters: a quarter's first day", "quarters", today="2026-10-01")
+    c.add("quarters: the data's first day", "quarters", today="2022-01-01")
+    c.add("no tags", "quarterly", history="$history", today=today)
+    c.add("shooter", "quarterly", history="$history", today=today, selection=[SHOOTER])
+    c.add("cozy: starts in 2024 Q2", "quarterly", history="$history", today=today, selection=[COZY])
+    c.add("cozy and shooter", "quarterly", history="$history", today=today, selection=[COZY, SHOOTER], mode="and")
+    c.add("cozy or pixel", "quarterly", history="$history", today=today, selection=[COZY, PIXEL], mode="or")
+    c.add("schinese", "quarterly", history="$history", today=today, selection=[SHOOTER], languages=["schinese"])
+    c.add("english or schinese, no tags", "quarterly", history="$history", today=today,
+          languages=["english", "schinese"])
+    c.add("partial quarter on its first day", "quarterly", history="$history", today="2026-10-01",
+          selection=[COZY])
+    c.add("no match", "quarterly", history="$history", today=today, selection=[PIXEL, SHOOTER])
+    c.add("no history", "quarterly", history=[], today=today, selection=[SHOOTER])
+    return c
+
+
 def data_cases() -> Cases:
     meta = {"snapshot_date": "2026-10-12", "tags": [[113, "Free to Play", 1, 0], [1774, "Shooter", 2, 1],
                                                      [99999, None, 1, 0]],
@@ -413,7 +458,7 @@ def data_cases() -> Cases:
 
 def build() -> dict[str, dict]:
     return {"heatmap.json": heatmap_cases().obj(), "panel.json": panel_cases().obj(),
-            "season.json": season_cases().obj(), "data.json": data_cases().obj()}
+            "season.json": season_cases().obj(), "data.json": data_cases().obj(), "trends.json": trend_cases().obj()}
 
 
 def dump(obj: dict) -> str:

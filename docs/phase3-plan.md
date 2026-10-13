@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year for all games, section links, event effects in the lanes and the searchable week list) built (PR #27, waiting for review).
+Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year for all games, section links, event effects in the lanes and the searchable week list) built (PR #27); section 04 Trends built (waiting for review).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -66,8 +66,8 @@ removable chips), all of these / any of these, paid / free, languages (default E
 and the match count ("1,204 of 20,495 upcoming, 3,950 of 82,910
 past launches"), which turns red when past launches are too few for the history
 section ("Too few for section 01"). The count is for the picked group (paid or
-free), so it agrees with the heatmap. Beside the count: links to the three sections
-("01 History · 02 Ahead · 03 Season", the one in view marked) and one "Raw counts"
+free), so it agrees with the heatmap. Beside the count: links to the four sections
+("01 History · 02 Ahead · 03 Season · 04 Trends", the one in view marked) and one "Raw counts"
 toggle (decided 2026-10-13, as the Phase 2 plan said) that switches both the history
 panel and the heatmap from "compared with a usual week" to plain counts. On phones,
 where the bar does not stick, a one-line summary ("3 tags · Paid · 1,204 upcoming")
@@ -75,7 +75,7 @@ stays on top once the bar has scrolled away, with the section numbers beside it;
 tapping the summary goes back and focuses the tag field.
 
 Section order (decided 2026-10-13): 01 What history says, 02 Competition ahead, 03
-Typical for this time of year, for all games. Reviews in the first 30 days stand in for sales; the
+Typical for this time of year, for all games, 04 Trends. Reviews in the first 30 days stand in for sales; the
 masthead says so, and so do section 01 and the event tooltips in section 02, where reviews appear.
 
 **01 What history says.**
@@ -163,6 +163,26 @@ them): a value and its spread per week, with the events that drive it on hover
 ("after Next Fest October"). It stays at 26 weeks: it comes from past years, so dates
 not yet set do not thin it out. China's holidays enter the pattern only when
 Simplified Chinese is picked. One line under the key: "Quiet is not the same as good."
+
+**04 Trends** (decided 2026-10-13). The selection's past launches per quarter since 2022 Q1
+(where the data starts), following the selection like section 01: tags, all / any, languages,
+paid or free. Launches are those the top bar counts (full and Early Access, not leaving Early
+Access, with or without a 30-day review count yet).
+- Three views, a small switch: the share of all launches (the default; the selection's
+  launches over all launches of the group and languages that quarter: Steam's launches grow
+  every year, so raw counts rise for almost every tag), launches per quarter, and the running
+  total. Axes start at 0. With no tags the share is 100% everywhere: the switch shows the
+  counts, with one line saying why.
+- No line ahead: the chart ends at the current quarter, hatched and labelled "so far" (its
+  days so far in the key). Upcoming dates are too incomplete further out, and a niche trend
+  from announced games waits for the calibration around 2027-01-10.
+- Bars drawn by hand in HTML, like the outlook: the quarters are a listbox (one tab stop,
+  arrow keys), each labelled with its numbers ("2024 Q3: 412 of 7,350 paid launches (5.6%)"),
+  and a line over the chart reads out the picked or pointed-at quarter. A line over that
+  compares 2022 with the last four full quarters. Phones keep all 20 quarters, with the years
+  as the only labels under them.
+- One line each: the quarter under way, no forecast, tags are today's (player votes reshape
+  them, so recent quarters rest more on developers' own picks), and which launches count.
 
 **Methods (separate page).** Built from `docs/methods.md`: sources, what each
 number means, the caveats in full, and credit to Games Popularity.
@@ -280,7 +300,12 @@ A `site` workflow builds and deploys to GitHub Pages:
    ARIA listbox (one tab stop, arrow keys), drawn down the page under 1024px. Chinese holiday
    parts are named only when Simplified Chinese is picked. `numbers.js` caches the outlook
    per languages, so a tag pick never recomputes it. The niche trend is `heatmap.py`
-   `niche_trend` / `trend_from`, ported to `heatmap.js` with golden cases.
+   `niche_trend` / `trend_from`, ported to `heatmap.js` with golden cases. Section 04 Trends
+   built: `analysis/trends.py` `quarterly` (per group and quarter: the selection's launches, all
+   launches, share, running totals, the partial quarter), ported to `src/lib/trends.js` with
+   golden cases (`site/test/golden/trends.json`); `numbers.js` caches it per tags, mode and
+   languages (about 11 to 20 ms on the real history, after the paint); `src/trendview.js` makes
+   the text and the scale, `src/ui/trends.js` draws it.
 5. Methods page.
 6. The deploy workflow, then a review of the live site.
 

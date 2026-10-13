@@ -17,4 +17,4 @@ uses `$PYTHON` if set, else the repository's `.venv` when there is one, else `py
 the Hugging Face dataset). It reads local files only. `public/data` is gitignored.
 
 Text lives in `src/strings.js`; the reference numbers in `src/lib/` (ports of
-`analysis/heatmap.py` and `analysis/season.py`).
+`analysis/heatmap.py`, `analysis/season.py` and `analysis/trends.py`).

@@ -8,6 +8,7 @@ import { fromTable } from "../src/lib/data.js";
 import { toDay, toIso, weekStart } from "../src/lib/dates.js";
 import * as hm from "../src/lib/heatmap.js";
 import * as season from "../src/lib/season.js";
+import * as trends from "../src/lib/trends.js";
 
 const TOLERANCE = 1e-9;
 
@@ -30,6 +31,8 @@ const CALLS = {
   estimate: (a) => season.estimate(a.week, a.ratios, a.series, a.before),
   outlook: (a) => season.outlook(a.history, a.events, a.today, a),
   table_rows: (a) => fromTable(a.table, a.meta),
+  quarters: (a) => trends.quarters(a.today),
+  quarterly: (a) => trends.quarterly(a.history, a.today, a),
 };
 
 // where `actual` differs from `expected`, as "path: actual vs expected" lines
@@ -58,7 +61,7 @@ function differences(actual, expected, path = "$") {
   return actual === expected ? [] : [`${path}: ${JSON.stringify(actual)} vs ${JSON.stringify(expected)}`];
 }
 
-for (const file of ["heatmap", "panel", "season", "data"]) {
+for (const file of ["heatmap", "panel", "season", "data", "trends"]) {
   const golden = JSON.parse(readFileSync(new URL(`./golden/${file}.json`, import.meta.url), "utf-8"));
   describe(file, () => {
     test.each(golden.cases.map((c) => [c.name, c]))("%s", (_, c) => {

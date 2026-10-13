@@ -2,9 +2,9 @@ import { expect, test } from "vitest";
 import { en } from "../src/strings.js";
 import { SECTIONS, sectionNumber } from "../src/ui/sections.js";
 
-test("history and the model first, then the heatmap, then the season, numbered in that order", () => {
-  expect(SECTIONS).toEqual(["history", "ahead", "season"]);
-  expect(SECTIONS.map(sectionNumber)).toEqual(["01", "02", "03"]);
+test("history and the model first, then the heatmap, the season and the trends, numbered in that order", () => {
+  expect(SECTIONS).toEqual(["history", "ahead", "season", "trends"]);
+  expect(SECTIONS.map(sectionNumber)).toEqual(["01", "02", "03", "04"]);
   for (const key of SECTIONS) expect(en.sections[key].title).toBeTruthy();
 });
 

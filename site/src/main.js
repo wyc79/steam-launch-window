@@ -14,6 +14,7 @@ import { masthead } from "./ui/masthead.js";
 import { seasonSection } from "./ui/season.js";
 import { footer, sections } from "./ui/sections.js";
 import { topbar } from "./ui/topbar.js";
+import { trendsSection } from "./ui/trends.js";
 
 document.documentElement.lang = s.lang;
 
@@ -23,6 +24,7 @@ const foot = footer(s);
 const history = historySection(s, parts.bodies.history);
 const season = seasonSection(s, parts.bodies.season, parts.intros.season);
 const ahead = aheadSection(s, parts.bodies.ahead);
+const trends = trendsSection(s, parts.bodies.trends);
 
 document.getElementById("app").replaceChildren(
   h("div", { class: "wrap" }, masthead(s)),
@@ -38,4 +40,4 @@ new ResizeObserver(([entry]) => {
   document.documentElement.style.setProperty("--bar-h", `${entry.borderBoxSize[0].blockSize}px`);
 }).observe(bar.el);
 
-connect({ data: loadData(`${import.meta.env.BASE_URL}data/`), selection, bar, parts, foot, history, season, ahead, s });
+connect({ data: loadData(`${import.meta.env.BASE_URL}data/`), selection, bar, parts, foot, history, season, ahead, trends, s });

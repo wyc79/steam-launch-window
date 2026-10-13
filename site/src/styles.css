@@ -1041,6 +1041,102 @@ main { display: block; }
   .ol-week.is-picked .ol-drivers { display: block; grid-column: 1 / -1; font-size: var(--fs-meta); line-height: 1.4; color: var(--ink-2); }
 }
 
+/* ---------- Trends ---------- */
+/* One grid: the axis labels, then a column per quarter. Row 1 the plot (a bar up
+   from 0 per quarter, the round steps as soft rules behind it), row 2 the quarter,
+   row 3 the years. The quarter under way is hatched; the picked one is red. */
+.seg.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tr-views { max-width: 34rem; margin-bottom: var(--s4); }
+.tr-fallback, .tr-summary { margin: 0 0 var(--s3); max-width: var(--measure); }
+.tr-fallback:empty, .tr-summary:empty { display: none; }
+.tr-summary { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tr-readout { min-height: 1.55em; margin: 0 0 var(--s3); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.tr-scroll { padding: 4px; margin: -4px; }
+.tr {
+  --axis-w: 3.25rem;
+  --plot-h: 14rem;
+  display: grid;
+  grid-template-columns: var(--axis-w) repeat(var(--n, 20), minmax(0, 1fr));
+  grid-template-rows: var(--plot-h) auto auto;
+}
+.tr-grid { grid-row: 1; grid-column: 2 / -1; position: relative; }
+.tr-line { position: absolute; left: 0; right: 0; bottom: var(--y); border-top: 1px solid var(--rule-soft); }
+.tr-line.is-zero { border-top-color: var(--ink); }
+.tr-tick {
+  position: absolute;
+  right: 100%;
+  bottom: 0;
+  transform: translateY(50%);
+  padding-right: var(--s2);
+  font-size: var(--fs-meta);
+  line-height: 1;
+  color: var(--ink-2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.tr-list { display: contents; }
+.tr-q {
+  grid-row: 1 / span 2;
+  grid-column: var(--i);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  cursor: pointer;
+}
+.tr-q:focus { outline: none; }
+.tr-q:focus-visible { outline: 2px solid var(--accent-ui); outline-offset: 2px; z-index: 2; }
+.tr-plot { position: relative; display: block; height: var(--plot-h); }
+.tr-q:hover .tr-plot { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.tr-bar { position: absolute; bottom: 0; left: 16%; right: 16%; height: var(--h); background: var(--ink-2); }
+.tr-q.is-partial .tr-bar {
+  --mark: var(--ink-2);
+  background: repeating-linear-gradient(135deg, var(--mark) 0 2px, transparent 2px 5px);
+  box-shadow: inset 0 0 0 1px var(--mark);
+}
+.tr-q.is-picked .tr-bar { background: var(--accent-ui); }
+.tr-q.is-picked.is-partial .tr-bar { --mark: var(--accent-ui); background: repeating-linear-gradient(135deg, var(--mark) 0 2px, transparent 2px 5px); }
+.tr-name {
+  padding-top: var(--s1);
+  font-size: .6875rem;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tr-sofar { display: none; }
+.tr-q.is-partial .tr-name { color: var(--accent-ui); font-weight: 700; }
+.tr-q.is-picked .tr-name { color: var(--ink); font-weight: 700; }
+.tr-year {
+  grid-row: 3;
+  grid-column: var(--from) / span var(--span);
+  margin-top: var(--s1);
+  padding-left: 4px;
+  border-left: 1px solid var(--ink-2);
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  letter-spacing: var(--track-meta);
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+.tr-empty { margin: 0; }
+.tr-notes { margin-top: var(--s4); padding-top: var(--s3); border-top: 1px solid var(--rule-soft); }
+.tr-notes p { margin: 0 0 var(--s1); max-width: 56rem; }
+.tr-notes p:empty { display: none; }
+/* wide screens have room for "so far" under the quarter under way */
+@media (min-width: 1024px) {
+  .tr-q.is-partial .tr-short { display: none; }
+  .tr-sofar { display: inline; }
+}
+/* phones: the years carry the axis; the quarters are too narrow for their names */
+@media (max-width: 639px) {
+  .tr { --axis-w: 2.75rem; --plot-h: 11rem; }
+  .tr-name { display: none; }
+  .tr-bar { left: 12%; right: 12%; }
+  .tr-readout { min-height: 3.1em; }
+}
+
 /* ---------- The phone summary ---------- */
 /* one line on top once the controls have scrolled away (topbar.js): the summary,
    which goes back to the controls, and the section links */

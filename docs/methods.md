@@ -215,3 +215,15 @@ launches against launches it flags 4.4% of tags, but on today's upcoming list it
 about a fifth, so it mostly measures how announced dates and developer-set tags differ
 from launches. It waits for a calibration on daily snapshots against launches, possible
 once 13 weeks of snapshots exist (about 2027-01-10).
+
+## Trends
+
+The Trends chart counts past launches per quarter, from 2022 Q1 (where the data starts) to
+the current quarter, for the picked tags, languages and group (paid or free). Launches are full
+and Early Access launches, as in the top bar's count, including the last month, whose 30-day
+reviews are not in yet. Its default view is the share: the selection's launches divided by all
+launches of the same group and languages that quarter, since Steam's launches grow every year.
+The current quarter is partial and marked so. Nothing is drawn ahead: upcoming dates are too
+incomplete, and a trend from announced games waits for the calibration above. Tags are today's,
+so recent launches, whose tags players have shaped less, rest more on developers' own picks,
+and games delisted since launch are missing, which thins older quarters a little.

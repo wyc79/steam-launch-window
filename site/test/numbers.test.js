@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { heatmapRows, matchCount, nicheTrend, weekGames } from "../src/lib/heatmap.js";
 import { outlook } from "../src/lib/season.js";
+import { quarterly } from "../src/lib/trends.js";
 import { createNumbers, heatmapKey, numbersKey, tagCounts } from "../src/numbers.js";
 import { DEFAULT } from "../src/state.js";
 
@@ -187,5 +188,28 @@ describe("the outlook", () => {
     }
     expect(shared.hasOutlook(pick({ languages: [] }), EVENTS)).toBe(false);
     expect(shared.hasOutlook(pick({}), [])).toBe(false); // other events: computed again
+  });
+});
+
+describe("the quarterly launches", () => {
+  test("are trends.quarterly for the selection, up to the snapshot", () => {
+    const shared = createNumbers(GAMES, HISTORY, "2026-10-13");
+    const st = pick({ tags: [1], languages: ["english"] });
+    expect(shared.hasTrends(st)).toBe(false);
+    expect(shared.trends(st)).toEqual(
+      quarterly(HISTORY, "2026-10-13", { selection: [1], mode: "and", languages: ["english"] }),
+    );
+    expect(shared.hasTrends(st)).toBe(true);
+  });
+
+  test("are cached per tags, mode and languages: the group, the measure and the pick order reuse them", () => {
+    const shared = createNumbers(GAMES, HISTORY, "2026-10-13");
+    const first = shared.trends(pick({ tags: [1, 2] }));
+    for (const patch of [{ group: "free" }, { measure: "raw" }, { tags: [2, 1] }]) {
+      expect(shared.trends(pick({ tags: [1, 2], ...patch }))).toBe(first);
+    }
+    for (const patch of [{ tags: [1] }, { mode: "or" }, { languages: [] }]) {
+      expect(shared.hasTrends(pick({ tags: [1, 2], ...patch }))).toBe(false);
+    }
   });
 });

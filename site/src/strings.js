@@ -281,6 +281,37 @@ export const en = {
     eventsFailed: "Steam events could not be loaded, so this pattern leaves them out.",
   },
 
+  // Trends: past launches per quarter since 2022
+  trends: {
+    show: "Show",
+    views: { share: "Share of all launches", count: "Per quarter", cumulative: "Cumulative" },
+    label: "Quarters since 2022",
+    quarter: (year, q) => `${year} Q${q}`,
+    soFar: "so far",
+    soFarName: (name, from, to) => `${name} so far (${from} to ${to})`,
+    justStarted: (name) => `${name} (just started)`,
+    // one quarter, in the readout and its label: "2024 Q3: 412 of 7,350 paid launches (5.6%)"
+    of: (name, n, all, group, pct) => `${name}: ${n} of ${all} ${group} launches (${pct})`,
+    plain: (name, n, count, group) => `${name}: ${n} ${group} ${count === 1 ? "launch" : "launches"}`,
+    none: (name, group) => `${name}: no ${group} launches`,
+    since: (name, total, group, n) => `${name}: ${total} ${group} launches since 2022 (${n} that quarter)`,
+    // the line over the chart
+    who: (group, langs) => `${group} launches ${langs} with your tags`,
+    whoAll: (group, langs) => `All ${group} launches ${langs}`,
+    summaryShare: (group, langs, first, last) =>
+      `Your tags' share of ${group} launches ${langs}: ${first} in 2022, ${last} in the last four full quarters.`,
+    summaryCount: (who, first, last) => `${who}: ${first} a quarter in 2022, ${last} a quarter in the last four full quarters.`,
+    summaryCumulative: (who, total) => `${who}: ${total} since 2022.`,
+    fallback: "No tags picked, so the share is 100% in every quarter: showing launches per quarter.",
+    empty: "No past launches match. Try fewer tags, Any of these, or more languages.",
+    // one line each under the chart
+    partial: (name, days, length) => `Hatched: ${name} is not over (${days} of ${length} days so far).`,
+    noForecast: "No forecast: dates for upcoming games are too incomplete to extend the line.",
+    tags: "Tags are today's Steam tags: player votes reshape them over time, so the newest quarters rest more on developers' own picks.",
+    which: (num) =>
+      `Counts every past launch, full or Early Access, as the top bar does. Section ${num} uses only those with 30 days of reviews.`,
+  },
+
   // Competition ahead: the niche trend line
   trend: {
     line: (row, ratio) => `${row} is ${ratio}x as large a share of upcoming games (exact dates) as of last year's launches.`,
@@ -308,6 +339,12 @@ export const en = {
       introFor: (group, langs) => `How busy each coming week usually is, from past years' launches of ${group} games ${langs}.`,
       langs: (names) => (names.length ? `in ${names.join(" or ")}` : "in any language"),
       nLangs: (n) => `in ${n} languages`,
+    },
+    trends: {
+      title: "Trends",
+      short: "Trends",
+      intro:
+        "Past launches with your tags in each quarter since 2022, and their share of all launches. Steam grows every year, so the share is the fairer comparison.",
     },
   },
   // the links to the sections in the top bar: "01 History"
