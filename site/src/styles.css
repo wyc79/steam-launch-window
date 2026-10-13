@@ -1203,8 +1203,25 @@ main { display: block; }
 .tr-notes { margin-top: var(--s4); padding-top: var(--s3); border-top: 1px solid var(--rule-soft); }
 .tr-notes p { margin: 0 0 var(--s1); max-width: 56rem; }
 .tr-notes p:empty { display: none; }
-/* Windows high contrast drops background colours: the bars keep system colours */
+/* Windows high contrast drops background colours: every chart mark keeps a
+   system-colour shape, with hatching for states that need a second pattern. */
 @media (forced-colors: active) {
+  .hm-part { forced-color-adjust: none; background: CanvasText; color: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+  .hm-part.s0 { background: Canvas; color: CanvasText; }
+  .hm-part.is-year { background: repeating-linear-gradient(135deg, CanvasText 0 2px, Canvas 2px 5px); color: CanvasText; box-shadow: inset 0 0 0 1px CanvasText; }
+  .hm-part.is-year > span { background: Canvas; color: CanvasText; }
+  .hm-block { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 2px CanvasText; }
+  .hm-block.is-themed_fest { background: repeating-linear-gradient(135deg, CanvasText 0 2px, Canvas 2px 5px); }
+  .hm-tag { forced-color-adjust: none; background: CanvasText; color: Canvas; }
+  .hm-tag.is-cn_holiday { background: Canvas; color: CanvasText; }
+  .hs-bar { forced-color-adjust: none; }
+  .hs-bar.is-p90 { background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+  .hs-bar.is-p75 { background: CanvasText; }
+  .hs-tick { forced-color-adjust: none; background: Highlight; }
+  .ol-spread { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+  .ol-bar { forced-color-adjust: none; background: CanvasText; }
+  .ol-week.is-picked .ol-bar { background: Highlight; }
+  .ol-events span { forced-color-adjust: none; background: CanvasText; color: Canvas; }
   .tr-bar { forced-color-adjust: none; background: CanvasText; }
   .tr-q.is-recent .tr-bar { background: repeating-linear-gradient(135deg, CanvasText 0 2px, Canvas 2px 5px); box-shadow: inset 0 0 0 1px CanvasText; }
   .tr-q.is-picked .tr-bar { background: Highlight; }

@@ -92,6 +92,23 @@ test("the trend bars keep system colours in forced colours (Windows high contras
   expect(forced).toMatch(/\.tr-q\.is-picked \.tr-bar \{ background: Highlight; \}/);
 });
 
+test("every background-only chart mark keeps a system-colour shape in forced colours", () => {
+  const forced = css.slice(css.indexOf("@media (forced-colors: active)"));
+  expect(forced).toMatch(/\.hm-part \{ forced-color-adjust: none; background: CanvasText; color: Canvas;[^}]*\}/);
+  expect(forced).toMatch(/\.hm-part\.is-year \{[^}]*repeating-linear-gradient\([^}]*CanvasText[^}]*Canvas[^}]*\}/);
+  expect(forced).toMatch(/\.hm-part\.is-year > span \{ background: Canvas; color: CanvasText; \}/);
+  expect(forced).toMatch(/\.hm-block \{ forced-color-adjust: none; background: Canvas;[^}]*CanvasText[^}]*\}/);
+  expect(forced).toMatch(/\.hm-tag \{ forced-color-adjust: none; background: CanvasText; color: Canvas; \}/);
+  expect(forced).toMatch(/\.hs-bar \{ forced-color-adjust: none; \}/);
+  expect(forced).toMatch(/\.hs-bar\.is-p90 \{ background: Canvas;[^}]*CanvasText[^}]*\}/);
+  expect(forced).toMatch(/\.hs-bar\.is-p75 \{ background: CanvasText; \}/);
+  expect(forced).toMatch(/\.hs-tick \{ forced-color-adjust: none; background: Highlight; \}/);
+  expect(forced).toMatch(/\.ol-spread \{ forced-color-adjust: none; background: Canvas;[^}]*CanvasText[^}]*\}/);
+  expect(forced).toMatch(/\.ol-bar \{ forced-color-adjust: none; background: CanvasText; \}/);
+  expect(forced).toMatch(/\.ol-week\.is-picked \.ol-bar \{ background: Highlight; \}/);
+  expect(forced).toMatch(/\.ol-events span \{ forced-color-adjust: none; background: CanvasText; color: Canvas; \}/);
+});
+
 test("the rules were found", () => {
   expect(steps).toHaveLength(8);
   expect(far).toHaveLength(7);
