@@ -1,8 +1,8 @@
 // Builds the site's data files into public/data from a checkout of the data branch:
 //   npm run data -- [--data-dir ../_data] [--gp-dir <folder>]
-// Runs `python -m analysis.site_data` from the repository root (with the repo's
-// .venv when there is one, else $PYTHON or python) and copies the data branch's
-// site/model.json when present. Reads local files only.
+// Runs `python -m analysis.site_data` from the repository root (with $PYTHON if
+// set, else the repo's .venv when there is one, else python) and copies the data
+// branch's site/model.json when present. Reads local files only.
 
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync } from "node:fs";
@@ -21,7 +21,12 @@ const args = ["-m", "analysis.site_data", "--data-dir", dataDir, "--out", out];
 if (values["gp-dir"]) args.push("--gp-dir", resolve(values["gp-dir"]));
 
 const run = spawnSync(python, args, { cwd: repo, stdio: "inherit" });
-if (run.status !== 0) process.exit(run.status ?? 1);
+if (run.error || run.status === null) {
+  console.error(`could not run ${python}: ${run.error?.message ?? run.signal}`);
+  console.error("set PYTHON to a Python that has the repository's dependencies");
+  process.exit(1);
+}
+if (run.status !== 0) process.exit(run.status);
 
 const model = resolve(dataDir, "site/model.json");
 if (existsSync(model)) {

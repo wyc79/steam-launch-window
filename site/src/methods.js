@@ -7,7 +7,7 @@ import { masthead, REPO } from "./ui/masthead.js";
 import { footer } from "./ui/sections.js";
 
 document.documentElement.lang = s.lang;
-document.title = `${s.methods.title} · ${s.title}`;
+document.title = s.pageTitle(s.methods.title, s.title);
 
 document.getElementById("app").replaceChildren(
   h("div", { class: "wrap" }, masthead(s, "methods")),

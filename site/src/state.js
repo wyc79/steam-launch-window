@@ -1,9 +1,17 @@
 // The user's selection, the one piece of state the sections share. The top bar
 // changes it; every section subscribes and redraws from it.
 
-import { GROUPS, MODES } from "./lib/heatmap.js";
+import { GROUPS, MEASURES, MODES } from "./lib/heatmap.js";
 
-export const DEFAULT = Object.freeze({ tags: [], mode: "and", languages: ["english"], group: "paid" });
+// measure: how the history panel ranks weeks ("relative" by default, or "raw"
+// counts); the match count's red uses the same one, so it lives here
+export const DEFAULT = Object.freeze({
+  tags: [],
+  mode: "and",
+  languages: ["english"],
+  group: "paid",
+  measure: "relative",
+});
 
 function same(a, b) {
   return Object.keys(a).every((k) =>
@@ -14,6 +22,7 @@ function same(a, b) {
 function check(s) {
   if (!MODES.includes(s.mode)) throw new Error(`mode must be one of ${MODES}, not ${s.mode}`);
   if (!GROUPS.includes(s.group)) throw new Error(`group must be one of ${GROUPS}, not ${s.group}`);
+  if (!MEASURES.includes(s.measure)) throw new Error(`measure must be one of ${MEASURES}, not ${s.measure}`);
   if (!Array.isArray(s.tags) || !Array.isArray(s.languages)) throw new Error("tags and languages must be lists");
 }
 

@@ -233,8 +233,8 @@ img { max-width: 100%; }
   border-top: 1px solid var(--ink);
   border-bottom: 1px solid var(--ink);
 }
-/* a short screen (a phone held sideways) cannot spare the room */
-@media (max-height: 560px) { .bar { position: static; } }
+/* a phone, or a short screen (a phone held sideways), cannot spare the room */
+@media (max-height: 560px), (max-width: 639px) { .bar { position: static; } }
 .bar-grid {
   display: grid;
   grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
@@ -247,26 +247,28 @@ img { max-width: 100%; }
 .ctl { min-width: 0; margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: var(--s1); }
 fieldset.ctl { display: block; }
 .ctl > legend { padding: 0; margin-bottom: var(--s1); }
+/* Languages is always the last control, at the right edge, so its panel opens
+   leftwards inside the page at every width */
 .ctl-tags { grid-column: 1 / span 5; }
 .ctl-mode { grid-column: 6 / span 3; }
-.ctl-langs { grid-column: 9 / span 2; }
-.ctl-group { grid-column: 11 / span 2; }
+.ctl-group { grid-column: 9 / span 2; }
+.ctl-langs { grid-column: 11 / span 2; }
 .count { grid-column: 1 / -1; }
 @media (max-width: 1023px) {
   .ctl-tags { grid-column: 1 / -1; }
   .ctl-mode { grid-column: 1 / span 2; }
-  .ctl-langs { grid-column: 3 / span 2; }
-  .ctl-group { grid-column: 5 / span 2; }
+  .ctl-group { grid-column: 3 / span 2; }
+  .ctl-langs { grid-column: 5 / span 2; }
 }
 @media (max-width: 639px) {
   .bar-grid { row-gap: var(--s2); padding-top: var(--s2); padding-bottom: var(--s2); }
   /* the controls say what they are; the labels stay for screen readers */
-  .ctl-tags > .label, .ctl-mode > legend, .ctl-group > legend {
+  .ctl > .label, .ctl > legend {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;
   }
   .ctl-mode { grid-column: 1 / -1; }
-  .ctl-langs { grid-column: 1 / span 2; }
-  .ctl-group { grid-column: 3 / span 2; }
+  .ctl-group { grid-column: 1 / span 2; }
+  .ctl-langs { grid-column: 3 / span 2; }
 }
 
 /* Tag picker: chips and the text field in one ruled box, the list below it */
@@ -405,9 +407,6 @@ fieldset.ctl { display: block; }
 .pick-panel li { break-inside: avoid; }
 .pick-panel label { display: flex; align-items: center; gap: .5em; padding: .3rem 0; font-size: var(--fs-small); cursor: pointer; }
 .pick-panel input { margin: 0; accent-color: var(--ink); width: 1rem; height: 1rem; flex: none; }
-@media (max-width: 1023px) {
-  .pick-panel { left: 0; right: auto; }
-}
 @media (max-width: 639px) {
   .pick-panel ul { columns: 1; }
 }
@@ -435,8 +434,10 @@ main { display: block; }
   margin-top: var(--s8);
   padding-top: var(--s4);
   border-top: 1px solid var(--ink);
-  scroll-margin-top: 12rem;
+  /* clear the sticky bar (its height measured in main.js); a phone's bar does not stick */
+  scroll-margin-top: calc(var(--bar-h, 12rem) + var(--s4));
 }
+@media (max-height: 560px), (max-width: 639px) { .page-section { scroll-margin-top: var(--s4); } }
 .page-section > * { grid-column: 1 / -1; min-width: 0; }
 /* the number from data-index, drawn by CSS so it is not read twice */
 .page-section::before {

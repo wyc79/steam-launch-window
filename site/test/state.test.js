@@ -2,8 +2,14 @@ import { describe, expect, test, vi } from "vitest";
 import { createState, DEFAULT, query } from "../src/state.js";
 
 describe("selection state", () => {
-  test("starts with no tags, all of these, English and paid games", () => {
-    expect(createState().get()).toEqual({ tags: [], mode: "and", languages: ["english"], group: "paid" });
+  test("starts with no tags, all of these, English, paid games and the relative measure", () => {
+    expect(createState().get()).toEqual({
+      tags: [],
+      mode: "and",
+      languages: ["english"],
+      group: "paid",
+      measure: "relative",
+    });
     expect(DEFAULT).toEqual(createState().get());
   });
 
@@ -66,10 +72,11 @@ describe("selection state", () => {
     expect(before.tags).toEqual([]);
   });
 
-  test("an unknown mode or group is an error and changes nothing", () => {
+  test("an unknown mode, group or measure is an error and changes nothing", () => {
     const state = createState();
     expect(() => state.set({ mode: "xor" })).toThrow();
     expect(() => state.set({ group: "both" })).toThrow();
+    expect(() => state.set({ measure: "ratio" })).toThrow();
     expect(state.get()).toEqual(DEFAULT);
   });
 

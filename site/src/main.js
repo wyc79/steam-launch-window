@@ -3,10 +3,9 @@
 // once, the data files load in parallel, and each part fills in when its data is in.
 
 import "./styles.css";
-import { countLine, tooFewPast } from "./count.js";
-import { historyPanel, matchCount } from "./lib/heatmap.js";
 import { loadData } from "./load.js";
-import { query, selection } from "./state.js";
+import { connect } from "./page.js";
+import { selection } from "./state.js";
 import { strings as s } from "./strings.js";
 import { h } from "./ui/dom.js";
 import { masthead } from "./ui/masthead.js";
@@ -33,24 +32,9 @@ document.getElementById("app").replaceChildren(
   h("div", { class: "wrap" }, foot.el),
 );
 
-const data = loadData(`${import.meta.env.BASE_URL}data/`);
-const reported = () => {}; // a failed file is reported once, by data.all below
+// the sticky bar's height, so a section scrolled to is not hidden under it
+new ResizeObserver(([entry]) => {
+  document.documentElement.style.setProperty("--bar-h", `${entry.borderBoxSize[0].blockSize}px`);
+}).observe(bar.el);
 
-data.meta.then((meta) => {
-  bar.setMeta(meta);
-  foot.setDate(meta.snapshot_date);
-}, reported);
-
-Promise.all([data.upcoming, data.history]).then(([games, history]) => {
-  selection.subscribe((st) => {
-    const q = query(st);
-    const panel = historyPanel(history, q);
-    bar.setCount(countLine(matchCount(games, history, q), st.group, s), tooFewPast(panel, st.group));
-  });
-}, reported);
-
-data.all.then(parts.settle, (err) => {
-  console.error(err);
-  bar.setError();
-  parts.settle();
-});
+connect({ data: loadData(`${import.meta.env.BASE_URL}data/`), selection, bar, parts, foot, s });

@@ -1,6 +1,7 @@
 // The sticky top bar: tag picker, all / any, languages, paid / free and the match
 // count. It reads and writes the selection (state.js) and computes nothing itself.
 
+import { arrowActive, openActive } from "../combo.js";
 import { searchTags, tagNames } from "../tags.js";
 import { h, uid } from "./dom.js";
 
@@ -31,6 +32,8 @@ function tagPicker(s, state) {
   let options = [];
   let active = -1;
   let quietFocus = false;
+  let countsFor = null; // set once the upcoming games are in
+  const optionId = (id) => `${listId}-t${id}`; // by tag, so a changed list gets new ids
 
   function close() {
     list.hidden = true;
@@ -41,20 +44,22 @@ function tagPicker(s, state) {
 
   function show() {
     options = searchTags(tags, input.value, { exclude: state.get().tags });
-    active = input.value.trim() && options.length ? 0 : -1;
+    active = openActive(input.value.trim() !== "", options.length);
     draw();
     list.hidden = false;
     input.setAttribute("aria-expanded", "true");
   }
 
   function draw() {
+    const counts = countsFor?.(state.get());
+    const fmt = new Intl.NumberFormat(s.locale);
     list.replaceChildren(
       ...(options.length
-        ? options.map(([id, name, upcoming], i) =>
+        ? options.map(([id, name], i) =>
             h(
               "li",
               {
-                id: `${listId}-${i}`,
+                id: optionId(id),
                 role: "option",
                 class: "tag-option",
                 "aria-selected": String(i === active),
@@ -62,13 +67,13 @@ function tagPicker(s, state) {
                 onclick: () => pick(id),
               },
               h("span", {}, name),
-              h("span", { class: "tag-count" }, s.bar.tagUpcoming(new Intl.NumberFormat(s.locale).format(upcoming))),
+              counts && h("span", { class: "tag-count" }, s.bar.tagUpcoming(fmt.format(counts.get(id) ?? 0))),
             ),
           )
         : [h("li", { role: "option", "aria-disabled": "true", class: "tag-none" }, s.bar.tagNone)]),
     );
     if (active >= 0) {
-      input.setAttribute("aria-activedescendant", `${listId}-${active}`);
+      input.setAttribute("aria-activedescendant", optionId(options[active][0]));
       list.children[active].scrollIntoView({ block: "nearest" });
     } else {
       input.removeAttribute("aria-activedescendant");
@@ -83,9 +88,9 @@ function tagPicker(s, state) {
   }
 
   function move(step) {
-    if (list.hidden) show();
-    if (!options.length) return;
-    active = active < 0 ? (step > 0 ? 0 : options.length - 1) : (active + step + options.length) % options.length;
+    const open = !list.hidden;
+    if (!open) show();
+    active = arrowActive({ open, active, typed: input.value.trim() !== "", count: options.length }, step);
     draw();
   }
 
@@ -105,6 +110,7 @@ function tagPicker(s, state) {
       if (!list.hidden) close();
       else input.value = "";
     } else if (e.key === "Backspace" && input.value === "") {
+      if (e.repeat) return; // holding Backspace to clear the text must not then eat the chips
       state.removeLastTag();
       if (!list.hidden) show();
     } else return;
@@ -153,6 +159,11 @@ function tagPicker(s, state) {
       input.disabled = false;
       input.placeholder = s.bar.tagPlaceholder;
       drawChips(state.get());
+    },
+    // countsFor(selection): tag id -> upcoming games for its languages and group
+    setCounts(fn) {
+      countsFor = fn;
+      if (!list.hidden) draw();
     },
   };
 }
@@ -247,11 +258,12 @@ export function topbar(s, state) {
       { class: "wrap bar-grid" },
       tags.el,
       switcher(s, s.bar.mode, "mode", ["and", "or"], state),
-      langs.el,
       switcher(s, s.bar.price, "group", ["paid", "free"], state),
+      langs.el, // last, so its panel can open leftwards from the right edge at every width
       count,
     ),
   );
+  let failed = false;
 
   return {
     el,
@@ -259,8 +271,11 @@ export function topbar(s, state) {
       tags.setTags(meta);
       langs.setLanguages(meta.languages);
     },
-    // line: countLine's result; tooFew: past launches too few for section 03
+    setTagCounts: tags.setCounts,
+    // line: countLine's result; tooFew: past launches too few for section 03.
+    // After an error, the error line stays.
     setCount(line, tooFew) {
+      if (failed) return;
       upcoming.textContent = line.upcoming;
       sep.textContent = s.bar.sep;
       past.textContent = line.past;
@@ -269,6 +284,7 @@ export function topbar(s, state) {
       count.replaceChildren(upcoming, sep, past, few);
     },
     setError() {
+      failed = true;
       const input = el.querySelector(".tag-input");
       if (input.disabled) input.placeholder = "";
       count.replaceChildren(h("span", { class: "error" }, s.bar.error));

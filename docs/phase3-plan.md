@@ -57,9 +57,9 @@ own pieces:
 
 One page with numbered sections, and a separate Methods page.
 
-**Top bar (sticky):** the tag picker (type to search Steam tags, picked tags as
-removable chips), all of these / any of these, languages (default English),
-paid / free, and the match count ("1,204 of 20,495 upcoming, 3,950 of 82,910
+**Top bar (sticky, except on phones):** the tag picker (type to search Steam tags, picked tags as
+removable chips), all of these / any of these, paid / free, languages (default English),
+and the match count ("1,204 of 20,495 upcoming, 3,950 of 82,910
 past launches"), which turns red when past launches are too few for section 03.
 The count is for the picked group (paid or free), so it agrees with the heatmap
 below it.
@@ -172,8 +172,14 @@ A `site` workflow builds and deploys to GitHub Pages:
    (the selection the sections subscribe to), `src/ui/` (masthead, top bar, empty section
    frames, footer), `src/styles.css`, a placeholder `methods.html`. The match count turns red
    when the history panel would hide the picked group (`historyPanel(...).shown`, parts under
-   `MIN_GROUP`). The theme choice is kept under its own key (`slw-theme`), since
-   wyc79.github.io writes `yc-theme` on the same origin and defaults it to light.
+   `MIN_GROUP`). `src/numbers.js` computes `matchCount` and `historyPanel` once per tags,
+   mode, languages and panel measure (the measure is in the selection), so paid / free costs
+   nothing and section 03 can read the same panel. The count is recomputed after the click
+   paints, once for several quick clicks. The tag list shows each tag's upcoming games for
+   the picked languages and paid / free. On phones (under 640px) the bar does not stick.
+   Analytics are not loaded on localhost. The theme choice is kept under its own key
+   (`slw-theme`), since wyc79.github.io writes `yc-theme` on the same origin and defaults
+   it to light.
 4. Sections 01 to 03.
 5. Methods page.
 6. The deploy workflow, then a review of the live site.

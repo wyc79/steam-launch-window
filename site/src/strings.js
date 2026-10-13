@@ -6,6 +6,7 @@ export const en = {
   locale: "en-US",
 
   title: "Steam Launch Window",
+  pageTitle: (page, site) => `${page} · ${site}`, // a page other than the tool
   description:
     "Pick a Steam launch week: how crowded the coming weeks are for your tags, and how similar games did when they launched.",
 
@@ -48,7 +49,7 @@ export const en = {
     upcoming: (n, total) => `${n} of ${total} upcoming`,
     past: (n, total) => `${n} of ${total} past launches`,
     sep: " · ",
-    fewPast: "Too few past launches for section 03.",
+    fewPast: "Too few for section 03.",
   },
 
   sections: {
