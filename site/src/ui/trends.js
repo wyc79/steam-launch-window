@@ -9,7 +9,6 @@
 
 import { trendView, VIEWS, viewsFor } from "../trendview.js";
 import { fill, h, uid } from "./dom.js";
-import { sectionNumber } from "./sections.js";
 
 const pct = (x) => `${(Math.max(0, Math.min(1, x)) * 100).toFixed(2)}%`;
 
@@ -53,10 +52,7 @@ export function trendsSection(s, body) {
     "div",
     { class: "tr-notes quiet" },
     partial,
-    h("p", {}, t.noForecast),
-    h("p", {}, t.tags),
-    h("p", {}, t.removed),
-    h("p", {}, t.which(sectionNumber("history"))),
+    h("p", {}, t.details),
   );
   const frame = [h("p", { id: labelId, class: "visually-hidden" }, t.label), switcher, fallback, summary, readout, chart, notes];
 

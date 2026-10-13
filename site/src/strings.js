@@ -313,16 +313,12 @@ export const en = {
     tooFew: (n) => `Too few launches to compare 2022 with recent years (each needs ${n}).`,
     noShare: "Pick a tag to see its share of all launches.",
     empty: "No past launches match. Try fewer tags, Any of these, or more languages.",
-    // one line each under the chart
+    // two lines under the chart: the partial quarter, then the scope and no forecast
     partial: (name, days, length) =>
-      `Hatched: recent quarters; their tags may still change as players vote. ${name} is not over (${days} of ${length} days so far).`,
-    partialStart: (name) => `Hatched: recent quarters; their tags may still change as players vote. ${name} has just started.`,
-    removed:
-      "Counts only games still on Steam today. Games Steam removed earlier are missing, so older quarters look smaller and shares shift a little.",
-    noForecast: "No forecast: dates for upcoming games are too incomplete to extend the line.",
-    tags: "Tags are today's Steam tags, which player votes reshape over time.",
-    which: (num) =>
-      `Full and Early Access launches, with or without 30 days of reviews yet. Section ${num} uses only those with reviews.`,
+      `Hatched: recent quarters, whose tags may still change. ${name} so far: ${days} of ${length} days.`,
+    partialStart: (name) => `Hatched: recent quarters, whose tags may still change. ${name} has just started.`,
+    details:
+      "Only games still on Steam today, full and Early Access, with today's tags. No forecast: upcoming dates are too incomplete.",
   },
 
   // Competition ahead: the niche trend line
