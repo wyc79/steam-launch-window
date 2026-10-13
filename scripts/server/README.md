@@ -8,6 +8,7 @@ small daily and weekly increments.
 |---|---|---|---|
 | History backfill: 30-day review counts and the hidden Early Access check | about 70,000 | about 20 h at 1/s | `steam-history-backfill` |
 | Optional: first-day and first-week review counts for all launches since 2022 | about 100,000 | about 2 to 3 days | none, a one-off command (section 4) |
+| Free-game recount, then reviews by language for 1,000 launches | about 27,000 | about 7 to 8 h | none, `run_review_jobs.sh` (section 5) |
 | ~~First follower scrape~~ | retired 2026-10-11 | | `steam-follower-scrape` |
 
 The follower scrape is retired: steamcommunity.com blocked the IP for 8+ hours
@@ -72,6 +73,49 @@ cd ~/steam-launch-window && git pull
 ```
 
 Rerun it until it exits with 0. Then copy `history/games.csv` back as in "When they are done".
+
+## 5. Free-game recount and reviews by language
+
+Free games' review counts used to include only Steam purchases (almost none for a
+free game); the first job counts them again with everyone's reviews. The second
+counts first-month reviews per language for 1,000 paid launches (half with
+Simplified Chinese), to check whether Chinese localization changes who reviews.
+They run one after the other, since they share Steam's review API and this IP.
+
+Before starting:
+- Turn off the weekly history job on GitHub (repository variable
+  `COLLECT_HISTORY=off`), so it does not write `history/games.csv` at the same time.
+- Make sure the old backfill service is off
+  (`systemctl --user disable --now steam-history-backfill`), or a reboot starts a
+  second writer.
+- While it runs, send no heavy Steam traffic from other machines on this network.
+
+```bash
+cd ~/steam-launch-window
+git checkout main && git pull
+git fetch origin data
+mkdir -p _data/history
+git show origin/data:history/games.csv > _data/history/games.csv
+nohup scripts/server/run_review_jobs.sh > ~/review-jobs.log 2>&1 &
+tail -f ~/review-jobs.log
+```
+
+It ends with `all review jobs complete`. If the recount fails or gives up, the
+language sample does not start; the log says why.
+
+After a reboot or a stop, run only the `nohup` line again: both jobs go on where
+they stopped (running the whole block would replace `games.csv` and lose the
+recount's progress). To stop it, end the script before the Python job, or the
+script starts the job again: `pkill -f run_review_jobs.sh; pkill -f "pipeline\."`.
+
+When it is done, copy both files back and commit them to the data branch, and
+set `COLLECT_HISTORY=on` again:
+
+```bash
+scp <user>@<server>:steam-launch-window/_data/history/games.csv _data/history/
+scp <user>@<server>:steam-launch-window/_data/history/reviews_by_language.csv _data/history/
+scp <user>@<server>:steam-launch-window/_data/history/language_sample_games.csv _data/history/
+```
 
 ## Keep them running after logout and reboots
 
