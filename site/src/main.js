@@ -22,13 +22,6 @@ const ahead = aheadSection(s, parts.bodies.ahead);
 
 document.getElementById("app").replaceChildren(
   h("div", { class: "wrap" }, masthead(s)),
-  h(
-    "div",
-    { class: "wrap hero" },
-    h("h1", {}, s.hero.title),
-    h("p", { class: "lede" }, s.hero.lede),
-    h("p", { class: "caveat" }, s.hero.caveat),
-  ),
   bar.summary,
   bar.el,
   h("main", { class: "wrap" }, parts.els),

@@ -1,5 +1,5 @@
 // The selection's numbers, computed once and shared: the top bar's count and its
-// red, section 01's heatmap, and (later) section 03's history panel read the same
+// red, the heatmap (Competition ahead), and (later) the history panel read the same
 // cached objects. Each result holds both groups, so paid / free costs nothing.
 
 import { groupOf, heatmap, historyPanel, matchCount, speaks, weekGames } from "./lib/heatmap.js";
@@ -62,7 +62,7 @@ export function createNumbers(games, history, today) {
   return {
     has: (st) => results.has(numbersKey(st)),
     hasHeatmap: (st) => maps.has(heatmapKey(st)),
-    // what heatmapRows(...) gives with the typical week, for section 01 (each
+    // what heatmapRows(...) gives with the typical week, for the heatmap (each
     // tag alone, then the combination; test/numbers.test.js checks they agree)
     heatmap: (st) =>
       remember(maps, heatmapKey(st), () => {

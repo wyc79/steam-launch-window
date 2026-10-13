@@ -1,33 +1,33 @@
-// Section 01, Competition ahead: the event band, the heatmap (an ARIA grid of
-// plain HTML cells, laid out by CSS: weeks across, or down on phones) and the
-// week detail. Numbers come from numbers.js, text and steps from heatview.js and
-// weekdetail.js; this file only draws them and handles input.
+// Competition ahead: the heatmap (an ARIA grid of plain HTML cells, laid out by
+// CSS: weeks across, or down on phones), the events lanes under the dates, and the
+// week's games. Numbers come from numbers.js, text and steps from heatview.js and
+// weekdetail.js, the events from events.js; this file only draws them and handles
+// input.
 
 import { formatNumber } from "../count.js";
 import { bandEvents } from "../events.js";
-import { buildView, eventText, formatCut, formatDate } from "../heatview.js";
-import { toDay } from "../lib/dates.js";
+import { buildView, CUTS, eventText, formatCut, formatDate } from "../heatview.js";
 import { WEEKS } from "../lib/heatmap.js";
 import { tagNames } from "../tags.js";
-import { detailItems, FIRST } from "../weekdetail.js";
-import { h, uid } from "./dom.js";
+import { detailItems, listParts } from "../weekdetail.js";
+import { fill, h, uid } from "./dom.js";
 
 const PHONE = "(max-width: 639px)";
-const DAYS = 7;
 
 export function aheadSection(s, body) {
   const a = s.ahead;
   const phone = window.matchMedia(PHONE);
   let numbers = null;
   let names = new Map();
-  let events = null;
+  let events; // undefined while loading, null if events.json failed
   let st = null; // the selection last drawn or asked for
   let rows = null; // heatmapRows drawn (an object from the cache)
+  let band = { events: [], lanes: [] };
+  let bandFor = null; // [rows, events] the band was picked for
   let view = null;
-  let band = null;
   const local = { raw: false, year: false };
   let focus = { row: 0, week: 0 };
-  let open = null; // { row, week, all }
+  let open = null; // { row, week, parts: Set of list parts shown in full }
   let cells = []; // [row][week] gridcell elements
 
   // ---------- fixed parts: toggles, legend, notes, detail ----------
@@ -53,94 +53,19 @@ export function aheadSection(s, body) {
     legend,
   );
   const status = h("p", { class: "ah-status", role: "status" });
+  const eventsNote = h("p", { class: "ah-events-note quiet" });
   const keyId = uid("hm-key");
   const scroller = h("div", { class: "hm-scroll" });
   const notes = h("div", { class: "ah-notes" });
   const detail = h("div", { class: "ah-detail" });
   // the opened week, said once (not the whole list) for screen readers
   const announce = h("p", { class: "visually-hidden", "aria-live": "polite" });
-  const frame = [controls, status, scroller, notes, detail, announce];
-
-  // ---------- the event band (desktop; phones list events in each week's row) ----------
-  // Each event is a bar with its name above it, starting where it starts; a name
-  // longer than its bar runs on to the right, so the next event of that kind goes
-  // to a second row when the name would reach it.
-  let weekPx = 0; // a week's width (with its gap) when the band was laid out
-  let bandEl = null;
-  let labelPx = () => 0; // an event name's width
-  const measure = document.createElement("canvas").getContext("2d");
-
-  // the events for the selection, rows packed for names `weekPx` wide a week
-  function layoutBand() {
-    const head = scroller.querySelector(".hm-week");
-    weekPx = head ? head.getBoundingClientRect().width + 2 : Math.max(24, (scroller.clientWidth * 0.85) / WEEKS);
-    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    measure.font = `${0.75 * rem}px ${getComputedStyle(body).fontFamily}`;
-    labelPx = (e) => measure.measureText(shortText(e)).width;
-    const room = (e) => e.from + ((labelPx(e) + 0.75 * rem) / weekPx) * DAYS;
-    band = bandEvents(events, rows[0].weeks[0], WEEKS, {
-      tagNames: st.tags.map((t) => names.get(t)).filter(Boolean),
-      languages: st.languages,
-      extent: (e) => Math.max(e.to, room(e)),
-    });
-  }
-
-  function placeBand(wrap) {
-    layoutBand();
-    const next = drawBand(rows[0].weeks[0]);
-    if (bandEl?.parentNode === wrap) bandEl.remove();
-    bandEl = next;
-    if (next) wrap.prepend(next);
-  }
-
-  // a new width: names take a different share of the weeks
-  new ResizeObserver(() => {
-    const head = scroller.querySelector(".hm-week");
-    const wrap = scroller.firstChild;
-    if (head && wrap && Math.abs(head.getBoundingClientRect().width + 2 - weekPx) > 0.5) placeBand(wrap);
-  }).observe(scroller);
-
-  function drawBand(first) {
-    if (!band.lanes.length) return null;
-    const total = DAYS * WEEKS;
-    const start = toDay(first);
-    const lanes = band.lanes.map((lane, i) =>
-      h(
-        "div",
-        { class: `hm-lane is-${lane.kind}` },
-        h("span", { class: "hm-lane-name" }, lane.row === 0 ? a.kinds[lane.kind] : ""),
-        h(
-          "div",
-          { class: "hm-track" },
-          band.events
-            .filter((e) => e.lane === i)
-            .map((e) => {
-              const from = Math.max(0, e.from - start);
-              const to = Math.min(total, e.to - start);
-              // a name that would run past the last week ends there instead
-              const over = (from / DAYS) * weekPx + labelPx(e) - WEEKS * weekPx;
-              return h(
-                "span",
-                {
-                  class: "hm-event",
-                  style: `left:${(100 * from) / total}%;width:${(100 * (to - from)) / total}%`,
-                  title: `${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`,
-                },
-                h("span", { class: "hm-event-name", style: over > 0 ? `left:${-over}px` : null }, shortText(e)),
-              );
-            }),
-        ),
-      ),
-    );
-    return h("div", { class: "hm-band", "aria-hidden": "true" }, lanes);
-  }
-
-  // "Next Fest October", "China Spring Festival holiday (unconfirmed)"
-  function shortText(e) {
-    return eventText({ ...e, name: e.short }, s);
-  }
+  const frame = [controls, status, eventsNote, scroller, notes, detail, announce];
 
   // ---------- the grid ----------
+  // Desktop rows: 1 the dates; then, with events, the "Events" label, one row per
+  // lane and a rule; then the heatmap rows. Phones put weeks in rows and the
+  // heatmap rows in columns 2 on (--tc); the lanes are hidden there.
   function weekHead(w, i) {
     const label = [a.week(w.date, w.to)];
     if (w.current) label.push(a.thisWeek);
@@ -155,27 +80,25 @@ export function aheadSection(s, body) {
         "aria-label": label.join(". "),
         "data-week": i,
       },
-      h("span", { class: "hm-month", "aria-hidden": "true" }, w.month ?? ""),
-      h("span", { class: "hm-day", "aria-hidden": "true" }, w.day),
-      // phones: the whole date, this week, the far line and the events, as text
       h("span", { class: "hm-date", "aria-hidden": "true" }, w.date),
+      // phones: this week, the far line and the events, as text in the week's row
       w.current && h("span", { class: "hm-now", "aria-hidden": "true" }, a.thisWeek),
-      i === view.weeks.findIndex((x) => x.far) && h("span", { class: "hm-far-note", "aria-hidden": "true" }, a.far),
+      i === firstFar(view) && h("span", { class: "hm-far-note", "aria-hidden": "true" }, a.far),
       w.events.length > 0 &&
         h(
           "span",
           { class: "hm-week-events", "aria-hidden": "true" },
-          w.events.map((e) => h("span", { class: `is-${e.kind}` }, shortText(e))),
+          w.events.map((e) => h("span", { class: `hm-tag is-${e.kind}` }, eventText({ ...e, name: e.short }, s))),
         ),
     );
   }
 
-  function rowHead(row, r) {
+  function rowHead(row, r, tr) {
     return h(
       "div",
-      { role: "rowheader", class: "hm-rowhead", style: `--tr:${r + 2}` },
-      h("span", { class: "hm-row-name" }, row.label),
-      h("span", { class: "hm-row-usual" }, row.usual),
+      { role: "rowheader", class: `hm-rowhead${row.counts ? " is-counts" : ""}`, style: `--tr:${tr};--tc:${r + 2}` },
+      h("span", { class: "hm-row-name", lang: s.lang }, row.label),
+      h("span", { class: "hm-row-note" }, row.note),
       h(
         "span",
         { class: "hm-row-parts", "aria-hidden": "true" },
@@ -184,14 +107,14 @@ export function aheadSection(s, body) {
     );
   }
 
-  function cell(c, r, w) {
+  function cell(c, r, w, tr) {
     const week = view.weeks[w];
-    const el = h(
+    return h(
       "div",
       {
         role: "gridcell",
-        class: `hm-cell${week.far ? " is-far" : ""}${week.current ? " is-current" : ""}`,
-        style: `--tr:${r + 2};--wk:${w + 2}`,
+        class: `hm-cell${week.far ? " is-far" : ""}`,
+        style: `--tr:${tr};--tc:${r + 2};--wk:${w + 2}`,
         tabindex: r === focus.row && w === focus.week ? "0" : "-1",
         "aria-label": c.label,
         "aria-selected": String(!!open && open.row === r && open.week === w),
@@ -201,15 +124,47 @@ export function aheadSection(s, body) {
         },
       },
       c.parts.map((p) =>
-        h("span", { class: `hm-part is-${p.part} s${p.step}`, "aria-hidden": "true" }, h("span", {}, p.text)),
+        h(
+          "span",
+          { class: `hm-part is-${p.part} s${p.step}`, "aria-hidden": "true" },
+          h("span", { class: "hm-part-tag" }, a.partsShort[p.part]),
+          h("span", { class: "hm-num" }, p.text),
+        ),
       ),
     );
-    return el;
+  }
+
+  // the events lanes: a block over the weeks each event covers, its name from its
+  // first week up to the next event in the lane (cut short with an ellipsis there)
+  function lanes(first) {
+    if (!band.lanes.length) return [];
+    const out = [h("div", { class: "hm-band-label", style: `--tr:${first}` }, a.eventsLabel)];
+    band.lanes.forEach((lane, i) => {
+      const tr = first + 1 + i;
+      out.push(h("div", { class: "hm-lane-name", style: `--tr:${tr}` }, lane.row === 0 ? a.kinds[lane.kind] : ""));
+      for (const e of band.events.filter((x) => x.lane === i)) {
+        const full = `${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`;
+        out.push(
+          h("div", {
+            class: `hm-block is-${e.kind}`,
+            style: `--tr:${tr};--from:${e.weeks[0] + 2};--to:${e.weeks[1] + 3}`,
+          }),
+          h(
+            "div",
+            { class: "hm-block-name", style: `--tr:${tr};--from:${e.weeks[0] + 2};--to:${e.room + 2}`, title: full },
+            eventText({ ...e, name: e.short }, s),
+          ),
+        );
+      }
+    });
+    out.push(h("div", { class: "hm-band-rule", style: `--tr:${first + 1 + band.lanes.length}` }));
+    return out;
   }
 
   function drawGrid() {
     const nRows = view.rows.length;
-    cells = view.rows.map((row, r) => row.cells.map((c, w) => cell(c, r, w)));
+    const top = band.lanes.length ? band.lanes.length + 4 : 2; // the first heatmap row's line
+    cells = view.rows.map((row, r) => row.cells.map((c, w) => cell(c, r, w, top + r)));
     const grid = h(
       "div",
       {
@@ -218,7 +173,6 @@ export function aheadSection(s, body) {
         "aria-labelledby": "ahead-title",
         "aria-describedby": keyId,
         "aria-rowcount": nRows + 1,
-        style: `--rows:${nRows}`,
         onkeydown: keys,
         onfocusin: (e) => {
           const at = findCell(e.target);
@@ -231,18 +185,18 @@ export function aheadSection(s, body) {
         h("div", { role: "columnheader", class: "hm-corner" }, h("span", {}, a.corner)),
         view.weeks.map(weekHead),
       ),
-      view.rows.map((row, r) => h("div", { role: "row", class: "hm-row" }, rowHead(row, r), cells[r])),
+      // the lanes are drawn for the eye; their events are in each week's label
+      h("div", { class: "hm-band", "aria-hidden": "true" }, lanes(2)),
+      view.rows.map((row, r) => h("div", { role: "row", class: "hm-row" }, rowHead(row, r, top + r), cells[r])),
     );
-    const firstFar = view.weeks.findIndex((w) => w.far);
+    const far = firstFar(view);
     const marks = h(
       "div",
       { class: "hm-marks", "aria-hidden": "true" },
-      h("span", { class: "hm-mark-now", style: `--from:2;--to:${firstFar + 2}` }, a.thisWeek),
-      h("span", { class: "hm-mark-far", style: `--from:${firstFar + 2};--to:-1` }, a.far),
+      h("span", { class: "hm-mark-now", style: `--from:2;--to:${far + 2}` }, a.thisWeek),
+      h("span", { class: "hm-mark-far", style: `--from:${far + 2}` }, a.far),
     );
-    const wrap = h("div", { class: "hm-wrap" }, marks, grid);
-    scroller.replaceChildren(wrap);
-    placeBand(wrap); // once the weeks have their width
+    fill(scroller, h("div", { class: "hm-wrap", style: `--rows:${nRows};--weeks:${WEEKS}` }, marks, grid));
   }
 
   function findCell(el) {
@@ -288,39 +242,53 @@ export function aheadSection(s, body) {
   // the shades and where each starts (the cells say their numbers, so screen
   // readers skip the swatches)
   function drawLegend() {
-    const swatch = (cls, text) => h("span", { class: "ah-swatch" }, h("span", { class: `hm-part ${cls}` }), h("span", {}, text));
-    legend.replaceChildren(
-      h("span", { class: "label" }, local.raw ? a.scaleRaw : a.scaleNormal),
+    const swatch = (cls, text) =>
+      h("span", { class: "ah-swatch" }, h("span", { class: `hm-part ${cls}` }), h("span", {}, text));
+    fill(
+      legend,
+      h("span", { class: "ah-legend-text" }, local.raw ? a.scaleRaw : a.scaleNormal),
       h(
         "span",
         { class: "ah-scale", "aria-hidden": "true" },
-        [0, ...view.cuts].map((low, i) => swatch(`s${i}`, formatCut(low, s, local.raw))),
+        [0, ...CUTS].map((low, i) => swatch(`s${i}`, formatCut(low, s))),
         local.year && swatch("is-year", a.parts.year),
       ),
     );
   }
 
   function drawNotes() {
-    const lines = [a.key, local.year && a.keyYear, a.caveatNear, a.caveatFar, local.year && a.caveatYear];
-    notes.replaceChildren(
-      h("p", { id: keyId, class: "ah-key" }, lines.slice(0, 2).filter(Boolean).join(" ")),
-      h("ul", { class: "ah-caveats" }, lines.slice(2).filter(Boolean).map((t) => h("li", {}, t))),
+    const key = [a.key, local.year && a.keyYear, a.typicalNote, view.anyCounts && a.countsNote];
+    const caveats = [a.caveatNear, a.caveatFar, local.year && a.caveatYear];
+    fill(
+      notes,
+      h("p", { id: keyId, class: "ah-key" }, key.filter(Boolean).join(" ")),
+      h(
+        "ul",
+        { class: "ah-caveats" },
+        caveats.filter(Boolean).map((t) => h("li", {}, t)),
+      ),
     );
-    sometime.textContent = view.sometime.join(s.bar.sep);
+    fill(
+      sometime,
+      h("span", { class: "label" }, a.sometimeFor(view.sometime.row)),
+      " ",
+      view.sometime.lines.join(s.bar.sep),
+    );
   }
 
   // ---------- the week detail ----------
   function openWeek(row, week) {
     if (!view) return;
     const same = open && open.row === row && open.week === week;
-    open = { row, week, all: same ? open.all : false };
+    if (!same) open = { row, week, parts: new Set() };
     for (const [r, list] of cells.entries())
       list.forEach((el, w) => el.setAttribute("aria-selected", String(r === row && w === week)));
     markOpenWeek();
     drawDetail();
     if (!same) {
       const w = view.weeks[week];
-      announce.textContent = `${a.week(w.date, w.to)}. ${detail.querySelector(".ah-detail-count").textContent}`;
+      const count = detail.querySelector(".ah-detail-count").textContent;
+      announce.textContent = a.announce(view.rows[row].label, a.week(w.date, w.to), count);
       // just the heading into view, so the grid (and the focused cell) moves as little as it can
       detail.firstChild.scrollIntoView({ block: "nearest", behavior: reduceMotion() ? "auto" : "smooth" });
     }
@@ -333,61 +301,34 @@ export function aheadSection(s, body) {
     for (const list of cells) list[open.week]?.classList.add("is-open");
   }
 
+  function gameLine(g) {
+    return h(
+      "li",
+      {},
+      h("a", { href: g.url, class: "ah-game" }, g.name),
+      h("span", { class: "ah-game-meta" }, [g.date, g.followers].filter(Boolean).join(s.bar.sep)),
+      g.moved && h("span", { class: "ah-moved" }, g.moved),
+    );
+  }
+
   function drawDetail() {
     if (!open) {
-      detail.replaceChildren(h("p", { class: "quiet ah-hint" }, a.hint));
+      fill(detail, h("p", { class: "quiet ah-hint" }, a.hint));
       return;
     }
     const w = view.weeks[open.week];
     const row = view.rows[open.row];
-    const games = numbers.weekGames(st, row.tags, w.iso, local.year);
-    const items = detailItems(games, numbers.game, s);
-    const shown = open.all ? items : items.slice(0, FIRST);
-    const parts = row.cells[open.week].parts;
-    const list = h(
-      "ol",
-      { class: "ah-games" },
-      shown.map((g) =>
-        h(
-          "li",
-          {},
-          h("a", { href: g.url, class: "ah-game" }, g.name),
-          h(
-            "span",
-            { class: "ah-game-meta" },
-            [[g.layer, g.date].filter(Boolean).join(" · "), g.followers].filter(Boolean).join(s.bar.sep),
-          ),
-          g.moved && h("span", { class: "ah-moved" }, g.moved),
-        ),
-      ),
-    );
-    const more =
-      shown.length < items.length &&
-      h(
-        "button",
-        {
-          type: "button",
-          class: "ah-more",
-          onclick: () => {
-            open.all = true;
-            drawDetail();
-            detail.querySelectorAll(".ah-game")[FIRST]?.focus();
-          },
-        },
-        a.showAll(formatNumber(items.length, s)),
-      );
-    detail.replaceChildren(
+    const items = detailItems(numbers.weekGames(st, row.tags, w.iso, local.year), numbers.game, s);
+    const parts = listParts(items, { year: local.year, open: open.parts }, s);
+    const cellText = row.cells[open.week].parts.map((p) => `${a.parts[p.part]} ${p.text}`).join(s.bar.sep);
+    fill(
+      detail,
       h(
         "div",
         { class: "ah-detail-head" },
         h("h3", {}, a.week(w.date, w.to)),
         h("p", { class: "ah-detail-for" }, a.detailFor(row.label, s.bar[st.group])),
-        h(
-          "p",
-          { class: "ah-detail-cell" },
-          parts.map((p) => `${a.parts[p.part]} ${p.text}`).join(s.bar.sep),
-          local.raw ? "" : ` ${a.unitNormal}`,
-        ),
+        h("p", { class: "ah-detail-cell" }, cellText, local.raw || row.counts ? "" : ` ${a.unitNormal}`),
       ),
       w.events.length > 0 &&
         h(
@@ -395,35 +336,82 @@ export function aheadSection(s, body) {
           { class: "ah-detail-events" },
           h("span", { class: "label" }, a.detailEvents),
           " ",
-          w.events.map((e) => `${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`).join("; "),
+          w.events
+            .map((e) => `${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`)
+            .join("; "),
         ),
-      h("p", { class: "ah-detail-count" }, items.length ? a.detailCount(a.games(formatNumber(items.length, s), items.length)) : a.detailNone),
-      items.length > 0 && list,
-      more,
+      h(
+        "p",
+        { class: "ah-detail-count" },
+        items.length ? a.detailCount(a.games(formatNumber(items.length, s), items.length)) : a.detailNone,
+      ),
+      parts.map((p) =>
+        h(
+          "div",
+          { class: `ah-part ah-part-${p.part}` },
+          h("h4", {}, p.heading),
+          h("ol", { class: "ah-games" }, p.items.map(gameLine)),
+          p.items.length < p.total &&
+            h(
+              "button",
+              {
+                type: "button",
+                class: "ah-more",
+                onclick: () => {
+                  const shown = p.items.length;
+                  open.parts.add(p.part);
+                  drawDetail();
+                  detail.querySelectorAll(`.ah-part-${p.part} .ah-game`)[shown]?.focus();
+                },
+              },
+              a.showAll(formatNumber(p.total, s)),
+            ),
+        ),
+      ),
     );
   }
 
   // ---------- drawing ----------
+  function pickBand() {
+    if (bandFor?.[0] === rows && bandFor[1] === events) return;
+    bandFor = [rows, events];
+    band = events
+      ? bandEvents(events, rows[0].weeks[0], WEEKS, {
+          tagNames: st.tags.map((t) => names.get(t)).filter(Boolean),
+          languages: st.languages,
+        })
+      : { events: [], lanes: [] };
+  }
+
   function redraw() {
+    if (!body.dataset.drawn) {
+      body.dataset.drawn = "true";
+      fill(body, frame);
+    }
     const map = numbers.heatmap(st);
     if (map !== rows) {
       // a new pick of tags, mode or languages: the open week belonged to the old rows
       open = null;
       rows = map;
     }
-    if (!body.dataset.drawn) {
-      body.dataset.drawn = "true"; // in the page first, so the weeks can be measured
-      body.replaceChildren(...frame);
-    }
-    layoutBand();
+    pickBand();
     const hadFocus = scroller.contains(document.activeElement);
-    view = buildView(rows, { group: st.group, raw: local.raw, year: local.year, mode: st.mode, names, band: band.events, s });
+    view = buildView(rows, {
+      group: st.group,
+      raw: local.raw,
+      year: local.year,
+      mode: st.mode,
+      names,
+      band: band.events,
+      s,
+    });
     focus = {
       row: Math.min(focus.row, view.rows.length - 1),
       week: Math.min(focus.week, view.weeks.length - 1),
     };
     if (open && open.row >= view.rows.length) open = null;
     status.textContent = view.empty ?? "";
+    eventsNote.textContent = events === null ? a.eventsFailed : "";
     const nothing = view.empty === a.empty;
     scroller.hidden = nothing;
     detail.hidden = nothing;
@@ -442,14 +430,15 @@ export function aheadSection(s, body) {
       numbers = shared;
       names = tagNames(meta.tags);
     },
+    // events.json's list, or null if it failed: the heatmap goes without lanes
     setEvents(list) {
       events = list;
-      if (st) redraw();
+      if (st && numbers) redraw();
     },
     // draws the selection (its numbers are computed here unless cached)
     draw(selection) {
       st = selection;
-      if (numbers && events) redraw();
+      if (numbers) redraw();
     },
     // a new selection is being computed
     busy() {
@@ -458,7 +447,11 @@ export function aheadSection(s, body) {
   };
 }
 
+// the first week faded as "dates still being set"
+function firstFar(view) {
+  return view.weeks.findIndex((w) => w.far);
+}
+
 function reduceMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
-

@@ -264,7 +264,14 @@ img { max-width: 100%; }
   .mast-utils { grid-column: 3 / span 2; grid-row: 2; }
 }
 
-/* ---------- Title ---------- */
+/* the tool page: the site name is the h1, and a short line under the masthead
+   stands in for a big title, so the controls sit high on the first screen */
+.mast-title { margin: 0; font: inherit; letter-spacing: inherit; }
+.page-head:has(.mast-lede) { border-bottom: 0; padding-bottom: var(--s4); }
+.mast-lede { margin-top: var(--s4); }
+.mast-lede .lede { font-size: var(--fs-body); max-width: 46em; margin-bottom: var(--s1); }
+
+/* ---------- Title (the Methods page) ---------- */
 .hero { padding-top: var(--s8); padding-bottom: var(--s7); }
 .hero h1 {
   font-size: var(--fs-display);
@@ -516,7 +523,7 @@ main { display: block; }
   .page-section > .intro { grid-column: 1 / -1; grid-row: 3; }
 }
 
-/* ---------- 01 Competition ahead ---------- */
+/* ---------- Competition ahead ---------- */
 /* Toggles, the "sometime in" line and the legend, above the heatmap */
 .ah-controls {
   display: flex;
@@ -530,7 +537,9 @@ main { display: block; }
 .ah-toggle { display: inline-flex; align-items: center; gap: .5em; min-height: 2rem; font-size: var(--fs-small); cursor: pointer; }
 .ah-toggle input { flex: none; width: 1rem; height: 1rem; margin: 0; accent-color: var(--ink); }
 .ah-sometime { flex-basis: 100%; margin: 0; color: var(--ink-2); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
-.ah-legend { display: flex; flex-direction: column; gap: var(--s1); }
+.ah-sometime .label { margin-right: .3em; }
+.ah-legend { display: flex; flex-direction: column; gap: var(--s1); max-width: 27rem; }
+.ah-legend-text { font-size: var(--fs-small); color: var(--ink-2); line-height: 1.3; }
 .ah-scale { display: flex; gap: 2px; }
 .ah-swatch {
   display: flex;
@@ -544,43 +553,88 @@ main { display: block; }
 }
 .ah-swatch .hm-part { height: .75rem; flex: none; }
 .ah-status { margin: 0 0 var(--s4); font-weight: 700; }
-.ah-status:empty { display: none; }
+.ah-status:empty, .ah-events-note:empty { display: none; }
+.ah-events-note { margin: 0 0 var(--s3); }
 
-/* The heatmap: one CSS grid, a label column then 26 weeks. Rows (role=row) are
-   display: contents, so every header and cell sits in the same grid; cells carry
-   their row (--tr) and week (--wk) lines, and phones swap the two. */
+/* The heatmap: one CSS grid, a label column then a column per week. Rows
+   (role=row) and the events lanes are display: contents, so every item sits in
+   the same grid: each carries its desktop row line (--tr), its week (--wk) and
+   its phone column (--tc); phones put weeks in rows. */
 .hm-scroll { padding: 4px; margin: -4px; } /* room for the focus ring */
-.hm-wrap { --label-w: clamp(6rem, 14%, 11rem); min-width: calc(var(--label-w) + 26 * 1.375rem); }
+.hm-wrap {
+  --label-w: clamp(9rem, 16%, 13rem);
+  --col-min: 3rem;
+  min-width: calc(var(--label-w) + var(--weeks, 13) * (var(--col-min) + 2px));
+}
 .hm,
 .hm-marks {
   display: grid;
-  grid-template-columns: var(--label-w) repeat(26, minmax(0, 1fr));
+  grid-template-columns: var(--label-w) repeat(var(--weeks), minmax(var(--col-min), 1fr));
   column-gap: 2px;
 }
-.hm { row-gap: 6px; } /* between tag rows; phones (weeks as rows) use 2px */
-.hm [role="row"] { display: contents; }
+.hm { row-gap: 6px; }
+.hm [role="row"], .hm-band { display: contents; }
 .hm-corner { grid-row: 1; grid-column: 1; align-self: end; }
-.hm-corner span, .hm-mark-now, .hm-mark-far {
+.hm-corner span, .hm-mark-now, .hm-mark-far, .hm-band-label {
   font-size: var(--fs-meta);
   font-weight: 700;
   letter-spacing: var(--track-meta);
   text-transform: uppercase;
   line-height: 1.4;
 }
-.hm-corner span { color: var(--ink-2); }
-.hm-week { grid-row: 1; grid-column: var(--wk); display: flex; flex-direction: column; justify-content: flex-end; min-width: 0; padding: 2px 0 4px; border-top: 3px solid transparent; font-variant-numeric: tabular-nums; line-height: 1.2; text-align: center; }
-.hm-month { min-height: 1.2em; font-size: var(--fs-meta); font-weight: 700; text-transform: uppercase; letter-spacing: .02em; color: var(--ink-2); white-space: nowrap; text-align: left; } /* runs on over the next weeks of the month */
-.hm-day { font-size: var(--fs-meta); }
-.hm-week.is-far .hm-day { color: var(--ink-2); }
+.hm-corner span, .hm-band-label { color: var(--ink-2); }
+.hm-week {
+  grid-row: 1;
+  grid-column: var(--wk);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  padding: 2px 0 4px;
+  border-top: 3px solid transparent;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  text-align: center;
+}
+.hm-date { font-size: var(--fs-small); white-space: nowrap; }
+.hm-week.is-far .hm-date { color: var(--ink-2); }
 .hm-week.is-current { border-top-color: var(--accent-ui); }
-.hm-week.is-current .hm-day { color: var(--accent-ui); font-weight: 700; }
-.hm-week.is-open .hm-day { font-weight: 700; text-decoration: underline 2px var(--accent-ui); text-underline-offset: .25em; }
-.hm-date, .hm-now, .hm-far-note, .hm-week-events { display: none; }
+.hm-week.is-current .hm-date { color: var(--accent-ui); font-weight: 700; }
+.hm-week.is-open .hm-date { font-weight: 700; text-decoration: underline 2px var(--accent-ui); text-underline-offset: .25em; }
+.hm-now, .hm-far-note, .hm-week-events { display: none; }
 
 /* "This week" and "Dates still being set" above the weeks */
 .hm-marks { margin-bottom: var(--s1); }
 .hm-mark-now { grid-column: var(--from) / var(--to); color: var(--accent-ui); white-space: nowrap; }
 .hm-mark-far { grid-column: var(--from) / -1; padding-left: var(--s2); border-left: 1px solid var(--ink-2); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* The events lanes, under the dates: "Events", a lane per kind, then a rule
+   before the heatmap rows. Each event is a block over the weeks it covers; its
+   name runs from its first week to the next event in the lane. */
+.hm-band-label { grid-row: var(--tr); grid-column: 1; padding-top: var(--s2); }
+.hm-lane-name { grid-row: var(--tr); grid-column: 1; align-self: center; font-size: var(--fs-meta); line-height: 1.2; color: var(--ink-2); padding-right: var(--s2); }
+.hm-block { grid-row: var(--tr); grid-column: var(--from) / var(--to); min-height: 1.5rem; background: var(--fill); }
+.hm-block-name {
+  grid-row: var(--tr);
+  grid-column: var(--from) / var(--to);
+  z-index: 1;
+  align-self: center;
+  min-width: 0;
+  padding: 0 .4rem;
+  font-size: var(--fs-meta);
+  line-height: 1.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hm-band-rule { grid-row: var(--tr); grid-column: 1 / -1; height: 0; margin: var(--s2) 0; border-top: 1px solid var(--rule-soft); }
+/* kinds: the same fills on phones (.hm-tag), all with ink text */
+.is-seasonal_sale { --fill: var(--heat-3); }
+.is-next_fest { --fill: var(--heat-2); }
+.is-themed_fest { --fill: var(--tint); }
+.is-cn_holiday { --fill: transparent; }
+.hm-block.is-themed_fest { box-shadow: inset 3px 0 0 var(--ink-2); }
+.hm-block.is-cn_holiday, .hm-tag.is-cn_holiday { outline: 1px dashed var(--ink); outline-offset: -1px; }
 
 .hm-rowhead {
   grid-row: var(--tr);
@@ -592,10 +646,12 @@ main { display: block; }
   min-width: 0;
   padding-right: var(--s2);
 }
-.hm-row-name { grid-column: 1; font-size: var(--fs-small); font-weight: 700; line-height: 1.2; hyphens: auto; }
-.hm-row-usual { grid-column: 1; font-size: var(--fs-meta); line-height: 1.3; color: var(--ink-2); }
+/* long tag names wrap at spaces (or hyphenate), never mid-word */
+.hm-row-name { grid-column: 1; font-size: var(--fs-small); font-weight: 700; line-height: 1.2; overflow-wrap: normal; hyphens: auto; }
+.hm-row-note { grid-column: 1; font-size: var(--fs-meta); line-height: 1.3; color: var(--ink-2); }
+.hm-rowhead.is-counts .hm-row-note { color: var(--ink); font-weight: 700; }
 .hm-row-parts { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 1px; align-self: center; }
-.hm-row-parts span { height: 1.375rem; font-size: var(--fs-meta); line-height: 1.375rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); }
+.hm-row-parts span { height: 1.75rem; font-size: var(--fs-meta); line-height: 1.75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); }
 
 .hm-cell {
   grid-row: var(--tr);
@@ -617,7 +673,8 @@ main { display: block; }
 
 /* one part of a week (exact, spread, year): a fill from the ramp and its number */
 .hm-part {
-  flex: 1 0 1.375rem;
+  position: relative;
+  flex: 1 0 1.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -625,11 +682,12 @@ main { display: block; }
   overflow: hidden;
   background: var(--fill);
   color: var(--on);
-  font-size: .6875rem;
+  font-size: .875rem;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.hm-part-tag { display: none; }
 .s0 { --fill: var(--heat-0); --on: var(--ink); box-shadow: inset 0 0 0 1px var(--rule-soft); }
 .s1 { --fill: var(--heat-1); --on: var(--ink); }
 .s2 { --fill: var(--heat-2); --on: var(--ink); }
@@ -648,24 +706,13 @@ main { display: block; }
 .is-far .s7 { --fill: var(--heat-far-7); --on: var(--ink); }
 /* year only: hatching in the step's shade, the number on paper */
 .hm-part.is-year {
+  --on: var(--ink);
   background: repeating-linear-gradient(135deg, var(--fill) 0 1.5px, transparent 1.5px 4.5px), var(--paper);
   color: var(--ink);
   box-shadow: inset 0 0 0 1px var(--rule-soft);
 }
 .hm-part.is-year > span { padding: 0 2px; background: var(--paper); }
 .ah-swatch .is-year { background: repeating-linear-gradient(135deg, var(--heat-5) 0 1.5px, transparent 1.5px 4.5px), var(--paper); }
-
-/* The event band: a lane per kind, bars placed by date (left and width in %) */
-.hm-band { display: grid; row-gap: 3px; margin-bottom: var(--s3); }
-.hm-lane { display: grid; grid-template-columns: var(--label-w) minmax(0, 1fr); column-gap: 2px; align-items: center; }
-.hm-lane-name { font-size: var(--fs-meta); line-height: 1.2; color: var(--ink-2); padding-right: var(--s2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.hm-track { position: relative; height: 1.375rem; }
-.hm-event { position: absolute; top: 0; bottom: 0; }
-/* the name above, from the event's start (it may run past the bar), the bar below */
-.hm-event-name { position: absolute; left: 0; top: 0; font-size: var(--fs-meta); line-height: 1.2; white-space: nowrap; }
-.hm-event::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: var(--ink); }
-.is-themed_fest .hm-event::after { background: var(--ink-2); }
-.is-cn_holiday .hm-event::after { height: 0; border-top: 2px dashed var(--ink); background: none; }
 
 /* Key, caveats and the week's games, under the heatmap */
 .ah-notes { margin-top: var(--s4); max-width: var(--measure); font-size: var(--fs-small); color: var(--ink-2); }
@@ -684,7 +731,9 @@ main { display: block; }
 .ah-detail-for { font-weight: 700; }
 .ah-detail-cell, .ah-detail-count { color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .ah-detail-events .label { margin-right: .4em; }
-.ah-games { max-width: 56rem; margin: var(--s3) 0 0; padding: 0; list-style: none; }
+.ah-part { max-width: 56rem; margin-top: var(--s5); }
+.ah-part h4 { margin: 0; font-size: var(--fs-meta); font-weight: 700; letter-spacing: var(--track-meta); text-transform: uppercase; color: var(--ink-2); }
+.ah-games { margin: var(--s2) 0 0; padding: 0; list-style: none; }
 .ah-games li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -706,21 +755,24 @@ main { display: block; }
 }
 .ah-more:hover { background: var(--tint); }
 
-/* Tablets and small laptops: the heatmap scrolls in its own area if it must */
+/* Tablets and small laptops: narrower weeks; the heatmap scrolls in its own area if it must */
 @media (max-width: 1023px) {
   .hm-scroll { overflow-x: auto; }
-  .hm-wrap { --label-w: 7.5rem; }
-  .hm-part { font-size: .625rem; }
+  .hm-wrap { --label-w: 7rem; --col-min: 2.5rem; }
+  .hm-part { font-size: .75rem; }
+  .hm-date { font-size: var(--fs-meta); }
   .hm-row-name { font-size: var(--fs-meta); }
-  .hm-row-parts span { font-size: .625rem; letter-spacing: 0; }
+  /* E, S and Y in each part instead of the row labels, which leaves the label column to the names */
+  .hm-row-parts { display: none; }
+  .hm-part-tag { display: block; position: absolute; left: 3px; top: 2px; font-size: .5625rem; line-height: 1; }
 }
 
-/* Phones: weeks run down (rows), the tag rows across (columns); events are text
-   in each week's row instead of the band */
+/* Phones: weeks run down (rows), the heatmap rows across (columns); the events
+   are text in each week's row instead of the lanes */
 @media (max-width: 639px) {
-  .hm-band, .hm-marks, .hm-month, .hm-day, .hm-row-parts { display: none; }
-  .hm-wrap { --label-w: 6rem; min-width: calc(var(--label-w) + var(--rows) * 2.5rem); }
-  .hm { grid-template-columns: var(--label-w) repeat(var(--rows), minmax(2.5rem, 1fr)); row-gap: 2px; }
+  .hm-band, .hm-marks { display: none; }
+  .hm-wrap { --label-w: 6.5rem; min-width: calc(var(--label-w) + var(--rows) * 3rem); }
+  .hm { grid-template-columns: var(--label-w) repeat(var(--rows), minmax(3rem, 1fr)); row-gap: 2px; }
   .hm-corner { grid-row: 1; grid-column: 1; }
   .hm-week {
     grid-row: var(--wk);
@@ -732,23 +784,26 @@ main { display: block; }
     text-align: left;
   }
   .hm-week.is-current { border-left-color: var(--accent-ui); }
-  .hm-date { display: block; font-size: var(--fs-small); font-weight: 700; }
-  .hm-week.is-far .hm-date { color: var(--ink-2); font-weight: 400; }
-  .hm-week.is-open .hm-date { text-decoration: underline 2px var(--accent-ui); text-underline-offset: .25em; }
+  .hm-date { font-size: var(--fs-small); font-weight: 700; }
+  .hm-week.is-far .hm-date { font-weight: 400; }
   .hm-now { display: block; font-size: var(--fs-meta); font-weight: 700; color: var(--accent-ui); }
   .hm-far-note { display: block; font-size: var(--fs-meta); color: var(--ink-2); }
-  .hm-week-events { display: flex; flex-direction: column; font-size: var(--fs-meta); line-height: 1.25; color: var(--ink-2); hyphens: auto; }
+  .hm-week-events { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+  .hm-tag { padding: 0 .3rem; background: var(--fill); color: var(--ink); font-size: var(--fs-meta); line-height: 1.3; overflow-wrap: normal; hyphens: auto; }
   .hm-rowhead {
     grid-row: 1;
-    grid-column: var(--tr);
+    grid-column: var(--tc);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
     padding: 0 0 var(--s1);
   }
   .hm-row-name { font-size: var(--fs-meta); }
-  .hm-cell { grid-row: var(--wk); grid-column: var(--tr); scroll-margin: 3.5rem 0 var(--s2); }
-  .hm-part { font-size: .6875rem; }
+  .hm-cell { grid-row: var(--wk); grid-column: var(--tc); scroll-margin: 3.5rem 0 var(--s2); }
+  .hm-part { font-size: .75rem; flex-basis: 1.5rem; }
+  /* the legend fits the width */
+  .ah-scale { width: 100%; }
+  .ah-swatch { flex: 1 1 0; width: auto; min-width: 0; }
   .ah-detail { scroll-margin-top: 3.5rem; }
   .ah-games li { grid-template-columns: minmax(0, 1fr); }
   .ah-game-meta { text-align: left; }
@@ -783,7 +838,6 @@ main { display: block; }
   .summary.is-away { display: block; }
   html { scroll-padding-top: 3rem; }
 }
-.bar:focus { outline: none; }
 
 .visually-hidden {
   position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;

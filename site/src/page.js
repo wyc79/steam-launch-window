@@ -11,7 +11,7 @@ export function afterPaint(fn) {
 }
 
 // data: loadData's promises. bar: setMeta, setTagCounts, setCount, setError (and
-// setSummary). parts: settle. ahead (section 01): start, setEvents, draw, busy.
+// setSummary). parts: settle. ahead (Competition ahead): start, setEvents, draw, busy.
 // Returns a promise for the shared numbers (null if the data failed).
 export function connect({ data, selection, bar, parts, foot, ahead = null, s, later = afterPaint }) {
   let failed = false;

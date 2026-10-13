@@ -41,7 +41,8 @@ export function masthead(s, page = "tool") {
         h(
           "span",
           {},
-          h("a", { class: "mast-name", href: base }, s.mast.name),
+          // the tool page has no big title: the site name is its h1
+          h(page === "tool" ? "h1" : "span", { class: "mast-title" }, h("a", { class: "mast-name", href: base }, s.mast.name)),
           h("a", { class: "mast-sub", href: HOME }, s.mast.by),
         ),
       ),
@@ -53,5 +54,12 @@ export function masthead(s, page = "tool") {
       ),
       h("div", { class: "mast-utils" }, toggle),
     ),
+    page === "tool" &&
+      h(
+        "div",
+        { class: "mast-lede" },
+        h("p", { class: "lede" }, s.mast.lede),
+        h("p", { class: "caveat" }, s.mast.caveat),
+      ),
   );
 }

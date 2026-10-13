@@ -19,11 +19,8 @@ export const en = {
     theme: "Dark theme",
     light: "Light",
     dark: "Dark",
-  },
-
-  hero: {
-    title: "Steam launch window",
-    lede: "Pick your game's Steam tags. See how crowded the coming weeks are, and how similar games did when they launched.",
+    // under the masthead, in place of a big title
+    lede: "Pick your game's Steam tags. See how similar games did when they launched, and how crowded the coming weeks are.",
     caveat: "Reviews stand in for sales. Patterns, not promises.",
   },
 
@@ -49,47 +46,57 @@ export const en = {
     upcoming: (n, total) => `${n} of ${total} upcoming`,
     past: (n, total) => `${n} of ${total} past launches`,
     sep: " · ",
-    fewPast: "Too few for section 03.",
+    fewPast: (num) => `Too few for section ${num}.`, // num: the history section's number
     // the one-line bar that stays on top on phones, where the controls scroll away
     summaryTags: (n) => (n === 0 ? "All tags" : n === 1 ? "1 tag" : `${n} tags`),
     summaryUpcoming: (n) => `${n} upcoming`,
     summaryLabel: (line) => `${line}. Back to the controls`,
   },
 
-  // 01 Competition ahead: the heatmap
+  // Competition ahead: the heatmap
   ahead: {
     allGames: "All games",
     combo: { and: "All of these", or: "Any of these" },
-    usual: (n) => `Usual week: ${n}`,
-    noUsual: "No launches last year",
-    // the parts of each week, as short labels and in full for screen readers
+    typical: (n) => `about ${n} launches in a typical week`,
+    // a row with under one launch in a typical week shows plain counts
+    fewLaunches: (n) =>
+      `counts: ${n === 0 ? "no launches" : n === 1 ? "only 1 launch" : `only ${n} launches`} in the last year`,
+    // the parts of each week, as short labels, single letters (phones) and in full for screen readers
     parts: { exact: "Exact", spread: "Spread", year: "Year" },
+    partsShort: { exact: "E", spread: "S", year: "Y" },
     partNames: { exact: "exact dates", spread: "month or quarter dates", year: "year only" },
     corner: "Week of",
     thisWeek: "This week",
     far: "Dates still being set",
     raw: "Raw counts",
     yearLayer: "Show games without a firm date",
-    scaleNormal: "1.0 = a usual week",
-    scaleRaw: "Games a week",
-    key: "Each week: exact dates on top, month and quarter dates spread below.",
-    keyYear: "Hatched: games dated only by year, spread over the weeks left in that year.",
+    scaleNormal: "1.0 = as many as a typical week. 2.0 = twice as many.",
+    scaleRaw: "Numbers are games. Shades still compare with a typical week.",
+    key: "Each week: exact dates on top (E), month and quarter dates spread below (S).",
+    keyYear: "Hatched (Y): games dated only by year, spread over the weeks left in that year.",
+    typicalNote: "A typical week is the row's average week of real launches over the last 52 weeks.",
+    countsNote: "Rows marked counts had too few past launches to compare with: they show games, unshaded.",
     caveatNear: "Near weeks run high: some of these dates will slip.",
     caveatFar: "Far weeks run low: many dates are not set yet.",
     caveatYear: "The year-only layer is a spread, not real dates.",
     games: (n, count) => (count === 1 ? `${n} game` : `${n} games`),
-    sometime: (year, games) => `Sometime in ${year}: ${games}`,
-    later: (games) => `Later: ${games}`,
-    noSometime: "No games dated only by year.",
+    below: (v) => `<${v}`, // a value too small to show as 0.1
+    under: (v) => `under ${v}`, // the same, read aloud
+    sometimeFor: (row) => `${row}, dated only by year:`,
+    sometime: (year, games) => `sometime in ${year}: ${games}`,
+    later: (games) => `later: ${games}`,
+    noSometime: "no games dated only by year.",
     empty: "No upcoming games match. Try fewer tags, Any of these, or more languages.",
-    emptyCombo: "No upcoming games have all of these tags. The rows above show each tag alone.",
+    emptyCombo: "No upcoming games have all of these tags. The rows show each tag alone.",
+    eventsFailed: "Steam events could not be loaded, so the events lanes are missing.",
     // one cell, for screen readers
     cell: (row, week, parts) => `${row}, week of ${week}: ${parts}`,
     cellPart: (name, value) => `${name} ${value}`,
-    unitNormal: "(1.0 = a usual week)",
+    unitNormal: "(1.0 = as many as a typical week)",
     unitRaw: "games",
     events: (list) => `Events: ${list}`,
-    // the event band
+    // the events lanes
+    eventsLabel: "Events",
     kinds: {
       seasonal_sale: "Steam sales",
       next_fest: "Next Fest",
@@ -107,7 +114,13 @@ export const en = {
     detailCount: (games) => `${games} in this week.`,
     detailNone: "No games in this week.",
     detailEvents: "Events",
-    layers: { exact: "Exact", spread: "Spread", year: "Year only" },
+    // the week's list, in parts: exact dates always shown in full
+    listParts: {
+      exact: (n) => `Exact dates (${n})`,
+      spread: (n) => `Month or quarter dates (${n})`,
+      year: (n) => `Year only (${n})`,
+    },
+    announce: (row, week, count) => `${row}, ${week}. ${count}`,
     quarter: (q, year) => `Q${q} ${year}`,
     followers: (n) => `${n} followers`,
     followersEstimate: (n) => `about ${n} followers, estimated from wishlist rank`,
@@ -118,21 +131,19 @@ export const en = {
     showAll: (n) => `Show all ${n}`,
   },
 
+  // numbered in page order (ui/sections.js SECTIONS)
   sections: {
-    ahead: {
-      num: "01",
-      title: "Competition ahead",
-      intro: "Games in your niche with dates in each of the next 26 weeks.",
-    },
-    season: {
-      num: "02",
-      title: "Typical for this time of year",
-      intro: "How busy each of those weeks usually is, from past years' launches.",
-    },
     history: {
-      num: "03",
       title: "What history says",
       intro: "How similar past launches did in quiet, normal and busy weeks, and around sales and fests.",
+    },
+    season: {
+      title: "Typical for this time of year",
+      intro: "How busy each of the coming 26 weeks usually is, from past years' launches.",
+    },
+    ahead: {
+      title: "Competition ahead",
+      intro: "Games in your niche with dates in each of the next 13 weeks.",
     },
   },
 

@@ -40,55 +40,68 @@ export function span(e) {
   return [toDay(e.start), toDay(e.end) + 1];
 }
 
-// "Steam Next Fest October 2026" -> "Next Fest October", for the band's little room
+// "Steam Next Fest October 2026" -> "Next Fest October", for the lanes' little room
 export function shortName(name) {
   return name.replace(/^Steam /, "").replace(/ \d{4}$/, "");
 }
 
+// covers at least MIN_DAYS of the week starting on day `start`, so a Steam event
+// that ends at 10:00 on a Monday is not counted in that week too
+function inWeek(e, start) {
+  return Math.min(e.to, start + 7) - Math.max(e.from, start) >= MIN_DAYS;
+}
+
 // The events to draw for `weeks` weeks from the Monday `first` (an ISO date), in
-// time order, each with its lane: { name, short, kind, start, end, from, to,
-// unconfirmed, estimate, lane }. `lanes` lists the lanes in use: { kind, row }
-// (a second row when events of one kind overlap). `extent(e)`: the day where the
-// event stops taking room in its row (default its end; the page adds its label).
-export function bandEvents(events, first, weeks, { tagNames = [], languages = [], extent = (e) => e.to } = {}) {
+// time order: { name, short, kind, start, end, from, to, unconfirmed, estimate,
+// weeks: [first, last] week index it covers, lane, room }. `lanes` lists the lanes
+// in use, { kind, row }: a second row when events of one kind share a week.
+// `room` is the week index where the next event in its lane starts (or `weeks`):
+// how far its name may run.
+export function bandEvents(events, first, weeks, { tagNames = [], languages = [] } = {}) {
   const begin = toDay(first);
-  const stop = begin + 7 * weeks;
-  const picked = events
-    .filter((e) => shows(e, { tagNames, languages }))
-    .map((e) => {
-      const [from, to] = span(e);
-      const kind = kindOf(e);
-      return {
-        name: e.name,
-        short: shortName(e.name),
-        kind,
-        start: e.start,
-        end: e.end,
-        from,
-        to,
-        unconfirmed: kind === "cn_holiday",
-        estimate: e.confidence === "low" && kind !== "cn_holiday",
-      };
-    })
-    .filter((e) => e.to > begin && e.from < stop)
-    .sort((a, b) => a.from - b.from || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
-  // per kind, each event goes in the first row whose last event has ended
-  const ends = new Map(KINDS.map((k) => [k, []]));
+  const picked = [];
+  for (const e of events) {
+    if (!shows(e, { tagNames, languages })) continue;
+    const [from, to] = span(e);
+    const kind = kindOf(e);
+    const covered = [];
+    for (let i = 0; i < weeks; i++) if (inWeek({ from, to }, begin + 7 * i)) covered.push(i);
+    if (!covered.length) continue;
+    picked.push({
+      name: e.name,
+      short: shortName(e.name),
+      kind,
+      start: e.start,
+      end: e.end,
+      from,
+      to,
+      unconfirmed: kind === "cn_holiday",
+      estimate: e.confidence === "low" && kind !== "cn_holiday",
+      weeks: [covered[0], covered.at(-1)],
+    });
+  }
+  picked.sort((a, b) => a.from - b.from || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  // per kind, each event goes in the first row whose last event ended in an earlier week
+  const rows = new Map(KINDS.map((k) => [k, []]));
   for (const e of picked) {
-    const rows = ends.get(e.kind);
-    let row = rows.findIndex((end) => end <= e.from);
-    if (row < 0) row = rows.length;
-    rows[row] = extent(e);
+    const lasts = rows.get(e.kind);
+    let row = lasts.findIndex((last) => last < e.weeks[0]);
+    if (row < 0) row = lasts.length;
+    lasts[row] = e.weeks[1];
     e.row = row;
   }
-  const lanes = KINDS.flatMap((kind) => ends.get(kind).map((_, row) => ({ kind, row })));
+  const lanes = KINDS.flatMap((kind) => rows.get(kind).map((_, row) => ({ kind, row })));
   for (const e of picked) e.lane = lanes.findIndex((l) => l.kind === e.kind && l.row === e.row);
+  for (const e of picked) {
+    const next = picked.find((x) => x.lane === e.lane && x.weeks[0] > e.weeks[1]);
+    e.room = next ? next.weeks[0] : weeks;
+  }
   return { events: picked, lanes };
 }
 
-// The events covering at least MIN_DAYS of the week starting on `monday` (ISO), so
-// a Steam event that ends at 10:00 on a Monday is not counted in that week too.
+// The band's events in the week starting on `monday` (ISO)
 export function weekEvents(band, monday) {
   const start = toDay(monday);
-  return band.filter((e) => Math.min(e.to, start + 7) - Math.max(e.from, start) >= MIN_DAYS);
+  return band.filter((e) => inWeek(e, start));
 }
+

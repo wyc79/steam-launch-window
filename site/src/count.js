@@ -1,10 +1,11 @@
 // The top bar's match count, as text. The numbers come from lib/heatmap.js
-// (matchCount for the counts, historyPanel for whether section 03 can show).
+// (matchCount for the counts, historyPanel for whether the history section can show).
 
+import { numberFormat } from "./format.js";
 import { en } from "./strings.js";
 
 export function formatNumber(n, s = en) {
-  return new Intl.NumberFormat(s.locale).format(n);
+  return numberFormat(s.locale).format(n);
 }
 
 // "1,204 of 20,495 upcoming", "3,950 of 82,910 past launches" and both joined,
@@ -19,7 +20,7 @@ export function countLine(counts, group, s = en) {
   return { ...parts, text: parts.upcoming + s.bar.sep + parts.past };
 }
 
-// True when section 03 cannot show the history panel for this group: the panel's
+// True when the history section cannot show the history panel for this group: the panel's
 // own rule, a quiet, normal or busy part with fewer than MIN_GROUP launches.
 export function tooFewPast(panel, group) {
   return !panel[group].shown;

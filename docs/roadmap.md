@@ -18,7 +18,7 @@ ends with a report, and the next one starts only after a go-ahead.
 | Audit | 6. Implementation | [PR #13](https://github.com/wyc79/steam-launch-window/pull/13) merged 2026-10-12; fixes from the first Games Popularity run in [PR #14](https://github.com/wyc79/steam-launch-window/pull/14), merged 2026-10-12 |
 | Audit | 7. Deliverables | reported 2026-10-12 in [pipeline-report.md](pipeline-report.md), together with the build Phase 1 report |
 | Build | 2. Analysis | built: site data and reference numbers (PR #18), the model (PR #19), free games count all reviews (PR #20), reviews by language sample (PR #21). Left: the free recount and language sample running on the Pi, then a model rerun. See [phase2-plan.md](phase2-plan.md) and [methods.md](methods.md) |
-| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 (pipeline additions) merged in PR #23; step 2 (JavaScript ports with shared test cases) merged in PR #24; step 3 (page shell, styles, top bar) merged in PR #25; step 4 part 1 (section 01, the heatmap) in review in PR #26 |
+| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 (pipeline additions) merged in PR #23; step 2 (JavaScript ports with shared test cases) merged in PR #24; step 3 (page shell, styles, top bar) merged in PR #25; step 4 part 1 (Competition ahead, the 13-week heatmap; sections reordered with history first) in review in PR #26 |
 | Build | 4. Agent and Worker | not started |
 
 ## Where things stand
@@ -102,7 +102,7 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 1. **When the Pi finishes:** copy back the three files, commit them to the data branch,
    set `COLLECT_HISTORY` back on, rerun the model (the free model can then be fitted), and
    look at the reviews by language sample.
-2. **Phase 3 steps 4 to 6** (section 01 is in review in PR #26): sections
+2. **Phase 3 steps 4 to 6** (Competition ahead is in review in PR #26): sections
    01 to 03, the Methods page, the deploy workflow.
 3. **Phase 4: agent and Cloudflare Worker,** free tier only. For Chinese users, the agent
    also gets a Tencent Cloud SCF function in a mainland China region (Workers are often

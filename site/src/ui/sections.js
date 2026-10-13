@@ -5,12 +5,18 @@
 import { REPO } from "./masthead.js";
 import { h } from "./dom.js";
 
-export const SECTIONS = ["ahead", "season", "history"];
+// page order; the numbers (01, 02, ...) follow it
+export const SECTIONS = ["history", "season", "ahead"];
+
+export function sectionNumber(key) {
+  return String(SECTIONS.indexOf(key) + 1).padStart(2, "0");
+}
 
 export function sections(s) {
   const bodies = {};
   const els = SECTIONS.map((key) => {
-    const { num, title, intro } = s.sections[key];
+    const { title, intro } = s.sections[key];
+    const num = sectionNumber(key);
     const titleId = `${key}-title`;
     bodies[key] = h("div", { class: "section-body", "aria-busy": "true" }, h("p", { class: "quiet" }, s.bar.loading));
     return h(

@@ -111,12 +111,35 @@ describe("the band for 26 weeks from Monday 2026-10-12", () => {
     expect(lane(ROBOTS.name)).toEqual({ kind: "themed_fest", row: 0 }); // the first row is free again by March
   });
 
-  test("an event taking more room (its label) pushes the next one of its kind down", () => {
-    const later = ev("Steam Next Fest February 2027", "next_fest", "2026-10-28", "2026-11-04");
-    const tight = bandEvents([FEST, later], "2026-10-12", 26);
-    expect(tight.events.map((e) => e.row)).toEqual([0, 0]);
-    const wide = bandEvents([FEST, later], "2026-10-12", 26, { extent: (e) => e.from + 14 });
-    expect(wide.events.map((e) => e.row)).toEqual([0, 1]);
+  test("know the weeks they cover, and how far their name may run", () => {
+    const { events } = bandEvents(ALL, "2026-10-12", 13, pick);
+    const of = (name) => events.find((e) => e.name === name);
+    expect(of(FEST.name).weeks).toEqual([1, 1]); // Oct 19 10:00 to Oct 26 10:00: not the week of Oct 26
+    expect(of(SALE.name).weeks).toEqual([9, 11]); // Dec 17 to Jan 4 10:00
+    expect(of(FEST.name).room).toBe(13); // nothing after it in its lane
+    const later = ev("Steam Next Fest December 2026", "next_fest", "2026-12-07", "2026-12-14");
+    const two = bandEvents([FEST, later], "2026-10-12", 13).events;
+    expect(two.map((e) => [e.weeks[0], e.room])).toEqual([
+      [1, 8],
+      [8, 13],
+    ]);
+  });
+
+  test("events of a kind sharing a week go to two rows, even without overlapping in time", () => {
+    const early = ev("Steam Bat Fest 2026", "themed_fest", "2026-10-26", "2026-10-28", { tags: ["Horror"] });
+    const late = ev("Steam Owl Fest 2026", "themed_fest", "2026-10-29", "2026-10-31", { tags: ["Horror"] });
+    const { events } = bandEvents([early, late], "2026-10-12", 13, { tagNames: ["Horror"] });
+    expect(events.map((e) => [e.weeks, e.row])).toEqual([
+      [[2, 2], 0],
+      [[2, 2], 1],
+    ]);
+  });
+
+  test("leave out an event that covers less than a day of any week shown", () => {
+    const edge = ev("Steam Edge Sale 2027", "seasonal_sale", "2027-01-08", "2027-01-11");
+    expect(bandEvents([edge], "2026-10-12", 13).events).toHaveLength(1); // Jan 8 to 11: in the 13th week
+    const after = ev("Steam After Sale 2027", "seasonal_sale", "2027-01-11", "2027-01-18");
+    expect(bandEvents([after], "2026-10-12", 13).events).toEqual([]);
   });
 });
 

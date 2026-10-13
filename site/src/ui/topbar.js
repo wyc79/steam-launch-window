@@ -2,8 +2,10 @@
 // count. It reads and writes the selection (state.js) and computes nothing itself.
 
 import { arrowActive, openActive } from "../combo.js";
+import { numberFormat } from "../format.js";
 import { searchTags, tagNames } from "../tags.js";
-import { h, uid } from "./dom.js";
+import { fill, h, uid } from "./dom.js";
+import { sectionNumber } from "./sections.js";
 
 // Type to search, arrows to move, Enter to pick, Backspace on an empty field
 // removes the last chip, Escape closes the list (a second Escape clears the text).
@@ -52,8 +54,9 @@ function tagPicker(s, state) {
 
   function draw() {
     const counts = countsFor?.(state.get());
-    const fmt = new Intl.NumberFormat(s.locale);
-    list.replaceChildren(
+    const fmt = numberFormat(s.locale);
+    fill(
+      list,
       ...(options.length
         ? options.map(([id, name], i) =>
             h(
@@ -118,7 +121,8 @@ function tagPicker(s, state) {
   });
 
   function drawChips(st) {
-    chips.replaceChildren(
+    fill(
+      chips,
       ...st.tags.map((id) => {
         const name = names.get(id) ?? String(id);
         return h(
@@ -164,6 +168,11 @@ function tagPicker(s, state) {
     setCounts(fn) {
       countsFor = fn;
       if (!list.hidden) draw();
+    },
+    // focus the field (its ring shows) without opening the list
+    focusQuiet() {
+      quietFocus = true;
+      input.focus({ preventScroll: true });
     },
   };
 }
@@ -230,7 +239,8 @@ function languagePicker(s, state) {
           onchange: () => state.toggleLanguage(c),
         }),
       );
-      panel.replaceChildren(
+      fill(
+        panel,
         h(
           "ul",
           { "aria-labelledby": labelId },
@@ -252,7 +262,7 @@ export function topbar(s, state) {
 
   const el = h(
     "div",
-    { class: "bar", role: "region", "aria-label": s.bar.label, tabindex: "-1" },
+    { class: "bar", role: "region", "aria-label": s.bar.label },
     h(
       "div",
       { class: "wrap bar-grid" },
@@ -277,7 +287,7 @@ export function topbar(s, state) {
       onclick: () => {
         const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
         el.scrollIntoView({ block: "start", behavior: smooth ? "smooth" : "auto" });
-        el.focus({ preventScroll: true });
+        tags.focusQuiet();
       },
     },
     summaryText,
@@ -301,23 +311,23 @@ export function topbar(s, state) {
       langs.setLanguages(meta.languages);
     },
     setTagCounts: tags.setCounts,
-    // line: countLine's result; tooFew: past launches too few for section 03.
+    // line: countLine's result; tooFew: past launches too few for the history section.
     // After an error, the error line stays.
     setCount(line, tooFew) {
       if (failed) return;
       upcoming.textContent = line.upcoming;
       sep.textContent = s.bar.sep;
       past.textContent = line.past;
-      few.textContent = tooFew ? ` ${s.bar.fewPast}` : "";
+      few.textContent = tooFew ? ` ${s.bar.fewPast(sectionNumber("history"))}` : "";
       count.classList.toggle("is-few", tooFew);
-      count.replaceChildren(upcoming, sep, past, few);
+      fill(count, upcoming, sep, past, few);
     },
     setError() {
       failed = true;
       summary.hidden = true;
       const input = el.querySelector(".tag-input");
       if (input.disabled) input.placeholder = "";
-      count.replaceChildren(h("span", { class: "error" }, s.bar.error));
+      fill(count, h("span", { class: "error" }, s.bar.error));
     },
   };
 }

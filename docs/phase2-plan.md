@@ -7,7 +7,7 @@ numbers and the model (section 3, `analysis/model.py`) are built; the website is
 Phase 2 turns the collected data into two things the website shows:
 
 1. **Competition ahead:** for a tag selection (one or more tags, AND or OR), how crowded each of the next
-   26 weeks is.
+   13 weeks is (26 until 2026-10-13: beyond a quarter, announced dates say little).
 2. **What history says:** how past launches in that niche did, depending on
    competition and Steam events around launch.
 
@@ -64,9 +64,10 @@ Free games declare it early, while paid games set their price at launch, so
 snapshots exist, we check this: of the games that launch, how many were
 correctly not marked free beforehand. The accuracy goes on the Methods page.
 
-## 2. Competition ahead (26-week heatmap)
+## 2. Competition ahead (13-week heatmap)
 
-Weeks run Monday to Sunday, Pacific time, starting with the current week.
+Weeks run Monday to Sunday, Pacific time, starting with the current week: 13 of them
+(`WEEKS` in `analysis/heatmap.py`; 26 until 2026-10-13). The seasonal outlook keeps 26.
 
 For each week and tag:
 

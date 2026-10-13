@@ -18,7 +18,7 @@ function deferred() {
 function fakeData() {
   const files = Object.fromEntries(["meta", "upcoming", "history", "events", "model"].map((k) => [k, deferred()]));
   const data = Object.fromEntries(Object.entries(files).map(([k, d]) => [k, d.promise]));
-  data.all = Promise.all(["meta", "upcoming", "history", "events"].map((k) => data[k]));
+  data.all = Promise.all(["meta", "upcoming", "history"].map((k) => data[k]));
   return { files, data };
 }
 
@@ -52,30 +52,27 @@ describe("a file that fails", () => {
   test("keeps its error line when the slower files arrive later", async () => {
     const { files, calls, numbers, flush } = start();
     files.meta.resolve(META);
-    files.events.reject(new Error("events.json: HTTP 404")); // fast failure
+    files.history.reject(new Error("history.json: HTTP 404")); // fast failure
     await tick();
-    files.upcoming.resolve(GAMES); // slow successes
-    files.history.resolve(HISTORY);
+    files.upcoming.resolve(GAMES); // slow success
     expect(await numbers).toBeNull();
     flush();
     expect(calls.filter((c) => c.startsWith("count"))).toEqual([]);
     expect(calls.at(-1)).toBe("error");
   });
 
-  test("replaces a count already drawn, and nothing redraws it", async () => {
+  test("events.json is optional: without it (loadData gives null) the count still draws", async () => {
     const { files, calls, selection, flush } = start();
+    files.events.resolve(null);
     files.meta.resolve(META);
     files.upcoming.resolve(GAMES);
     files.history.resolve(HISTORY);
     await tick();
     flush();
-    expect(calls.at(-1)).toMatch(/^count /);
-    files.events.reject(new Error("events.json: HTTP 500"));
-    await tick();
-    selection.set({ group: "free" });
     selection.addTag(1);
     flush();
-    expect(calls.at(-1)).toBe("error");
+    expect(calls).not.toContain("error");
+    expect(calls.at(-1)).toMatch(/^count /);
   });
 });
 
@@ -123,7 +120,7 @@ describe("section 01", () => {
     return {
       calls,
       start: (numbers, meta) => calls.push(`start ${meta.snapshot_date}`),
-      setEvents: (events) => calls.push(`events ${events.length}`),
+      setEvents: (events) => calls.push(`events ${events?.length ?? "failed"}`),
       draw: (st) => calls.push(`draw ${st.group} ${st.tags.join(",")}`),
       busy: () => calls.push("busy"),
     };
@@ -168,12 +165,26 @@ describe("section 01", () => {
     const ahead = fakeAhead();
     const { files, numbers, flush } = startWith(ahead);
     files.meta.resolve(META);
-    files.events.reject(new Error("events.json: HTTP 404"));
+    files.history.reject(new Error("history.json: HTTP 404"));
     await tick();
     files.upcoming.resolve(GAMES);
-    files.history.resolve(HISTORY);
+    files.events.resolve([]);
     expect(await numbers).toBeNull();
     flush();
     expect(ahead.calls).toEqual([]);
+  });
+
+  test("hears that events.json failed (null) and still draws", async () => {
+    const ahead = fakeAhead();
+    const { files, numbers, flush } = startWith(ahead);
+    files.meta.resolve(META);
+    files.upcoming.resolve(GAMES);
+    files.history.resolve(HISTORY);
+    files.events.resolve(null);
+    await numbers;
+    await tick();
+    flush();
+    expect(ahead.calls).toContain("events failed");
+    expect(ahead.calls.at(-1)).toBe("draw paid ");
   });
 });

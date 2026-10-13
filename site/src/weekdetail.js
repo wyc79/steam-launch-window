@@ -1,12 +1,13 @@
-// The text of one week's game list (section 01, a week opened). The games and
+// The text of one week's game list (Competition ahead, a week opened). The games and
 // their order come from lib/heatmap.js weekGames; this only formats them.
 
 import { formatNumber } from "./count.js";
+import { dateFormat } from "./format.js";
 import { toDay } from "./lib/dates.js";
 import { en } from "./strings.js";
 import { formatDate } from "./heatview.js";
 
-export const FIRST = 20; // games listed before "Show all"
+export const FIRST = 20; // month, quarter or year games listed before "Show all"
 
 export function storeUrl(appid) {
   return `https://store.steampowered.com/app/${appid}/`;
@@ -34,7 +35,7 @@ export function dateText(game, s = en) {
   const month = +game.date.slice(5, 7);
   if (game.precision === "day") return formatDate(game.date, s);
   if (game.precision === "month") {
-    const f = new Intl.DateTimeFormat(s.locale, { month: "short", year: "numeric", timeZone: "UTC" });
+    const f = dateFormat(s.locale, { month: "short", year: "numeric" });
     return f.format(toDay(game.date) * 86400000);
   }
   if (game.precision === "quarter") return s.ahead.quarter(Math.ceil(month / 3), year);
@@ -47,9 +48,29 @@ export function detailItems(list, gameOf, s = en) {
     appid: g.appid,
     name: g.name || s.ahead.unnamed(g.appid),
     url: storeUrl(g.appid),
-    layer: s.ahead.layers[g.layer],
+    part: g.layer, // exact, spread or year
     date: dateText(gameOf(g.appid), s),
     followers: followersText(g.followers, g.hype_src, s),
     moved: movedText(g.moved, s),
   }));
+}
+
+// The list in parts, exact dates first, each keeping weekGames' order:
+// [{ part, heading: "Exact dates (3)", items, total }]. Exact dates are always
+// listed in full; the other parts show FIRST games unless `open` has their part.
+// Parts with no games are left out.
+export function listParts(items, { year = false, open = new Set() } = {}, s = en) {
+  const names = year ? ["exact", "spread", "year"] : ["exact", "spread"];
+  return names
+    .map((part) => {
+      const all = items.filter((g) => g.part === part);
+      const full = part === "exact" || open.has(part) || all.length <= FIRST;
+      return {
+        part,
+        heading: s.ahead.listParts[part](formatNumber(all.length, s)),
+        items: full ? all : all.slice(0, FIRST),
+        total: all.length,
+      };
+    })
+    .filter((p) => p.total > 0);
 }
