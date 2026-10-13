@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="%SLW_LANG%">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>%SLW_TITLE%</title>
+  <meta name="description" content="%SLW_DESCRIPTION%" />
+  <link rel="icon" type="image/png" href="/images/wyc.png" />
+  <link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/inter-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+  <!-- a theme picked earlier, before first paint (src/theme.js uses the same key) -->
+  <script>try { var t = localStorage.getItem("slw-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
+  <!-- the wyc79.github.io loader (public/analytics.js): adds Google's script with async and
+       fails quietly where it is blocked; not added on this machine (vite dev and preview) -->
+  <script>if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) { var ga = document.createElement("script"); ga.async = true; ga.src = "%BASE_URL%analytics.js"; ga.dataset.gaId = "G-C9FHKV9CXJ"; document.head.appendChild(ga); }</script>
+  <script type="module" src="/src/main.js"></script>
+</head>
+<body>
+  <div id="app"></div>
+</body>
+</html>

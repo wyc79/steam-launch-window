@@ -1,6 +1,6 @@
 """Build the website's data files from the data branch (docs/phase2-plan.md section 5).
 
-    python -m analysis.site_data --data-dir _data --gp-dir _gp --out site/data
+    python -m analysis.site_data --data-dir _data --gp-dir _gp --out site/public/data
 
 Writes, as compact JSON:
   meta.json      snapshot date, tags (id, name, upcoming games, past launches),
@@ -223,7 +223,7 @@ def main(argv=None) -> int:
                    help="Games Popularity folder (latest_followers.csv or followers/*.csv.gz); "
                         "without it, no follower numbers")
     p.add_argument("--events", type=Path, default=Path("data/events.yaml"))
-    p.add_argument("--out", type=Path, default=Path("site/data"))
+    p.add_argument("--out", type=Path, default=Path("site/public/data"))
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     if args.out.resolve() == args.data_dir.resolve():

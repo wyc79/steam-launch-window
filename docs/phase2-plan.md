@@ -333,7 +333,7 @@ whether this matters.
 
 ### Built (2026-10-12)
 
-`python -m analysis.model --data-dir _data --gp-dir _gp --out site/data` writes
+`python -m analysis.model --data-dir _data --gp-dir _gp --out site/public/data` writes
 `model.json` (paid and free models: rate ratios with 95% intervals, sample
 sizes, checks, held-out scores, caveats). Features are in `analysis/features.py`,
 the Methods text in [methods.md](methods.md). A full run takes about 6 minutes
@@ -535,19 +535,19 @@ Static files on GitHub Pages, rebuilt by Actions (decided 2026-10-12). The
 browser does the tag filtering and counting; Actions does the heavy parts.
 
 ```
-site/data/meta.json         snapshot date, tags (id, name, games upcoming, games in
-                            history), languages (the rows below point into these
-                            lists), and the fitted rank-to-followers curve if any
-site/data/upcoming.json     one row per upcoming game with a date or wishlist rank:
-                            appid, name, date range and precision, tag ids by weight,
-                            languages, free flag, hype weight, and for a date change
-                            in the last 30 days the old date text and the change date
-site/data/history.json      one row per past launch (not `ea_exit`): appid, launch
-                            date and type, tag ids by weight, languages, free flag,
-                            price, 30-day reviews
-site/data/events.json       events.yaml as JSON
-site/data/model.json        effect sizes with intervals, sample sizes, caveats
-                            (paid model and free model)
+site/public/data/meta.json         snapshot date, tags (id, name, games upcoming, games in
+                                   history), languages (the rows below point into these
+                                   lists), and the fitted rank-to-followers curve if any
+site/public/data/upcoming.json     one row per upcoming game with a date or wishlist rank:
+                                   appid, name, date range and precision, tag ids by weight,
+                                   languages, free flag, hype weight, and for a date change
+                                   in the last 30 days the old date text and the change date
+site/public/data/history.json      one row per past launch (not `ea_exit`): appid, launch
+                                   date and type, tag ids by weight, languages, free flag,
+                                   price, 30-day reviews
+site/public/data/events.json       events.yaml as JSON
+site/public/data/model.json        effect sizes with intervals, sample sizes, caveats
+                                   (paid model and free model)
 ```
 
 Built from 2026-10-12 data by `analysis/site_data.py`: `upcoming.json` 1.0 MB

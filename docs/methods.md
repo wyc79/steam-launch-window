@@ -2,7 +2,7 @@
 
 This is the text for the website's Methods page (Phase 3). The numbers are from
 the 2026-10-12 data. `python -m analysis.model` rebuilds them into
-`site/data/model.json`.
+`site/public/data/model.json`.
 
 ## The question
 

@@ -1,0 +1,79 @@
+// The numbered sections and the footer. Each section has a body that step 4
+// fills (heatmap, outlook, history panel); until the data is in it says so.
+
+import { REPO } from "./masthead.js";
+import { h } from "./dom.js";
+
+export const SECTIONS = ["ahead", "season", "history"];
+
+export function sections(s) {
+  const bodies = {};
+  const els = SECTIONS.map((key) => {
+    const { num, title, intro } = s.sections[key];
+    const titleId = `${key}-title`;
+    bodies[key] = h("div", { class: "section-body", "aria-busy": "true" }, h("p", { class: "quiet" }, s.bar.loading));
+    return h(
+      "section",
+      { id: key, class: "page-section", "data-index": num, "aria-labelledby": titleId },
+      h("h2", { id: titleId }, title),
+      h("p", { class: "intro" }, intro),
+      bodies[key],
+    );
+  });
+  return {
+    els,
+    bodies,
+    // the data is in (or failed, which the top bar reports): drop the loading line
+    settle() {
+      for (const body of Object.values(bodies)) {
+        body.removeAttribute("aria-busy");
+        body.replaceChildren();
+      }
+    },
+  };
+}
+
+const LINKS = {
+  steam: "https://store.steampowered.com/",
+  gp: "https://games-popularity.com/",
+  hf: "https://huggingface.co/datasets/strikeoo/steam-launch-data",
+};
+
+export function footer(s) {
+  const f = s.footer;
+  const asOf = h("span");
+  const link = (href, text) => h("a", { href }, text);
+  const el = h(
+    "footer",
+    { class: "page-foot" },
+    h(
+      "p",
+      { class: "foot-credits" },
+      h("span", { class: "label" }, f.data),
+      link(LINKS.steam, f.steam),
+      f.steamNote,
+      s.bar.sep,
+      link(LINKS.gp, f.gp),
+      f.gpNote,
+      s.bar.sep,
+      link(LINKS.hf, f.hf),
+      f.hfNote,
+      asOf,
+    ),
+    h(
+      "p",
+      { class: "foot-links" },
+      link(`${import.meta.env.BASE_URL}methods.html`, f.methods),
+      s.bar.sep,
+      link(REPO, f.source),
+      s.bar.sep,
+      h("span", {}, f.affiliation),
+    ),
+  );
+  return {
+    el,
+    setDate(date) {
+      asOf.textContent = f.asOf(date);
+    },
+  };
+}
