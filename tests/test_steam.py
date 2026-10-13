@@ -192,3 +192,10 @@ def test_review_counts_raises_unavailable_without_totals(reply):
 def test_review_counts_passes_http_errors_up():
     with pytest.raises(HTTPStatusError):
         steam.review_counts(ReviewsClient(HTTPStatusError(429, "u")), 1, 0, 1)
+
+
+def test_review_counts_sends_the_purchase_type_and_language():
+    client = ReviewsClient(REVIEWS_WINDOW)
+    steam.review_counts(client, 1, 0, 1, steam.PURCHASE_ALL, "schinese")
+    _, payload = client.calls[0]
+    assert payload["purchase_type"] == 1 and payload["languages"] == ["schinese"]

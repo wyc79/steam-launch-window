@@ -4,14 +4,18 @@
 
 Picks paid launches (full or Early Access) from --since to 31 days before today
 with at least --min-reviews reviews in their first 30 days: --games of them, half
-supporting Simplified Chinese and half not. The pick is seeded, so a rerun picks
-the same games. For each game it counts the first-30-day reviews (Steam
+supporting Simplified Chinese and half not, seeded. The first run saves the pick
+to history/language_sample_games.csv and later runs reuse it, so a run that
+resumes on another day (when other games have become eligible) counts the same
+games. For each game it counts the first-30-day reviews (Steam
 purchases, like reviews_30d) in every language of LANGUAGES and in all languages
 together, so the shares share one denominator taken at the same time.
 
 Writes history/reviews_by_language.csv: appid, schinese_supported, language,
 reviews, positive, fetched. Resumable: pairs already in the file are skipped,
-and progress is saved every 100 requests and on Ctrl+C or SIGTERM. Exit code 3
+and progress is saved every 100 requests and on Ctrl+C or SIGTERM. A game with
+no review data in all languages is recorded as empty in every language without
+asking for each. Exit code 3
 (with --fail-if-incomplete) when pairs are left, so a loop can run it again.
 About 11 requests per game: 11,000 for the default 1,000 games.
 """
@@ -29,6 +33,7 @@ from .common import Budget, base_parser, run_pass, setup
 LANGUAGES = ["all", "english", "schinese", "tchinese", "russian", "japanese", "koreana",
              "brazilian", "german", "french", "spanish"]
 FIELDS = ["appid", "schinese_supported", "language", "reviews", "positive", "fetched"]
+PICK_FIELDS = ["appid"]
 
 log = logging.getLogger("sample_languages")
 
@@ -66,7 +71,15 @@ def main(argv=None) -> int:
     client, today = setup(args)
 
     rows = storage.read_csv(args.data_dir / "history" / "games.csv")
-    games = pick(rows, args.games, args.since, today - timedelta(days=31), args.min_reviews, args.seed)
+    pick_path = args.data_dir / "history" / "language_sample_games.csv"
+    saved = [r["appid"] for r in storage.read_csv(pick_path)]
+    if saved:
+        by_id = {r["appid"]: r for r in rows}
+        games = [by_id[a] for a in saved if a in by_id]
+        log.info("reusing the saved pick of %d games", len(games))
+    else:
+        games = pick(rows, args.games, args.since, today - timedelta(days=31), args.min_reviews, args.seed)
+        storage.write_csv(pick_path, [{"appid": g["appid"]} for g in games], PICK_FIELDS)
     log.info("%d games picked (%d with Simplified Chinese)", len(games),
              sum("schinese" in (g.get("languages") or "").split("|") for g in games))
     path = args.data_dir / "history" / "reviews_by_language.csv"
@@ -79,16 +92,23 @@ def main(argv=None) -> int:
         storage.write_csv(path, [done[k] for k in sorted(done, key=lambda k: (int(k[0]), LANGUAGES.index(k[1])
                                                                               if k[1] in LANGUAGES else 99))], FIELDS)
 
+    def record(game, lang, counts):
+        done[(game["appid"], lang)] = {
+            "appid": game["appid"], "schinese_supported": int("schinese" in (game.get("languages") or "").split("|")),
+            "language": lang, "reviews": counts["total"], "positive": counts["positive"], "fetched": stamp}
+
     def fetch(item):
         game, lang = item
+        whole = done.get((game["appid"], "all"))
+        if lang != "all" and whole is not None and whole["reviews"] == "":
+            record(game, lang, {"total": "", "positive": ""})  # no data at all: no need to ask per language
+            return False
         start = int(game["launch_ts"])
         try:
             counts = steam.review_counts(client, game["appid"], start, start + WINDOW, steam.PURCHASE_STEAM, lang)
         except steam.Unavailable:
             counts = {"total": "", "positive": ""}  # recorded as unknown, not retried
-        done[(game["appid"], lang)] = {
-            "appid": game["appid"], "schinese_supported": int("schinese" in (game.get("languages") or "").split("|")),
-            "language": lang, "reviews": counts["total"], "positive": counts["positive"], "fetched": stamp}
+        record(game, lang, counts)
         return True
 
     finished = False

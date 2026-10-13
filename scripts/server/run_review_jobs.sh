@@ -6,8 +6,10 @@
 #      reviews, not only Steam purchases (about 16,200 requests, about 4.5 h)
 #   2. reviews by language for a sample of 1,000 paid launches
 #      (about 11,000 requests, about 3 h), see pipeline/sample_languages.py
-# Each is rerun until it finishes (both save progress and go on where they
-# stopped), at most MAX_TRIES times. Afterwards copy back
+# Each is rerun while it exits with 3 (work left: both save progress and go on
+# where they stopped), at most MAX_TRIES times; any other failure stops the
+# script, and the language sample only starts once the recount is complete.
+# Afterwards copy back
 # history/games.csv and history/reviews_by_language.csv (scripts/server/README.md).
 #
 # Env vars (optional):
@@ -20,6 +22,7 @@ REPO="${REPO:-$(cd "$(dirname "$0")/../.." && pwd)}"
 DATA_DIR="${DATA_DIR:-$REPO/_data}"
 MAX_TRIES="${MAX_TRIES:-10}"
 cd "$REPO"
+export PYTHONPATH="$REPO"  # this checkout's code, whatever is installed in .venv
 
 if [ ! -x .venv/bin/python ]; then
   echo "creating virtualenv"
@@ -40,8 +43,14 @@ run_until_done() {
       echo "$label complete"
       return 0
     fi
-    echo "$label exited with $code (try $try of $MAX_TRIES); trying again in 5 minutes"
-    sleep 300
+    if [ "$code" -ne 3 ]; then
+      echo "$label failed with exit code $code; stopping (see the error above)"
+      return 1
+    fi
+    if [ "$try" -lt "$MAX_TRIES" ]; then
+      echo "$label has work left (try $try of $MAX_TRIES); trying again in 5 minutes"
+      sleep 300
+    fi
   done
   echo "$label did not finish after $MAX_TRIES tries; check the log"
   return 1
