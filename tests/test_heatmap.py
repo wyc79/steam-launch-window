@@ -205,6 +205,37 @@ def test_relative_busy_puts_a_lone_launch_in_a_small_niche_in_quiet():
     assert max(p.get("busy_max", 0) for p in parts.values()) == 2.0  # 2 others against a floor of 1
 
 
+def test_rows_are_each_tag_then_the_combination():
+    games = [game("day", "2026-10-14", tags=(SHOOTER, ROGUELIKE)), game("day", "2026-10-14", tags=(ROGUELIKE,))]
+    rows = hm.rows(games, TODAY, [SHOOTER, ROGUELIKE], "or")
+    assert [(r["tags"], r["matched"]) for r in rows] == [([SHOOTER], 1), ([ROGUELIKE], 2), ([SHOOTER, ROGUELIKE], 2)]
+    assert [r["tags"] for r in hm.rows(games, TODAY, [SHOOTER])] == [[SHOOTER]]
+    assert [r["matched"] for r in hm.rows(games, TODAY)] == [2]  # no tags: all games
+
+
+def test_normalized_divides_by_the_typical_week():
+    history = [past("2026-03-02", 10)] * 104  # 2 a week for paid, none for free
+    h = hm.heatmap([game("day", "2026-10-14"), game("month", "2026-10-01", "2026-10-31")], TODAY, history=history)
+    norm = hm.normalized(h)
+    assert norm["paid"][0] == pytest.approx({"exact": 0.5, "spread": 7 / 20 / 2, "year": 0})
+    assert norm["free"] is None  # no usual week to compare with
+    assert hm.normalized(hm.heatmap([], TODAY)) is None
+
+
+def test_week_games_list_top_10_matches_first_then_big_names():
+    low = [492, 19, 21, 4182, 597, 1742, 3871, 1625, 4166, 1664, SHOOTER]  # shooter is 11th
+    games = [dict(game("day", "2026-10-14", tags=low, followers=9000), appid=1, name="Low", moved=None),
+             dict(game("day", "2026-10-15", followers=10), appid=2, name="Small", moved=None),
+             dict(game("day", "2026-10-16"), appid=3, name="Unknown", moved=["moved", "October 2026", "2026-10-09"]),
+             dict(game("month", "2026-10-01", "2026-10-31", followers=500), appid=4, name="Vague", moved=None),
+             dict(game("day", "2026-10-20"), appid=5, name="Next week", moved=None)]
+    listed = hm.week_games(games, TODAY, date(2026, 10, 12), [SHOOTER])
+    assert [g["appid"] for g in listed] == [4, 2, 3, 1]
+    assert listed[0]["layer"] == "spread" and listed[0]["share"] == pytest.approx(7 / 20)
+    assert listed[2]["moved"] == ["moved", "October 2026", 3]  # changed 3 days ago
+    assert listed[3]["top10"] is False
+
+
 def test_unknown_mode_or_measure_is_an_error():
     with pytest.raises(ValueError):
         hm.matches([1], [1], "xor")

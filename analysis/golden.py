@@ -1,0 +1,369 @@
+"""Golden test cases for the browser's copies of the reference numbers (docs/phase3-plan.md, Data).
+
+    python -m analysis.golden
+
+Runs analysis.heatmap, analysis.season and site_data.table_rows on small
+hand-built inputs and writes the inputs with the expected outputs to
+site/test/golden/*.json. site/test/golden.test.js requires the JavaScript in
+site/src/lib/ to give the same results, and tests/test_golden.py fails when the
+committed files are out of date, so the two sides cannot drift.
+
+Each file is {"inputs": {...}, "cases": [{"name", "fn", "args", "expected"}]};
+an argument written "$name" stands for inputs[name]. Dates are "YYYY-MM-DD".
+"""
+
+from __future__ import annotations
+
+import json
+from datetime import date, timedelta
+from pathlib import Path
+
+from . import heatmap as hm
+from . import season
+from .site_data import table_rows
+
+OUT = Path(__file__).resolve().parent.parent / "site" / "test" / "golden"
+SHOOTER, ROGUELIKE, COZY, PIXEL, F2P = 1774, 1716, 97376, 3964, 113
+FILLER = [492, 19, 21, 4182, 597, 1742, 3871, 1625, 4166, 1664, 7208]  # pushes a tag below the top 10
+
+
+def _d(iso: str | None) -> date | None:
+    return date.fromisoformat(iso) if iso else None
+
+
+# fn name: how to call the Python reference with the case's (resolved) arguments
+CALLS = {
+    "matches": lambda a: hm.matches(a["tags"], a["selection"], a.get("mode", "and")),
+    "speaks": lambda a: hm.speaks(a["langs"], a["languages"]),
+    "heatmap": lambda a: hm.heatmap(a["games"], _d(a["today"]), a.get("selection", ()), a.get("mode", "and"),
+                                    a.get("languages", ()), a.get("history")),
+    "heatmap_rows": lambda a: hm.rows(a["games"], _d(a["today"]), a.get("selection", ()), a.get("mode", "and"),
+                                      a.get("languages", ()), a.get("history")),
+    "normalized": lambda a: hm.normalized(CALLS["heatmap"](a)),
+    "week_games": lambda a: hm.week_games(a["games"], _d(a["today"]), _d(a["week"]), a.get("selection", ()),
+                                          a.get("mode", "and"), a.get("languages", ()), a.get("year", False)),
+    "percentile": lambda a: hm.percentile(a["values"], a["q"]),
+    "round2": lambda a: round(a["x"], 2),  # the relative busy measure's rounding
+    "cut_points": lambda a: hm.cut_points(a["busy"]),
+    "history_panel": lambda a: hm.history_panel(a["history"], a.get("selection", ()), a.get("mode", "and"),
+                                                a.get("languages", ()), a.get("min_group", hm.MIN_GROUP),
+                                                a.get("measure", "relative")),
+    "weekly_ratios": lambda a: season.weekly_ratios(a["history"], a.get("selection", ()), a.get("mode", "and"),
+                                                    a.get("languages", ()), a.get("group", "paid")),
+    "event_series": lambda a: season.event_series(a["events"]),
+    "estimate": lambda a: season.estimate(_d(a["week"]), {_d(w): r for w, r in a["ratios"].items()},
+                                          {n: [_d(w) for w in ws] for n, ws in a["series"].items()},
+                                          _d(a["before"])),
+    "outlook": lambda a: season.outlook(a["history"], a["events"], _d(a["today"]), a.get("weeks", 26),
+                                        a.get("languages", ())),
+    "table_rows": lambda a: table_rows(a["table"], a.get("meta")),
+}
+
+
+def _plain(x):
+    """Dates to strings and tuples to lists, as JSON and the JavaScript side have them."""
+    if isinstance(x, date):
+        return x.isoformat()
+    if isinstance(x, dict):
+        return {_plain(k): _plain(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return [_plain(v) for v in x]
+    return x
+
+
+class Cases:
+    def __init__(self, **inputs):
+        self.inputs = inputs
+        self.cases = []
+
+    def add(self, name: str, fn: str, **args):
+        resolved = {k: self.inputs[v[1:]] if isinstance(v, str) and v.startswith("$") else v for k, v in args.items()}
+        self.cases.append({"name": name, "fn": fn, "args": args, "expected": _plain(CALLS[fn](resolved))})
+
+    def obj(self) -> dict:
+        return {"inputs": self.inputs, "cases": self.cases}
+
+
+def game(appid, name, precision, start=None, end=None, tags=(SHOOTER,), langs=("english",), free=False,
+         followers=None, moved=None):
+    return {"appid": appid, "name": name, "precision": precision, "date": start,
+            "date_end": end or start, "tags": list(tags), "langs": list(langs), "free": free,
+            "followers": followers, "moved": moved}
+
+
+def past(day, reviews=10, tags=(SHOOTER,), langs=("english",), free=False, launch_type="full"):
+    return {"launch_date": day, "launch_type": launch_type, "tags": list(tags), "langs": list(langs),
+            "free": free, "reviews_30d": reviews}
+
+
+UPCOMING = [
+    game(1, "Zeta Strike", "day", "2026-10-12", tags=(SHOOTER, ROGUELIKE), followers=5000),  # earlier this week
+    game(2, "Alpha Run", "day", "2026-10-15", followers=5000),            # same followers: by name
+    game(3, "Twin Tongue", "day", "2026-10-16", langs=("english", "schinese")),  # no follower number
+    game(4, "Dragon Hall", "day", "2026-10-20", tags=(ROGUELIKE,), langs=("schinese",), followers=300),
+    game(5, "Low Tag", "day", "2026-10-21", tags=(*FILLER, SHOOTER), free=True, followers=120000),
+    game(6, "Mover", "month", "2026-10-01", "2026-10-31", followers=800,
+         moved=["moved", "Q3 2026", "2026-10-11"]),
+    game(7, "Cozy Quarter", "quarter", "2026-10-01", "2026-12-31", tags=(COZY, SHOOTER), free=True,
+         moved=["date_set", "Coming soon", "2026-10-14"]),
+    game(8, "Ran Out", "month", "2026-09-01", "2026-09-30"),
+    game(9, "This Year", "year", "2026-01-01", "2026-12-31", followers=50),
+    game(10, "Next Year", "year", "2027-01-01", "2027-12-31", tags=(ROGUELIKE,)),
+    game(11, "Two Years", "year", "2028-01-01", "2028-12-31", free=True),
+    game(12, "Far Off", "year", "2031-01-01", "2031-12-31", followers=7),
+    game(13, "Ranked Only", "unknown", followers=900),
+    game(14, "Summer", "day", "2027-06-01"),                               # past the 26 weeks
+    game(15, "Last Week", "day", "2026-10-05"),                            # before this week
+    game(16, "New Year Day", "day", "2027-01-01", followers=40),           # ISO week 53 of 2026
+    game(17, "December", "month", "2026-12-01", "2026-12-31", tags=(ROGUELIKE, SHOOTER), followers=0),
+    game(18, "Cozy Today", "day", "2026-10-14", tags=(COZY,), followers=10),
+    game(19, "Spring Free", "quarter", "2027-01-01", "2027-03-31", tags=(ROGUELIKE,), free=True, followers=999),
+    game(20, "Pixel Later", "day", "2026-11-03", tags=(PIXEL, *FILLER, ROGUELIKE), followers=60,
+         moved=["moved", "Oct 28, 2026", "2026-09-20"]),
+]
+
+# past launches around TODAY's 52-week window (2025-10-15 to 2026-10-13) for the typical week
+TYPICAL = (
+    [past("2025-10-14"), past("2025-10-15"), past("2026-10-13"), past("2026-10-14")]
+    + [past("2026-03-0" + str(1 + i % 7)) for i in range(50)]
+    + [past("2026-05-04", launch_type="early_access"), past("2026-05-04", launch_type="ea_exit"),
+       past("2026-05-05", tags=(ROGUELIKE,)), past("2026-05-05", tags=(ROGUELIKE,), free=True),
+       past("2026-06-01", langs=("schinese",))]
+)
+
+
+def weekly(counts, start=date(2024, 1, 1), reviews=lambda i, j: (i * 37 + j * 11) % 101, **kw):
+    """`counts[i]` launches in week i from `start`, spread over the week's days."""
+    rows = []
+    for i, n in enumerate(counts):
+        for j in range(n):
+            rows.append(past((start + timedelta(weeks=i, days=j % 7)).isoformat(), reviews(i, j), **kw))
+    return rows
+
+
+# 60 weeks with a repeating 1-2-3-2-4 pattern: equal busy counts, cut ties, and parts of 30 or more
+PANEL = (weekly([(1, 2, 3, 2, 4)[i % 5] for i in range(60)])
+         + weekly([(1, 2, 3, 2, 4)[i % 5] for i in range(60)], tags=(COZY,), langs=("schinese",))
+         + weekly([1 + i % 2 for i in range(60)], free=True)
+         + weekly([1] * 10, reviews=lambda i, j: None)                     # no review count yet
+         + [past("2024-02-05", 3, launch_type="early_access"), past("2024-02-05", 3, launch_type="ea_exit")])
+
+# exact halves at 2 decimals: 13 weeks of 8, then 1, 3 and 5 others against 8 (0.125, 0.375, 0.625)
+HALVES = [r for tag, n in ((SHOOTER, 2), (COZY, 4), (ROGUELIKE, 6)) for r in weekly([8] * 13 + [n], tags=(tag,))]
+
+# under one launch a week: the usual week counts as 1, so a lone launch is quiet
+SPARSE = weekly([0] * 14 + [1, 0] * 12 + [3])
+
+# a niche with a long gap (weeks with no usual launches), its last week complete
+# (7 launches, Monday to Sunday); without the Sunday launch that week is partial
+GAP = weekly([3] * 14 + [0] * 16 + [2, 5, 7])
+GAP_PARTIAL = GAP[:-1]
+
+
+def season_history():
+    """Weekly launches 2022 to 2026-10-11 (a Sunday): a quiet Christmas week, a busy
+    week after each Next Fest, a Chinese-only market and free games."""
+    fests = {date(y, m, d) for y, m, d in NEXT_FESTS}
+    rows, week = [], date(2022, 1, 3)
+    while week <= date(2026, 10, 5):
+        days = _days(week)
+        n = 2 if (1, 1) in days else 1 if (12, 25) in days else 5 if week - timedelta(weeks=1) in fests else 3
+        n += week.month in (6, 7)
+        days = [(week + timedelta(days=j % 7)).isoformat() for j in range(n)]
+        rows += [past(d, tags=(SHOOTER,) if j % 2 else (ROGUELIKE,)) for j, d in enumerate(days)]
+        rows.append(past((week + timedelta(days=2)).isoformat(), langs=("schinese",)))
+        if week.toordinal() % 3:
+            rows.append(past((week + timedelta(days=4)).isoformat(), free=True))
+        week += timedelta(weeks=1)
+    rows.append(past("2026-10-11"))
+    return rows
+
+
+NEXT_FESTS = [(2022, 2, 21), (2022, 6, 13), (2022, 10, 3), (2023, 2, 6), (2023, 6, 19), (2023, 10, 9),
+              (2024, 2, 5), (2024, 6, 10), (2024, 10, 14), (2025, 2, 24), (2025, 6, 9), (2025, 10, 13),
+              (2026, 2, 23), (2026, 6, 15), (2026, 10, 19), (2027, 2, 22)]
+
+
+def season_events():
+    events = []
+    for y, m, d in NEXT_FESTS:
+        month = date(y, m, d).strftime("%B")
+        name = f"Steam Next Fest: {month} {y} Edition" if m == 6 else f"Steam Next Fest {month} {y}"
+        events.append({"name": name, "type": "next_fest", "start": date(y, m, d).isoformat()})
+    for y in range(2022, 2027):
+        events.append({"name": f"Steam Winter Sale {y}", "type": "seasonal_sale", "start": f"{y}-12-{18 + y % 4}"})
+        events.append({"name": f"Christmas to New Year {y}", "type": "regional_holiday", "start": f"{y}-12-24"})
+        events.append({"name": f"Big Game {y}", "type": "major_release", "start": f"{y}-11-0{1 + y % 5}"})
+    return events
+
+
+def yearly_ratios(start=date(2019, 1, 7), end=date(2026, 12, 28)):
+    """Synthetic weekly ratios: 0.7 in a week that holds Jan 1, 0.4 in one that holds
+    Dec 25 (2023's Dec 25 is a Monday: that week counts as New Year), 2.0 in one that
+    holds Feb 29, and a small wobble from year to year and week to week."""
+    out, week = {}, start
+    while week <= end:
+        days = _days(week)
+        r = 0.7 if (1, 1) in days else 0.4 if (12, 25) in days else 2.0 if (2, 29) in days else 1.0
+        out[week.isoformat()] = round(r + 0.05 * (week.year % 3) - 0.01 * (week.isocalendar()[1] % 4), 4)
+        week += timedelta(weeks=1)
+    return out
+
+
+def _days(week: date) -> set[tuple[int, int]]:
+    """(month, day) of each day of the week."""
+    return {((week + timedelta(days=k)).month, (week + timedelta(days=k)).day) for k in range(7)}
+
+
+def heatmap_cases() -> Cases:
+    c = Cases(games=UPCOMING, typical=TYPICAL)
+    today = "2026-10-14"  # a Wednesday: week 0 is partial for vague dates
+    c.add("all games, no history", "heatmap", games="$games", today=today)
+    c.add("shooter with the typical week", "heatmap", games="$games", today=today, selection=[SHOOTER],
+          history="$typical")
+    c.add("shooter and roguelike", "heatmap", games="$games", today=today, selection=[SHOOTER, ROGUELIKE],
+          mode="and", history="$typical")
+    c.add("shooter or roguelike", "heatmap", games="$games", today=today, selection=[SHOOTER, ROGUELIKE],
+          mode="or", history="$typical")
+    c.add("no match", "heatmap", games="$games", today=today, selection=[COZY, PIXEL], mode="and",
+          history="$typical")
+    c.add("simplified chinese only", "heatmap", games="$games", today=today, languages=["schinese"],
+          history="$typical")
+    c.add("english or schinese", "heatmap", games="$games", today=today, languages=["english", "schinese"])
+    c.add("year end: week 53 and partial weeks", "heatmap", games="$games", today="2026-12-23")
+    c.add("on a Monday", "heatmap", games="$games", today="2026-10-12", selection=[ROGUELIKE])
+    c.add("rows: no tags", "heatmap_rows", games="$games", today=today, history="$typical")
+    c.add("rows: one tag", "heatmap_rows", games="$games", today=today, selection=[ROGUELIKE])
+    c.add("rows: two tags, or", "heatmap_rows", games="$games", today=today, selection=[SHOOTER, ROGUELIKE],
+          mode="or", history="$typical")
+    c.add("rows: three tags, and", "heatmap_rows", games="$games", today=today,
+          selection=[SHOOTER, ROGUELIKE, COZY], mode="and", history="$typical")
+    c.add("normalized: free has no usual week", "normalized", games="$games", today=today,
+          selection=[SHOOTER], history="$typical")
+    c.add("normalized: roguelike, both groups", "normalized", games="$games", today=today,
+          selection=[ROGUELIKE], history="$typical")
+    c.add("normalized: no history", "normalized", games="$games", today=today)
+    c.add("week games: this week, shooter", "week_games", games="$games", today=today, week="2026-10-12",
+          selection=[SHOOTER])
+    c.add("week games: next week, all", "week_games", games="$games", today=today, week="2026-10-19")
+    c.add("week games: next week, roguelike or shooter", "week_games", games="$games", today=today,
+          week="2026-10-19", selection=[ROGUELIKE, SHOOTER], mode="or")
+    c.add("week games: moved from a month to a day", "week_games", games="$games", today=today,
+          week="2026-11-02", selection=[ROGUELIKE])
+    c.add("week games: week 53 without year dates", "week_games", games="$games", today="2026-12-23",
+          week="2026-12-28")
+    c.add("week games: week 53 with year dates", "week_games", games="$games", today="2026-12-23",
+          week="2026-12-28", year=True)
+    c.add("week games: schinese", "week_games", games="$games", today=today, week="2026-10-19",
+          languages=["schinese"])
+    for tags, sel, mode in (([ROGUELIKE, 492, SHOOTER], [SHOOTER, ROGUELIKE], "and"),
+                            ([ROGUELIKE, 492, SHOOTER], [SHOOTER, COZY], "and"),
+                            ([ROGUELIKE, 492, SHOOTER], [SHOOTER, COZY], "or"),
+                            ([ROGUELIKE], [], "and"), ([], [SHOOTER], "or")):
+        c.add(f"matches {sel} {mode} in {tags}", "matches", tags=tags, selection=sel, mode=mode)
+    for langs, languages in ((["english"], []), (["english", "schinese"], ["schinese"]), (["english"], ["schinese"])):
+        c.add(f"speaks {languages} with {langs}", "speaks", langs=langs, languages=languages)
+    return c
+
+
+def panel_cases() -> Cases:
+    c = Cases(panel=PANEL, halves=HALVES, sparse=SPARSE)
+    c.add("relative, under one launch a week", "history_panel", history="$sparse", min_group=1)
+    c.add("raw, shooter", "history_panel", history="$panel", selection=[SHOOTER], measure="raw")
+    c.add("relative, shooter", "history_panel", history="$panel", selection=[SHOOTER])
+    c.add("relative, all games, small parts", "history_panel", history="$panel", min_group=1)
+    c.add("relative, shooter or cozy", "history_panel", history="$panel", selection=[SHOOTER, COZY], mode="or",
+          min_group=5)
+    c.add("relative, shooter and cozy: no match", "history_panel", history="$panel", selection=[SHOOTER, COZY])
+    c.add("relative, schinese", "history_panel", history="$panel", languages=["schinese"], min_group=10)
+    c.add("raw, min group 0", "history_panel", history="$panel", measure="raw", min_group=0)
+    c.add("no history", "history_panel", history=[])
+    for tag in (SHOOTER, COZY, ROGUELIKE):
+        c.add(f"exact half rounds to even, tag {tag}", "history_panel", history="$halves", selection=[tag],
+              min_group=1)
+    for busy in ([0, 2, 2, 2], [0] * 40 + [1] * 40 + [3] * 40, [5, 5, 5], [], [0, 1, 1, 2, 2, 2],
+                 [1, 1, 2, 2, 3, 3], [0.12, 0.38, 0.12, 0.62, 1.5, 0.38], [3, 1, 2]):
+        c.add(f"cut points {busy[:8]} ({len(busy)})", "cut_points", busy=busy)
+    for values, q in (([1, 2, 3, 4], 0.5), ([0, 10], 0.9), ([7], 0.75), ([5, 1, 9, 3, 3], 0.9), ([2, 4], 0.75)):
+        c.add(f"percentile {values} {q}", "percentile", values=values, q=q)
+    # exact halves of a cent (odd eighths) go to the even cent; 2.675 and 1.005 sit just below a half
+    for x in (0.125, 0.375, 0.625, 0.875, 2.675, 1.005, 0.145, 1 / 3, 13 / 7, 12.5, 0, 9.995, 30 / 13):
+        c.add(f"round {x}", "round2", x=x)
+    return c
+
+
+def season_cases() -> Cases:
+    c = Cases(history=season_history(), events=season_events(), ratios=yearly_ratios(), gap=GAP,
+              gap_partial=GAP_PARTIAL)
+    c.inputs["series"] = _plain(season.event_series(c.inputs["events"]))
+    c.inputs["history_ratios"] = _plain(season.weekly_ratios(c.inputs["history"]))
+    c.add("ratios, paid", "weekly_ratios", history="$history")
+    c.add("ratios, free", "weekly_ratios", history="$history", group="free")
+    c.add("ratios, schinese", "weekly_ratios", history="$history", languages=["schinese"])
+    c.add("ratios, shooter", "weekly_ratios", history="$history", selection=[SHOOTER])
+    c.add("ratios: weeks with no usual launches", "weekly_ratios", history="$gap")
+    c.add("ratios: partial last week left out", "weekly_ratios", history="$gap_partial")
+    c.add("ratios: no history", "weekly_ratios", history=[])
+    c.add("event series", "event_series", events="$events")
+    c.add("estimate: Christmas week", "estimate", week="2026-12-21", ratios="$ratios", series={},
+          before="2026-01-01")
+    c.add("estimate: week 53 matched with New Year", "estimate", week="2026-12-28", ratios="$ratios", series={},
+          before="2026-12-01")
+    c.add("estimate: Thursday on Feb 29", "estimate", week="2024-02-26", ratios="$ratios", series={},
+          before="2024-02-01")
+    c.add("estimate: two years only", "estimate", week="2021-12-20", ratios="$ratios", series={},
+          before="2021-06-01")
+    c.add("estimate: nothing before", "estimate", week="2020-06-01", ratios="$ratios", series="$series",
+          before="2018-01-01")
+    c.add("estimate: after a Next Fest", "estimate", week="2026-10-26", ratios="$ratios", series="$series",
+          before="2026-10-12")
+    c.add("estimate: own occurrence is not a past year", "estimate", week="2024-02-19", ratios="$ratios",
+          series="$series", before="2027-01-01")
+    twin = [f"{y}-{md}" for y, mds in ((2023, ("03-06", "04-17")), (2024, ("03-04", "04-15")),
+                                       (2025, ("03-03", "04-14")), (2026, ("03-02", "04-13"))) for md in mds]
+    c.add("estimate: halfway between two occurrences goes with the earlier", "estimate", week="2026-03-23",
+          ratios="$ratios", series={"Twin Fest": twin}, before="2026-01-01")
+    c.add("estimate: events from the history", "estimate", week="2026-03-02", ratios="$history_ratios",
+          series="$series", before="2026-01-01")
+    c.add("outlook", "outlook", history="$history", events="$events", today="2026-10-14")
+    c.add("outlook, schinese", "outlook", history="$history", events="$events", today="2026-10-14",
+          languages=["schinese"], weeks=8)
+    c.add("outlook over the year end", "outlook", history="$history", events="$events", today="2026-12-23",
+          weeks=6)
+    return c
+
+
+def data_cases() -> Cases:
+    meta = {"snapshot_date": "2026-10-12", "tags": [[113, "Free to Play", 1, 0], [1774, "Shooter", 2, 1],
+                                                     [99999, None, 1, 0]],
+            "languages": ["english", "schinese"], "rank_curve": None}
+    table = {"columns": ["appid", "name", "tags", "langs", "free", "moved"],
+             "rows": [[1, "A", [1, 0], [0, 1], True, None], [2, "B", [2], [], False, ["moved", "2026", "2026-10-12"]]]}
+    c = Cases(meta=meta, table=table)
+    c.add("table with meta", "table_rows", table="$table", meta="$meta")
+    c.add("table without meta", "table_rows", table="$table")
+    return c
+
+
+def build() -> dict[str, dict]:
+    return {"heatmap.json": heatmap_cases().obj(), "panel.json": panel_cases().obj(),
+            "season.json": season_cases().obj(), "data.json": data_cases().obj()}
+
+
+def dump(obj: dict) -> str:
+    """One input and one case per line, so a change shows up as a readable diff."""
+    inputs = ",\n".join(f" {json.dumps(k)}: {json.dumps(v)}" for k, v in obj["inputs"].items())
+    cases = ",\n".join(f" {json.dumps(c)}" for c in obj["cases"])
+    return '{"inputs": {\n' + inputs + '\n},\n"cases": [\n' + cases + "\n]}\n"
+
+
+def main(argv=None) -> int:
+    OUT.mkdir(parents=True, exist_ok=True)
+    for name, obj in build().items():
+        (OUT / name).write_text(dump(obj), encoding="utf-8", newline="\n")
+        print(f"{OUT / name}: {len(obj['cases'])} cases")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

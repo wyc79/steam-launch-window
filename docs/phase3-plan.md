@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); step 1 built (site-pipeline PR, waiting for review).
+Status: decided (2026-10-13); step 1 built (PR #23); step 2 built (site-js-ports PR, waiting for review).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -151,7 +151,9 @@ A `site` workflow builds and deploys to GitHub Pages:
 ## Build order
 
 1. Pipeline additions (latest followers, weekly `model.json`), with tests. Built.
-2. JavaScript ports of the reference numbers, with the shared test cases.
+2. JavaScript ports of the reference numbers, with the shared test cases. Built: `site/src/lib/`
+   (`heatmap.js`, `season.js`); `python -m analysis.golden` writes the cases to `site/test/golden/`,
+   which both test suites check. `heatmap.py` gained `rows`, `normalized` and `week_games` (a week's games).
 3. Page shell, styles and the top bar.
 4. Sections 01 to 03.
 5. Methods page.

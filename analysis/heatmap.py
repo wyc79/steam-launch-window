@@ -16,6 +16,9 @@ checked against. Games are dicts with the column names of those files.
   `today` on; games that launched earlier that week have left the list.
 - Free games (Steam's flag or "Free to Play" in the top 10 tags) are counted
   apart from paid ones.
+
+The browser's copies are in site/src/lib/ (heatmap.js, season.js), checked
+against this module with the golden files that analysis/golden.py writes.
 """
 
 from __future__ import annotations
@@ -126,6 +129,56 @@ def heatmap(games, today: date, selection=(), mode: str = "and", languages=(), h
         typical = {g: sum((h["free"]) == (g == "free") for h in recent) / TYPICAL_WEEKS for g in GROUPS}
     return {"weeks": [w.isoformat() for w in weeks], **grid, "typical": typical,
             "sometime": dict(sorted(sometime.items())), "matched": len(chosen), "total": len(games)}
+
+
+def rows(games, today: date, selection=(), mode: str = "and", languages=(), history=None) -> list[dict]:
+    """The heatmap's rows: each picked tag alone, then the combination in `mode`
+    (no tags: one row of all games; one tag: just its row)."""
+    out = [{"tags": [t], **heatmap(games, today, [t], mode, languages, history)} for t in selection]
+    if len(selection) != 1:
+        out.append({"tags": list(selection), **heatmap(games, today, selection, mode, languages, history)})
+    return out
+
+
+def normalized(h: dict) -> dict | None:
+    """The heatmap's default view, "1.0 = a usual week": exact, spread and year per
+    week divided by the group's typical week. None without `typical`, and a group
+    whose typical week is 0 gets None."""
+    if h["typical"] is None:
+        return None
+    return {g: [{k: c[k] / h["typical"][g] for k in ("exact", "spread", "year")} for c in h[g]]
+            if h["typical"][g] else None for g in GROUPS}
+
+
+def week_games(games, today: date, week: date, selection=(), mode: str = "and", languages=(),
+               year: bool = False) -> list[dict]:
+    """The games behind one heatmap week (`week` is its Monday), as the heatmap counts
+    them: day dates in the week (layer "exact", share 1), month and quarter dates by the
+    share they add ("spread"), and year-only dates the same way when `year` is set.
+    Games whose top 10 tags match the selection come first, then the most followers
+    (none last), then by name. `moved` is [kind, old date text, days since the change]."""
+    out = []
+    for game in selected(games, selection, mode, languages):
+        precision = game["precision"]
+        if precision == "day":
+            if week_start(date.fromisoformat(game["date"])) != week:
+                continue
+            layer, share = "exact", 1.0
+        elif precision in SPREAD or (year and precision == "year"):
+            span = days_ahead(game, today)
+            days = _overlap(*span, week) if span else 0
+            if not days:
+                continue
+            layer = "year" if precision == "year" else "spread"
+            share = 1 / ((span[1] - span[0]).days + 1) * days  # as in heatmap, to the last digit
+        else:
+            continue
+        moved = game.get("moved")
+        out.append({"appid": game["appid"], "name": game["name"], "layer": layer, "share": share,
+                    "followers": game.get("followers"), "top10": matches(game["tags"][:10], selection, mode),
+                    "moved": [moved[0], moved[1], (today - date.fromisoformat(moved[2])).days] if moved else None})
+    return sorted(out, key=lambda g: (not g["top10"], g["followers"] is None, -(g["followers"] or 0),
+                                      g["name"], g["appid"]))
 
 
 def percentile(values: list[float], q: float) -> float:

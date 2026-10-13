@@ -1,0 +1,8 @@
+{"inputs": {
+ "meta": {"snapshot_date": "2026-10-12", "tags": [[113, "Free to Play", 1, 0], [1774, "Shooter", 2, 1], [99999, null, 1, 0]], "languages": ["english", "schinese"], "rank_curve": null},
+ "table": {"columns": ["appid", "name", "tags", "langs", "free", "moved"], "rows": [[1, "A", [1, 0], [0, 1], true, null], [2, "B", [2], [], false, ["moved", "2026", "2026-10-12"]]]}
+},
+"cases": [
+ {"name": "table with meta", "fn": "table_rows", "args": {"table": "$table", "meta": "$meta"}, "expected": [{"appid": 1, "name": "A", "tags": [1774, 113], "langs": ["english", "schinese"], "free": true, "moved": null}, {"appid": 2, "name": "B", "tags": [99999], "langs": [], "free": false, "moved": ["moved", "2026", "2026-10-12"]}]},
+ {"name": "table without meta", "fn": "table_rows", "args": {"table": "$table"}, "expected": [{"appid": 1, "name": "A", "tags": [1, 0], "langs": [0, 1], "free": true, "moved": null}, {"appid": 2, "name": "B", "tags": [2], "langs": [], "free": false, "moved": ["moved", "2026", "2026-10-12"]}]}
+]}

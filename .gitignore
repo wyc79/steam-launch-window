@@ -166,9 +166,6 @@ venv.bak/
 # Rope project settings
 .ropeproject
 
-# mkdocs/Zensical documentation
-/site
-
 # mypy
 .mypy_cache/
 .dmypy.json
@@ -228,6 +225,11 @@ _hf/
 
 # website data built by analysis.site_data
 site/data/
+
+# website (Vite): dependencies and build output; keep its code out of the Python lib/ rule
+site/node_modules/
+site/dist/
+!site/src/lib/
 
 # agent worktrees
 .claude/worktrees/
