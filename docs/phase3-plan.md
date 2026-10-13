@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); step 1 built (site-pipeline PR, waiting for review).
+Status: decided (2026-10-13); step 1 built (PR #23); step 2 built (PR #24, waiting for review).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -61,6 +61,8 @@ One page with numbered sections, and a separate Methods page.
 removable chips), all of these / any of these, languages (default English),
 paid / free, and the match count ("1,204 of 20,495 upcoming, 3,950 of 82,910
 past launches"), which turns red when past launches are too few for section 03.
+The count is for the picked group (paid or free), so it agrees with the heatmap
+below it.
 
 **01 Competition ahead.** The 26-week heatmap.
 - Rows: each picked tag alone, then the combination (AND or OR). Columns: weeks
@@ -73,9 +75,10 @@ past launches"), which turns red when past launches are too few for section 03.
 - An event band above the weeks: Steam sales, Next Fests, themed fests whose
   tags match. Chinese holidays only when Simplified Chinese is among the picked
   languages, marked unconfirmed.
-- Click or focus a week: its games, big names first, top-10-tag matches before
-  the rest, with the "moved here from October 2026, 3 days ago" marker and the
-  follower count when known.
+- Click or focus a week: its games, with the "moved here from October 2026, 3
+  days ago" marker and the follower count when known (marked when it is an
+  estimate from wishlist rank). Order: games whose top 10 tags match first, then
+  the most followers (unknown last), then name, then appid.
 
 **02 Typical for this time of year.** The seasonal outlook for the same 26
 weeks (the all-games pattern for the picked languages, paid or free): a value
@@ -101,8 +104,14 @@ The site reads static JSON from `site/data/`:
 | File | Built by | When | Size (gzip) |
 |---|---|---|---|
 | `meta.json`, `upcoming.json`, `events.json` | `analysis.site_data` | daily | about 1 MB |
-| `history.json` | `analysis.site_data` | daily (changes weekly) | about 2.8 MB, loaded only when section 02 or 03 opens |
+| `history.json` | `analysis.site_data` | daily (changes weekly) | about 2.8 MB |
 | `model.json` | `analysis.model` | weekly, after the history run | small |
+
+All of them load at page start (about 3.8 MB gzip): the page frame and the top
+bar render first, the heatmap once `upcoming.json` and `history.json` are in. The
+heatmap needs the history from the start, since its default view is normalized
+by the usual week of past launches. Tags are most of `history.json` (about 1.6
+MB of the 2.8), so they are the place to look if it ever needs to shrink.
 
 The browser computes the heatmap, the outlook, the match count and the panel.
 These are JavaScript ports of `heatmap.py` and `season.py`, checked against the
@@ -151,7 +160,10 @@ A `site` workflow builds and deploys to GitHub Pages:
 ## Build order
 
 1. Pipeline additions (latest followers, weekly `model.json`), with tests. Built.
-2. JavaScript ports of the reference numbers, with the shared test cases.
+2. JavaScript ports of the reference numbers, with the shared test cases. Built: `site/src/lib/`
+   (`heatmap.js`, `season.js`); `python -m analysis.golden` writes the cases to `site/test/golden/`,
+   which both test suites check. `heatmap.py` gained `heatmap_rows`, `normalized`,
+   `match_count` and `week_games` (a week's games).
 3. Page shell, styles and the top bar.
 4. Sections 01 to 03.
 5. Methods page.

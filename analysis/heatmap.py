@@ -16,6 +16,9 @@ checked against. Games are dicts with the column names of those files.
   `today` on; games that launched earlier that week have left the list.
 - Free games (Steam's flag or "Free to Play" in the top 10 tags) are counted
   apart from paid ones.
+
+The browser's copies are in site/src/lib/ (heatmap.js, season.js), checked
+against this module with the golden files that analysis/golden.py writes.
 """
 
 from __future__ import annotations
@@ -60,6 +63,24 @@ def selected(games, selection=(), mode: str = "and", languages=()) -> list[dict]
     return [g for g in games if matches(g["tags"], selection, mode) and speaks(g["langs"], languages)]
 
 
+def group_of(game: dict) -> str:
+    return "free" if game["free"] else "paid"
+
+
+def _per_group(games) -> dict[str, int]:
+    return {g: sum(group_of(x) == g for x in games) for g in GROUPS}
+
+
+def match_count(games, history, selection=(), mode: str = "and", languages=()) -> dict:
+    """The top bar's numbers per group (paid, free), so they agree with the heatmap
+    for the group the user picked: [matched, total] for upcoming games and for past
+    launches (full and Early Access, as in the panel)."""
+    past = [h for h in history if h["launch_type"] in PANEL_TYPES]
+    up, up_all = _per_group(selected(games, selection, mode, languages)), _per_group(games)
+    hist, hist_all = _per_group(selected(past, selection, mode, languages)), _per_group(past)
+    return {g: {"upcoming": [up[g], up_all[g]], "past": [hist[g], hist_all[g]]} for g in GROUPS}
+
+
 def days_ahead(game: dict, today: date) -> tuple[date, date] | None:
     """The part of a vague date's range from `today` on, or None if it has run out."""
     start, end = max(date.fromisoformat(game["date"]), today), date.fromisoformat(game["date_end"])
@@ -80,13 +101,13 @@ def heatmap(games, today: date, selection=(), mode: str = "and", languages=(), h
     a usual week of launches" (none when it is 0). Announced dates are not
     launches: near weeks run high (some will slip) and far weeks low (dates not
     set yet), and the page says so. `matched` and `total` are the
-    match count for upcoming games."""
+    match count for upcoming games, per group."""
     weeks = [week_start(today) + timedelta(weeks=i) for i in range(WEEKS)]
     grid = {g: [dict.fromkeys(CELL, 0.0) for _ in weeks] for g in GROUPS}
     sometime: dict[str, dict] = {}
     chosen = selected(games, selection, mode, languages)
     for game in chosen:
-        group = "free" if game["free"] else "paid"
+        group = group_of(game)
         followers = game.get("followers")
         precision = game["precision"]
         if precision == "day":
@@ -125,7 +146,60 @@ def heatmap(games, today: date, selection=(), mode: str = "and", languages=(), h
                   if h["launch_type"] in PANEL_TYPES and since <= h["launch_date"] < today.isoformat()]
         typical = {g: sum((h["free"]) == (g == "free") for h in recent) / TYPICAL_WEEKS for g in GROUPS}
     return {"weeks": [w.isoformat() for w in weeks], **grid, "typical": typical,
-            "sometime": dict(sorted(sometime.items())), "matched": len(chosen), "total": len(games)}
+            "sometime": dict(sorted(sometime.items())), "matched": _per_group(chosen), "total": _per_group(games)}
+
+
+def heatmap_rows(games, today: date, selection=(), mode: str = "and", languages=(), history=None) -> list[dict]:
+    """The heatmap's rows: each picked tag alone, then the combination in `mode`
+    (no tags: one row of all games; one tag: just its row)."""
+    out = [{"tags": [t], **heatmap(games, today, [t], mode, languages, history)} for t in selection]
+    if len(selection) != 1:
+        out.append({"tags": list(selection), **heatmap(games, today, selection, mode, languages, history)})
+    return out
+
+
+def normalized(h: dict) -> dict | None:
+    """The heatmap's default view, "1.0 = a usual week": exact, spread and year per
+    week divided by the group's typical week. None without `typical`, and a group
+    whose typical week is 0 gets None."""
+    if h["typical"] is None:
+        return None
+    return {g: [{k: c[k] / h["typical"][g] for k in ("exact", "spread", "year")} for c in h[g]]
+            if h["typical"][g] else None for g in GROUPS}
+
+
+def week_games(games, today: date, week: date, selection=(), mode: str = "and", languages=(),
+               year: bool = False) -> list[dict]:
+    """The games behind one heatmap week (`week` is its Monday), as the heatmap counts
+    them: day dates in the week (layer "exact", share 1), month and quarter dates by the
+    share they add ("spread"), and year-only dates the same way when `year` is set.
+    Games whose top 10 tags match the selection come first, then the most followers
+    (none last), then by name, then appid. `hype_src` says where `followers` comes from
+    ("f" a count, "r" an estimate from wishlist rank). `moved` is [kind, old date
+    text, days since the change]."""
+    out = []
+    for game in selected(games, selection, mode, languages):
+        precision = game["precision"]
+        if precision == "day":
+            if week_start(date.fromisoformat(game["date"])) != week:
+                continue
+            layer, share = "exact", 1.0
+        elif precision in SPREAD or (year and precision == "year"):
+            span = days_ahead(game, today)
+            days = _overlap(*span, week) if span else 0
+            if not days:
+                continue
+            layer = "year" if precision == "year" else "spread"
+            share = 1 / ((span[1] - span[0]).days + 1) * days  # as in heatmap, to the last digit
+        else:
+            continue
+        moved = game.get("moved")
+        out.append({"appid": game["appid"], "name": game["name"], "free": game["free"], "layer": layer,
+                    "share": share, "followers": game.get("followers"), "hype_src": game.get("hype_src"),
+                    "top10": matches(game["tags"][:10], selection, mode),
+                    "moved": [moved[0], moved[1], (today - date.fromisoformat(moved[2])).days] if moved else None})
+    return sorted(out, key=lambda g: (not g["top10"], g["followers"] is None, -(g["followers"] or 0),
+                                      g["name"], g["appid"]))
 
 
 def percentile(values: list[float], q: float) -> float:
@@ -162,9 +236,8 @@ def history_panel(history, selection=(), mode: str = "and", languages=(), min_gr
     if measure not in MEASURES:
         raise ValueError(f"measure must be one of {MEASURES}, not {measure!r}")
     chosen = [h for h in selected(history, selection, mode, languages) if h["launch_type"] in PANEL_TYPES]
-    group_of = {id(h): "free" if h["free"] else "paid" for h in chosen}
     week_of = {id(h): week_start(date.fromisoformat(h["launch_date"])) for h in chosen}
-    per_week = Counter((group_of[id(h)], week_of[id(h)]) for h in chosen)
+    per_week = Counter((group_of(h), week_of[id(h)]) for h in chosen)
     span = [week_start(date.fromisoformat(h["launch_date"])) for h in history]
     baseline_from = min(span) + timedelta(weeks=RELATIVE_WEEKS) if span else None
 
@@ -177,11 +250,11 @@ def history_panel(history, selection=(), mode: str = "and", languages=(), min_gr
     out = {"measure": measure}
     for group in GROUPS:
         sample = [(busy(group, week_of[id(h)]), h["reviews_30d"])
-                  for h in chosen if group_of[id(h)] == group and h["reviews_30d"] is not None
+                  for h in chosen if group_of(h) == group and h["reviews_30d"] is not None
                   and (measure == "raw" or week_of[id(h)] >= baseline_from)]
         out[group] = _terciles(sample, min_group)
-    out["matched"] = len(chosen)
-    out["total"] = sum(h["launch_type"] in PANEL_TYPES for h in history)
+    out["matched"] = _per_group(chosen)
+    out["total"] = _per_group([h for h in history if h["launch_type"] in PANEL_TYPES])
     return out
 
 

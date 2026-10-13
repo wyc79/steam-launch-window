@@ -172,10 +172,10 @@ def test_rebuilds_are_identical(data, tmp_path):
 def test_the_reference_numbers_run_on_built_files(data, tmp_path):
     _, meta, up, hist, _ = built(data, tmp_path)
     h = hm.heatmap(list(up.values()), date.fromisoformat(meta["snapshot_date"]), [1774])
-    assert h["matched"] == 5
+    assert h["matched"] == {"paid": 3, "free": 2}  # 2 has Free to Play in its tags, 3 Steam's flag
     assert sum(c["exact"] for c in h["paid"] + h["free"]) == 2   # Nov 4 (free flag) and Dec 1 (free tag)
     assert h["sometime"]["2027"]["paid"]["games"] == 1
-    assert hm.history_panel(list(hist.values()), [1774])["matched"] == 1
+    assert hm.history_panel(list(hist.values()), [1774])["matched"] == {"paid": 1, "free": 0}
 
 
 def test_cli_refuses_to_write_into_the_data_folder(data):

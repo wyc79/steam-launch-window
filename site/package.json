@@ -1,0 +1,12 @@
+{
+  "name": "steam-launch-window-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
+  }
+}

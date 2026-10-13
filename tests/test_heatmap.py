@@ -91,10 +91,18 @@ def test_selection_and_match_count():
     games = [game("day", "2026-10-14", tags=(SHOOTER, ROGUELIKE)), game("day", "2026-10-14", tags=(SHOOTER,)),
              game("unknown", tags=(COZY,)), game("day", "2026-10-14", tags=(SHOOTER,), langs=("schinese",))]
     h = hm.heatmap(games, TODAY, [SHOOTER, ROGUELIKE], "and")
-    assert (h["matched"], h["total"], h["paid"][0]["exact"]) == (1, 4, 1)
+    assert (h["matched"], h["total"], h["paid"][0]["exact"]) == ({"paid": 1, "free": 0}, {"paid": 4, "free": 0}, 1)
     h = hm.heatmap(games, TODAY, [ROGUELIKE, COZY], "or")
-    assert h["matched"] == 2 and h["paid"][0]["exact"] == 1  # the cozy game has no date
-    assert hm.heatmap(games, TODAY, [SHOOTER], languages=["english"])["matched"] == 2
+    assert h["matched"]["paid"] == 2 and h["paid"][0]["exact"] == 1  # the cozy game has no date
+    assert hm.heatmap(games, TODAY, [SHOOTER], languages=["english"])["matched"]["paid"] == 2
+
+
+def test_match_count_follows_the_group():
+    games = [game("day", "2026-10-14"), game("day", "2026-10-14", free=True), game("day", "2026-10-14", tags=(COZY,))]
+    history = [past("2026-01-05", 1), past("2026-01-05", 1, free=True), past("2026-01-05", 1, tags=(COZY,)),
+               past("2026-01-05", 1, launch_type="ea_exit")]
+    assert hm.match_count(games, history, [SHOOTER]) == {"paid": {"upcoming": [1, 2], "past": [1, 2]},
+                                                         "free": {"upcoming": [1, 1], "past": [1, 1]}}
 
 
 def test_percentile_interpolates_like_numpy():
@@ -115,7 +123,8 @@ def test_busy_counts_other_matching_launches_of_the_same_group_that_week():
                past("2026-01-06", 5, launch_type="ea_exit")]
     panel = hm.history_panel(history, [SHOOTER], min_group=1, measure="raw")
     parts = panel["paid"]["parts"]
-    assert panel["matched"] == 5 and panel["total"] == 6  # ea_exit is not a past launch here
+    assert panel["matched"] == {"paid": 4, "free": 1}  # the cozy launch is not a shooter
+    assert panel["total"] == {"paid": 5, "free": 1}    # ea_exit is not a past launch here
     assert parts["quiet"]["busy_max"] == 0 and parts["quiet"]["games"] == 1
     assert sum(p["games"] for p in parts.values()) == 4
     assert max(p.get("busy_max", 0) for p in parts.values()) == 2
@@ -203,6 +212,64 @@ def test_relative_busy_puts_a_lone_launch_in_a_small_niche_in_quiet():
     parts = panel["paid"]["parts"]
     assert parts["quiet"]["busy_max"] == 0.0     # alone in its week: no competition
     assert max(p.get("busy_max", 0) for p in parts.values()) == 2.0  # 2 others against a floor of 1
+
+
+def test_rows_are_each_tag_then_the_combination():
+    games = [game("day", "2026-10-14", tags=(SHOOTER, ROGUELIKE)), game("day", "2026-10-14", tags=(ROGUELIKE,))]
+    rows = hm.heatmap_rows(games, TODAY, [SHOOTER, ROGUELIKE], "or")
+    assert [(r["tags"], r["matched"]["paid"]) for r in rows] == [([SHOOTER], 1), ([ROGUELIKE], 2),
+                                                                ([SHOOTER, ROGUELIKE], 2)]
+    assert [r["tags"] for r in hm.heatmap_rows(games, TODAY, [SHOOTER])] == [[SHOOTER]]
+    assert [r["matched"]["paid"] for r in hm.heatmap_rows(games, TODAY)] == [2]  # no tags: all games
+
+
+def test_normalized_divides_by_the_typical_week():
+    history = [past("2026-03-02", 10)] * 104  # 2 a week for paid, none for free
+    h = hm.heatmap([game("day", "2026-10-14"), game("month", "2026-10-01", "2026-10-31")], TODAY, history=history)
+    norm = hm.normalized(h)
+    assert norm["paid"][0] == pytest.approx({"exact": 0.5, "spread": 7 / 20 / 2, "year": 0})
+    assert norm["free"] is None  # no usual week to compare with
+    assert hm.normalized(hm.heatmap([], TODAY)) is None
+
+
+def test_week_games_list_top_10_matches_first_then_big_names():
+    low = [492, 19, 21, 4182, 597, 1742, 3871, 1625, 4166, 1664, SHOOTER]  # shooter is 11th
+    games = [dict(game("day", "2026-10-14", tags=low, followers=9000), appid=1, name="Low", moved=None),
+             dict(game("day", "2026-10-15", followers=10), appid=2, name="Small", moved=None),
+             dict(game("day", "2026-10-16"), appid=3, name="Unknown", moved=["moved", "October 2026", "2026-10-09"]),
+             dict(game("month", "2026-10-01", "2026-10-31", followers=500), appid=4, name="Vague", moved=None),
+             dict(game("day", "2026-10-20"), appid=5, name="Next week", moved=None)]
+    listed = hm.week_games(games, TODAY, date(2026, 10, 12), [SHOOTER])
+    assert [g["appid"] for g in listed] == [4, 2, 3, 1]
+    assert listed[0]["layer"] == "spread" and listed[0]["share"] == pytest.approx(7 / 20)
+    assert listed[2]["moved"] == ["moved", "October 2026", 3]  # changed 3 days ago
+    assert listed[3]["top10"] is False
+
+
+def test_week_games_with_year_dates_over_the_year_end():
+    games = [dict(game("year", "2026-01-01", "2026-12-31", followers=50), appid=1, name="This year", moved=None),
+             dict(game("year", "2027-01-01", "2027-12-31"), appid=2, name="Next year", moved=None),
+             dict(game("day", "2027-01-01", followers=40), appid=3, name="New Year Day", moved=None)]
+    today, week = date(2026, 12, 23), date(2026, 12, 28)  # Dec 28 to Jan 3, ISO week 53
+    assert [g["appid"] for g in hm.week_games(games, today, week)] == [3]  # year dates only on request
+    listed = hm.week_games(games, today, week, year=True)
+    assert [(g["appid"], g["layer"]) for g in listed] == [(1, "year"), (3, "exact"), (2, "year")]
+    assert listed[0]["share"] == pytest.approx(4 / 9)    # Dec 28 to 31 of the 9 days left in 2026
+    assert listed[2]["share"] == pytest.approx(3 / 365)  # Jan 1 to 3 of 2027
+
+
+def test_week_games_in_or_mode_carry_group_and_hype_source():
+    low = [492, 19, 21, 4182, 597, 1742, 3871, 1625, 4166, 1664, ROGUELIKE]  # roguelike is 11th
+    games = [dict(game("day", "2026-10-14", tags=(COZY,), free=True, followers=70), appid=1, name="Cozy",
+                  moved=None, hype_src="r"),
+             dict(game("day", "2026-10-14", tags=low, followers=900), appid=2, name="Low", moved=None, hype_src="f"),
+             dict(game("day", "2026-10-14", tags=(SHOOTER,)), appid=3, name="Shooter", moved=None),
+             dict(game("day", "2026-10-15", tags=(ROGUELIKE, *low)), appid=4, name="Rogue", moved=None)]
+    listed = hm.week_games(games, TODAY, date(2026, 10, 12), [ROGUELIKE, COZY], "or")
+    assert [(g["appid"], g["top10"]) for g in listed] == [(1, True), (4, True), (2, False)]
+    assert (listed[0]["free"], listed[0]["hype_src"]) == (True, "r")  # an estimate from wishlist rank
+    assert (listed[2]["free"], listed[2]["hype_src"]) == (False, "f")
+    assert listed[1]["hype_src"] is None
 
 
 def test_unknown_mode_or_measure_is_an_error():

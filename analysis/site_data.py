@@ -203,7 +203,11 @@ def _table(rows: list[dict], columns: list[str]) -> dict:
 def load_table(path: Path, meta: dict | None = None) -> list[dict]:
     """Rows of upcoming.json or history.json as dicts; with `meta`, tags and langs
     are turned back into tag ids and language names."""
-    table = json.loads(Path(path).read_text(encoding="utf-8"))
+    return table_rows(json.loads(Path(path).read_text(encoding="utf-8")), meta)
+
+
+def table_rows(table: dict, meta: dict | None = None) -> list[dict]:
+    """load_table for a table already read (site/src/lib/data.js fromTable is its copy)."""
     rows = [dict(zip(table["columns"], r)) for r in table["rows"]]
     if meta:
         for r in rows:
