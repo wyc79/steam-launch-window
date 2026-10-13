@@ -51,23 +51,27 @@ What the model adjusts for:
 ## What we found (paid games)
 
 The "by chance" column is a second test for events that happened only a few
-times (see "How much to trust it"): how often fake event dates on random weeks
-gave a result at least this far from "no difference". Small is better; 0.05
-means 1 in 20.
+times (see "How much to trust it"). It estimates the event's effect alone, on
+all games pooled with the rest of the model held fixed (the first number, a
+rate ratio, so it can differ a little from the main column), then gives how
+often fake event dates on random weeks gave a result at least that far from
+"no difference" (p). Small p is better; 0.05 means 1 in 20.
 
-| Launch... | Reviews, compared with otherwise similar launches | By chance | Games |
+| Launch... | Reviews, compared with otherwise similar launches | By chance: effect alone; p | Games |
 |---|---|---|---|
 | with 10 more launches in its niche and price tier that week | 9% fewer (6% to 11%) | | 67,791 (median 15 such launches) |
-| during a seasonal sale | 37% fewer (25% to 47%) | 0.002 (19 sales) | 5,310 |
+| during a seasonal sale | 37% fewer (25% to 47%) | 0.75; 0.001 (19 sales) | 5,310 |
 | in the 7 days before a sale | 15% fewer (32% fewer to 6% more) | | 5,337 |
-| during Next Fest | 19% more (19% fewer to 75% more) | 0.32 (14 fests) | 3,047 |
+| during Next Fest | 19% more (19% fewer to 75% more) | 1.13; 0.34 (14 fests) | 3,047 |
 | with a demo out during the last Next Fest | 71% more (36% to 114%) | | 10,394 |
-| during a themed fest for one of its tags | 45% fewer (35% to 54%) | 0.04 (69 fests) | 1,008 |
+| during a themed fest for one of its tags | 45% fewer (35% to 54%) | 0.56; 0.04 (69 fests) | 1,008 |
 | within 3 days of a big paid release | no clear difference (11% fewer to 18% more) | | 21,375 |
-| during China's Spring Festival holiday | 37% fewer (14% to 54%) | 0.08 (5 holidays) | 1,408 |
-| during China's National Day holiday | 56% fewer (33% to 71%) | 0.008 (4 holidays) | 1,047 |
-| between US Thanksgiving and Cyber Monday | no clear difference (25% fewer to 154% more) | 0.40 (4) | 713 |
-| between Christmas and New Year | no clear difference (23% fewer to 73% more) | 0.63 (4) | 741 |
+| during China's Spring Festival holiday, without Simplified Chinese | 37% fewer (14% to 54%) | 0.70; 0.08 (5 holidays, all games) | 877 |
+| ... with Simplified Chinese | 29% fewer (8% to 46%) | (the same test) | 531 |
+| during China's National Day holiday, without Simplified Chinese | 56% fewer (33% to 71%) | 0.51; 0.007 (4 holidays, all games) | 698 |
+| ... with Simplified Chinese | 52% fewer (6% to 76%) | (the same test) | 349 |
+| between US Thanksgiving and Cyber Monday | no clear difference (25% fewer to 154% more) | 1.26; 0.42 (4) | 713 |
+| between Christmas and New Year | no clear difference (23% fewer to 73% more) | 1.11; 0.61 (4) | 741 |
 | in Early Access | 18% more (0% to 38% more) | | 10,962 |
 
 Reviews x price (the revenue proxy) gives the same picture.
@@ -78,17 +82,22 @@ more (bigger, more polished ones), not what a price change would do. Niche
 prices barely vary (half of all games sit in a niche whose median is $4.99; 90%
 between $3.99 and $8.99), so the niche price says little on its own.
 
-**Chinese holidays are not a general rule.** The dip around China's holidays is
-no different for games that support Simplified Chinese (extra effect 1.13 for
-Spring Festival and 1.09 for National Day, both within noise), so it is not
-about Chinese players. Every one of the 9 holiday windows in the data overlapped
-another Steam event: the Lunar New Year Sale (2022), Next Fest (October 2022,
-February 2024, February 2026), the Autumn Sale (2025) or a themed fest (the other
-years). With only 5 and 4 windows, the usual intervals overstate how sure this
-is; the chance test agrees for National Day (0.008) but not clearly for Spring
-Festival (0.08). The site shows Chinese holidays only as calendar context for
-games that support Simplified Chinese, marked unconfirmed, and not as advice
-for other games.
+**Chinese holidays are not a general rule.** Games launched during China's
+holidays got fewer reviews, with or without Simplified Chinese (see the
+table). In the review-count model, the extra effect of supporting Simplified
+Chinese is 1.13 (0.76 to 1.68) for Spring Festival and 1.09 (0.64 to 1.84) for
+National Day: no clear difference, but the intervals are wide, so a difference
+is not ruled out. The "any reviews" part does show one: games with Simplified
+Chinese launched during Spring Festival were less likely to get any review than
+other games launched then (odds ratio 0.71, 0.55 to 0.93). Every one of the 9
+holiday windows in the data overlapped another Steam event: the Lunar New Year
+Sale (2022), Next Fest (October 2022, February 2024, February 2026), the Autumn
+Sale (2025) or a themed fest (the other years). With only 5 and 4 windows, the
+usual intervals overstate how sure this is. The chance test, on all games
+pooled, agrees for National Day (0.007) but not clearly for Spring Festival
+(0.08). The site shows Chinese holidays only as calendar context for games that
+support Simplified Chinese, marked unconfirmed, and not as advice for other
+games.
 
 ## How much to trust it
 
@@ -108,14 +117,17 @@ for other games.
   times (4 to 19 windows; themed fests 69), and the usual intervals assume more
   independent chances than that. So for each one we placed fake windows of the
   same length on random weeks, 1,000 times (same number of windows, the same
-  weekday and hour, never on the real ones), and counted how often the fake
-  dates gave a result at least as far from "no difference" as the real ones. To
-  keep it fast, the model is fitted once without the event and only the event's
-  own effect is estimated for each set of dates. On 15 fake sets for two events
+  weekday and Pacific clock time, never on a real window of that event, even a
+  themed fest for other tags), and counted how often the fake dates gave a
+  result at least as far from "no difference" as the real ones. To keep it
+  fast, the model is fitted once without the event and only the event's own
+  effect is estimated for each set of dates, on all games pooled (for a Chinese
+  holiday, with and without Simplified Chinese). On 15 fake sets for two events
   this tracked a full refit closely (correlation above 0.99), and if anything it
-  makes the chance numbers a little too large (cautious). Sales (0.002),
-  National Day (0.008) and themed fests (0.04) pass; Spring Festival (0.08),
-  Next Fest, Thanksgiving and Christmas do not.
+  makes the chance numbers a little too large (cautious). Each event has its
+  own random numbers, so adding an event does not change the others. Sales
+  (0.001), National Day (0.007) and themed fests (0.04) pass; Spring Festival
+  (0.08), Next Fest, Thanksgiving and Christmas do not.
 - **No hype control yet.** Pre-launch followers would be the best control we
   have, but Games Popularity counts exist so far for 626 launches from one week
   of August 2026. On the 555 paid ones, adding followers shrinks the competition
@@ -128,10 +140,12 @@ for other games.
   fewer reviews per same-niche launch.
 - **Zero or some reviews.** A first part, "any reviews at all", shows sales,
   same-tier competition and a demo outside Next Fest going with more launches
-  that got no review. Themed fests and the Chinese holidays do not show up there:
-  their dip is among games that got some reviews (a plain count model on those
-  games gives 0.55, 0.59 and 0.45). The planned second part, a zero-truncated
-  count model, has no finite best fit on this data and is left out.
+  that got no review. Themed fests and the Chinese holidays do not show up there
+  for games without Simplified Chinese: their dip is among games that got some
+  reviews (a plain count model on those games, not corrected for the missing
+  zeros, gives 0.55, 0.59 and 0.45). Games with Simplified Chinese launched
+  during Spring Festival are the exception (above). The planned second part, a
+  zero-truncated count model, has no stable fit on this data and is left out.
 - **Free games:** our review counts only include Steam purchases, so most free
   launches show 0 reviews in their first 30 days although they do have reviews.
   The free model is fitted but marked unreliable until free games are recounted

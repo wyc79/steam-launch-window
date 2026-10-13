@@ -344,20 +344,23 @@ launches on Jan 1 and 2, 2022 left out, no `unavailable` review data (0), 72
 paid games without a price left out. Paid 67,791, free 12,232; 245 launch weeks.
 
 **Paid results** (rate ratios, 95% intervals; the full list is in `model.json`).
-"Chance" is the chance-test p-value for events with few windows (see Checks):
+"Chance" is the chance test for events with few windows (see Checks): the
+event's effect estimated alone on all games pooled (`ratio_alone`), then its
+p-value:
 
 | Predictor | Rate ratio | Chance | Games |
 |---|---|---|---|
 | one more same-niche, same-tier launch that week | 0.991 (0.988 to 0.994); per 10: 0.913 | | median 15 |
 | big paid release within 3 days | 1.03 (0.90 to 1.18) | | 21,375 |
-| seasonal sale | 0.63 (0.53 to 0.76) | 0.002 (19 windows) | 5,310 |
+| seasonal sale | 0.63 (0.53 to 0.76) | 0.75; 0.001 (19 windows) | 5,310 |
 | 7 days before a sale | 0.85 (0.68 to 1.06) | | 5,337 |
-| Next Fest | 1.19 (0.81 to 1.75) | 0.32 (14) | 3,047 |
+| Next Fest | 1.19 (0.81 to 1.75) | 1.13; 0.34 (14) | 3,047 |
 | demo in the last Next Fest | 1.71 (1.36 to 2.15) | | 10,394 |
-| themed fest for its tags | 0.55 (0.46 to 0.65) | 0.04 (69) | 1,008 |
-| Spring Festival / National Day | 0.63 (0.46 to 0.86) / 0.44 (0.29 to 0.67) | 0.08 (5) / 0.008 (4) | 1,408 / 1,047 |
-| ... with Simplified Chinese (extra) | 1.13 (0.76 to 1.68) / 1.09 (0.64 to 1.84) | | 531 / 349 |
-| Thanksgiving to Cyber Monday / Christmas to New Year | 1.38 (0.75 to 2.54) / 1.16 (0.77 to 1.73) | 0.40 / 0.63 (4 each) | 713 / 741 |
+| themed fest for its tags | 0.55 (0.46 to 0.65) | 0.56; 0.04 (69) | 1,008 |
+| Spring Festival / National Day, games without Simplified Chinese | 0.63 (0.46 to 0.86) / 0.44 (0.29 to 0.67) | all games: 0.70; 0.08 (5) / 0.51; 0.007 (4) | 877 / 698 |
+| ... extra for Simplified Chinese | 1.13 (0.76 to 1.68) / 1.09 (0.64 to 1.84) | | 531 / 349 |
+| ... games with Simplified Chinese (main x extra) | 0.71 (0.55 to 0.92) / 0.48 (0.24 to 0.94) | | 531 / 349 |
+| Thanksgiving to Cyber Monday / Christmas to New Year | 1.38 (0.75 to 2.54) / 1.16 (0.77 to 1.73) | 1.26; 0.42 / 1.11; 0.61 (4 each) | 713 / 741 |
 | Early Access | 1.18 (1.00 to 1.38) | | 10,962 |
 | demo before launch | 0.60 (0.49 to 0.72) | | 12,822 |
 | own price, per doubling (niche price fixed) | 1.81 (1.69 to 1.94) | | |
@@ -375,16 +378,23 @@ doubling 2.88" was really own price plus the niche ratio (about 2.88 x 0.62 =
 0.32: own price per doubling 1.81. This says which games charge more (bigger,
 more polished ones), not what a price change would do: it is not pricing advice.
 
-**Chinese holidays are not a general rule.** The extra effect for games with
-Simplified Chinese is about 1 (1.13 and 1.09, within noise), so the dip is not
-about Chinese players. All 9 holiday windows in the sample overlapped another
-Steam event (Lunar New Year Sale 2022; Next Fest October 2022, February 2024
-and February 2026; Autumn Sale 2025; themed fests in the other years). With 5
-and 4 windows, week-clustered intervals overstate certainty; the chance test
-gives 0.008 for National Day and 0.08 for Spring Festival. `model.json` carries
-this as a note (`holidays`), and the site shows Chinese holidays only as
-calendar context for games that support Simplified Chinese, marked
-unconfirmed, not as advice for other games.
+**Chinese holidays are not a general rule.** With the Simplified Chinese
+extra in the model, `cn_spring` and `cn_national` are the effects for games
+without Simplified Chinese. Games with it: 0.71 (0.55 to 0.92) and 0.48 (0.24
+to 0.94), main plus extra with the interval from the clustered covariance
+(`holidays.with_schinese`). The extra itself (1.13 and 1.09) is no clear
+difference in the review-count model, but its intervals are wide, so a
+difference is not ruled out. The "any reviews" part does show one: Simplified
+Chinese games launched during Spring Festival were less likely to get any
+review (extra odds ratio 0.71, 0.55 to 0.93). All 9 holiday windows in the
+sample overlapped another Steam event (Lunar New Year Sale 2022; Next Fest
+October 2022, February 2024 and February 2026; Autumn Sale 2025; themed fests
+in the other years). With 5 and 4 windows, week-clustered intervals overstate
+certainty; the chance test (all games pooled: 0.51 and 0.70) gives 0.007 for
+National Day and 0.08 for Spring Festival. `model.json` carries this as a note
+(`holidays`), and the site shows Chinese holidays only as calendar context for
+games that support Simplified Chinese, marked unconfirmed, not as advice for
+other games.
 
 **Checks (paid):**
 - Same-tier competition won on held-out log-likelihood only (per game -3.690
@@ -399,13 +409,17 @@ unconfirmed, not as advice for other games.
   for reviews x price).
 - Hurdle, "any reviews at all" (odds ratios): same-tier competition 0.996,
   sales 0.86, Next Fest 0.90, demo before launch 0.85, demo in the last Next
-  Fest 2.14; themed fests (0.95) and the Chinese holidays (0.99, 1.02) are
-  within noise. The zero-truncated count part has no finite maximum (alpha runs
-  off past 10^8; the first build's BFGS fit had stopped unconverged, so its
-  numbers were not usable) and is left out of `model.json`. A plain negative
-  binomial on the 51,066 games with reviews stands in: sales 0.65, themed fests
-  0.55, Spring Festival 0.59, National Day 0.45, demo in the last fest 1.47. So
-  the themed-fest and holiday dips are among games that got some reviews.
+  Fest 2.14; themed fests (0.95) and the Chinese holidays for games without
+  Simplified Chinese (0.99, 1.02) are within noise, but the Spring Festival
+  extra for Simplified Chinese is 0.71 (0.55 to 0.93). The zero-truncated count
+  part has no finite maximum (alpha runs off past 10^8; the first build's BFGS
+  fit had stopped unconverged, so its numbers were not usable) and is left out
+  of `model.json`; the site-facing caveat says "no stable fit" and the number
+  stays in `hurdle.count_given_some.failure`. A plain negative binomial on the
+  51,066 games with reviews (not corrected for the missing zeros) stands in:
+  sales 0.65, themed fests 0.55, Spring Festival 0.59, National Day 0.45, demo
+  in the last fest 1.47. So the themed-fest and holiday dips are among games
+  that got some reviews.
 - **Placebo, on the same measure:** same-tier competition 8 weeks after launch
   gives 0.991 (0.988 to 0.994), the real week 0.990 (0.987 to 0.994) on the same
   65,380 games. Together: real week 0.994 (0.988 to 1.000), placebo 0.996 (0.991
@@ -414,18 +428,23 @@ unconfirmed, not as advice for other games.
   `model.json` is written from these numbers.
 - **Chance test** for the event indicators with few windows: 1,000 sets of fake
   windows, each real window moved by a random whole number of weeks (same
-  length, weekday and hour; themed fests keep their tags) inside the sample, not
-  on a real window or another fake one. A full refit per draw would take hours
+  length, weekday and Pacific clock time across daylight saving; themed fests
+  keep their tags) inside the sample, never on any real window of the event
+  (a fake themed fest also stays off real fests for other tags), and not on
+  another fake one with shared tags. Each event has its own random generator
+  (seeded from its name), so adding an event does not change the others.
+  Every event still got all 1,000 draws. A full refit per draw would take hours
   (about 8 s a fit), so the model is refitted once without the event (and its
   Simplified Chinese extra), and with that fit held fixed only the event's own
-  coefficient is estimated, for the real and for each fake set. p = share of
-  fake sets at least as far from 1. On 15 fake sets for Spring Festival and
+  coefficient is estimated, for the real and for each fake set, on all games
+  pooled (`ratio_alone`; for a holiday, with and without Simplified Chinese).
+  p = share of fake sets at least as far from 1. On 15 fake sets for Spring Festival and
   sales, this one-parameter coefficient tracked a full refit with correlation
   0.995 and 0.999. Full refits spread the fake coefficients 22% and 37% wider
   and put the real ones 31% and 56% further from 1, so if anything these
-  p-values are a little too large (cautious). Results: sale 0.002, National Day 0.008, themed fest 0.04, Spring
-  Festival 0.08, Next Fest 0.32, Thanksgiving 0.40, Christmas 0.63. About 45 s
-  per group.
+  p-values are a little too large (cautious). Results: sale 0.001 (no fake set
+  as far), National Day 0.007, themed fest 0.04, Spring Festival 0.08, Next Fest
+  0.34, Thanksgiving 0.42, Christmas 0.61. About 45 s per group.
 - Held out (fitted on 2022 to 2025, scored on 16,383 launches of 2026; genres
   picked from 2022 to 2025 only): rank correlation 0.485 against 0.384 for the
   genre, year and price baseline; log-likelihood per game -3.69 against -3.77.
@@ -459,7 +478,9 @@ rerun the model after it has run.
   with paid, free with free), including launches with no review count yet.
 - Niche median price: paid launches in the 365 days before the game (earlier
   only) with similarity at least 0.3 and a shared language; with fewer than 5,
-  the median of all paid launches in those 365 days (343 games).
+  the median of all paid launches in those 365 days (343 games). A game with
+  fewer than 5 paid launches before it at all is left out (none in the data;
+  there is no fallback that uses later launches).
 - Demo in the last Next Fest: the last Next Fest that ended before launch, and
   the game's demo released before that fest ended. Taking part is not checked.
 - "Attention" releases: free-to-play or not on Steam, not expansions, not

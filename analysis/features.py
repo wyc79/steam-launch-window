@@ -38,6 +38,7 @@ SAMPLE_START = date(2022, 1, 1)
 REACH_FULL_FROM = date(2023, 1, 1)  # publisher reach has a full year of history behind it from here
 GAP_DAYS = 31           # the 30-day review window must have closed
 SIMILAR = 0.3           # cosine similarity that counts as the same niche
+SIMILAR_TOL = 1e-9      # rounding slack for that comparison (cosines are float64 everywhere)
 TOP = 10
 LANG_FLAGS = ("schinese", "japanese", "russian", "korean", "brazilian", "german", "french", "spanish")
 MAJOR_LANGUAGES = ("english", *LANG_FLAGS)
@@ -182,7 +183,7 @@ def similar_counts(targets: pd.DataFrame, pool: pd.DataFrame, top: int = TOP, th
             continue
         ti, pj = np.array(ti), np.array(pj)
         if rule == "cosine":
-            ok = (tv[ti] @ pv[pj].T).toarray() >= threshold - 1e-9
+            ok = (tv[ti] @ pv[pj].T).toarray() >= threshold - SIMILAR_TOL
         elif rule == "primary":
             ok = t_first[ti][:, None] == p_first[pj][None, :]
         else:
@@ -203,7 +204,7 @@ def _price_window(targets: pd.DataFrame, days: int) -> tuple[np.ndarray, np.ndar
 
 
 def niche_median_price(targets: pd.DataFrame, pool: pd.DataFrame, top: int = TOP, threshold: float = SIMILAR,
-                       days: int = PRICE_DAYS, chunk: int = 500) -> np.ndarray:
+                       days: int = PRICE_DAYS, chunk: int = 250) -> np.ndarray:
     """Median price of the paid pool games in each target's niche (same cosine and
     language rule as `similar_counts`) that launched in the `days` before it, so no
     later launch is used. NaN with fewer than MIN_NICHE."""
@@ -214,14 +215,14 @@ def niche_median_price(targets: pd.DataFrame, pool: pd.DataFrame, top: int = TOP
     p_ts = pool["launch_ts"].to_numpy(dtype=np.int64)
     lo_ts, hi_ts = _price_window(targets, days)
     index = _index(targets, pool)
-    tv = tag_vectors(list(targets["tags"]), top, index).astype(np.float32)
-    pv = tag_vectors(list(pool["tags"]), top, index).astype(np.float32).T.toarray()
+    tv = tag_vectors(list(targets["tags"]), top, index)
+    pv = tag_vectors(list(pool["tags"]), top, index).T.toarray()
     tl, pl = lang_matrix(targets["langs"]), lang_matrix(pool["langs"]).T
     t_app, p_app = targets["appid"].to_numpy(), pool["appid"].to_numpy()
     out = np.full(len(targets), np.nan)
     for start in range(0, len(targets), chunk):
         s = slice(start, start + chunk)
-        ok = (tv[s] @ pv >= threshold - 1e-6) & (tl[s] @ pl > 0) & (t_app[s][:, None] != p_app[None, :])
+        ok = (tv[s] @ pv >= threshold - SIMILAR_TOL) & (tl[s] @ pl > 0) & (t_app[s][:, None] != p_app[None, :])
         ok &= (p_ts[None, :] >= lo_ts[s][:, None]) & (p_ts[None, :] < hi_ts[s][:, None])
         out[s] = _sorted_median(ok, prices)
     return out

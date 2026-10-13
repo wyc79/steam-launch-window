@@ -36,11 +36,12 @@ def test_fit_nb_recovers_a_rate_ratio():
 
 
 def make_data(root, n=2500, seed=3):
+    """Launches from 2022-09 to 2026-08 (some before REACH_FULL_FROM and some held out)."""
     rng = random.Random(seed)
     rows = []
-    start = date(2024, 1, 1)
+    start = date(2022, 9, 1)
     for i in range(n):
-        day = start + timedelta(days=rng.randrange(0, 960))
+        day = start + timedelta(days=rng.randrange(0, 1450))
         ts = int(datetime(day.year, day.month, day.day, rng.randrange(24), tzinfo=timezone.utc).timestamp())
         tags = rng.sample([19, 492, 1716, 1664, 599], 3)
         free = rng.random() < 0.35
@@ -70,9 +71,9 @@ def make_data(root, n=2500, seed=3):
          "end": date(2025, 10, 8), "region": "CN"},
     ]
     (root / "events.yaml").write_text(yaml.safe_dump({"events": events}), encoding="ascii")
-    # follower series for the first 400 games: a straight line from 2023 on
+    # follower series for the first 700 games: a straight line around launch
     lines = ["appid,followers,observed_at,fetched_at"]
-    for r in rows[:400]:
+    for r in rows[:700]:
         launch = int(r["launch_ts"])
         for d in (-30, -10, -3, 2):
             t = datetime.fromtimestamp(launch + d * 86400, timezone.utc).isoformat()
@@ -82,14 +83,27 @@ def make_data(root, n=2500, seed=3):
         f.write("\n".join(lines) + "\n")
 
 
-def test_model_cli_writes_model_json(tmp_path, capsys):
-    make_data(tmp_path)
+@pytest.fixture(scope="module")
+def data_dir(tmp_path_factory):
+    root = tmp_path_factory.mktemp("data")
+    make_data(root)
+    return root
+
+
+@pytest.fixture(scope="module")
+def frames(data_dir):
+    return M.build_frames(data_dir, data_dir / "events.yaml", data_dir / "gp")
+
+
+def test_model_cli_writes_model_json(data_dir, frames, tmp_path, capsys):
     out = tmp_path / "site"
-    assert M.main(["--data-dir", str(tmp_path), "--gp-dir", str(tmp_path / "gp"), "--events",
-                   str(tmp_path / "events.yaml"), "--out", str(out), "--permutations", "20"]) == 0
+    assert M.main(["--data-dir", str(data_dir), "--gp-dir", str(data_dir / "gp"), "--events",
+                   str(data_dir / "events.yaml"), "--out", str(out), "--permutations", "20"]) == 0
     result = json.loads((out / "model.json").read_text(encoding="utf-8"))
-    assert result["sample"]["kept"] == result["sample"]["paid"] + result["sample"]["free"]
-    assert result["followers"]["games_with_series"] == 400
+    n = result["sample"]
+    assert n["paid_without_earlier_prices"] > 0   # the first days of the data: left out, no niche price
+    assert n["kept"] == n["paid"] + n["free"] + n["paid_without_price"] + n["paid_without_earlier_prices"]
+    assert result["followers"]["games_with_series"] == 700
     for group in ("paid", "free"):
         g = result[group]
         keys = {e["key"] for e in g["reviews"]["effects"]}
@@ -110,6 +124,59 @@ def test_model_cli_writes_model_json(tmp_path, capsys):
     assert "log_price" not in {e["key"] for e in result["free"]["reviews"]["effects"]}
     assert "with_followers" in result["paid"]["followers"]
     assert "== paid" in capsys.readouterr().out
+    # small games: launched from REACH_FULL_FROM only (the data starts before it)
+    s = frames[0]["paid"]
+    small = (s["reach"] <= M.SMALL_REACH) & (s["franchise"] == 0) & (s["price"] < M.SMALL_PRICE)
+    late = s["launch_date"] >= M.F.REACH_FULL_FROM
+    assert result["paid"]["checks"]["small_games"]["n"] == int((small & late).sum()) < int(small.sum())
+
+
+def test_tier_placebo_counts_the_same_tier_8_weeks_later(data_dir, frames):
+    s = frames[0]["paid"]
+    pool = M.F.pool_of(M.F.load_history(data_dir / "history" / "games.csv"), False)
+    expected = M.F.similar_counts(s, pool, offset_weeks=M.PLACEBO_WEEKS, same_tier=True)
+    assert list(s["comp_tier_placebo"]) == list(expected)
+    assert (s["comp_tier_placebo"] < s["comp_placebo"]).any()      # the tier rule bites in this data
+    assert (s["comp_tier_placebo"] <= s["comp_placebo"]).all()
+
+
+def test_today_caps_the_data(data_dir, frames):
+    today = date(2025, 12, 31)
+    capped, info = M.build_frames(data_dir, data_dir / "events.yaml", data_dir / "gp", today=today)
+    assert info["sample"]["sample_end"] == "2025-11-30"
+    s, full = capped["paid"], frames[0]["paid"].set_index("appid")
+    history = M.F.load_history(data_dir / "history" / "games.csv")
+    data_end = max(d for d in history["launch_date"] if d <= today)
+    # the placebo week must end before the capped data end, not the real one
+    assert list(s["placebo_ok"]) == [w + timedelta(weeks=M.PLACEBO_WEEKS, days=6) < data_end for w in s["week"]]
+    assert not s["placebo_ok"].all() and full.loc[s.loc[~s["placebo_ok"], "appid"], "placebo_ok"].any()
+    # launches after `today` are not in the pool: a placebo week after it counts nothing
+    after = [w + timedelta(weeks=M.PLACEBO_WEEKS) > today for w in s["week"]]
+    assert (s.loc[after, "comp_placebo"] == 0).all()
+    assert (full.loc[s.loc[after, "appid"], "comp_placebo"] > 0).any()
+
+
+def test_held_out_genres_come_from_the_fitting_years(monkeypatch):
+    # tag 19 leads before HELD_OUT_FROM; tag 492 leads overall because of the held-out year
+    rows = [{"launch_date": date(2025, 6, 1), "tags": [(19, 10)]}] * 30 + \
+           [{"launch_date": date(2025, 6, 1), "tags": [(492, 10)]}] * 10 + \
+           [{"launch_date": date(2026, 3, 1), "tags": [(492, 10)]}] * 40
+    s = pd.DataFrame(rows)
+    seen = {}
+
+    class Stop(Exception):
+        pass
+
+    def spy(frame, cols):
+        seen.update(cols)
+        raise Stop
+
+    monkeypatch.setattr(M, "GENRES", 1)
+    monkeypatch.setattr(M, "held_out", spy)
+    with pytest.raises(Stop):
+        M.run_group(s, free=True)
+    assert "tag_19" in seen["model"] and "tag_492" not in seen["model"]
+    assert "tag_19" in seen["baseline"] and "tag_492" not in seen["baseline"]
 
 
 # --- pieces -----------------------------------------------------------------
@@ -139,6 +206,11 @@ def test_effects_scale_doublings_and_per_10():
     assert e["comp_tier"]["rate_ratio"] == pytest.approx(np.exp(-0.01), rel=1e-3)
     assert e["comp_tier"]["per_10"]["ratio"] == pytest.approx(np.exp(-0.1), rel=1e-3)
     assert e["comp_tier"]["per_10"]["high"] == pytest.approx(np.exp(-0.08), rel=1e-3)
+    # with the Simplified Chinese extra in the model, the holiday's own effect is for games without it
+    res = FakeResult({"cn_spring": -0.4, "cn_spring_x_schinese": 0.1}, {"cn_spring": 0.1, "cn_spring_x_schinese": 0.1})
+    s = pd.DataFrame({"cn_spring": [1, 1, 1, 0], "cn_spring_x_schinese": [1, 0, 0, 0]})
+    e = {r["key"]: r for r in M.effects(res, s)}
+    assert e["cn_spring"]["games_with"] == 2 and e["cn_spring_x_schinese"]["games_with"] == 1
 
 
 def truncated_data(n=3000, seed=0):
@@ -188,7 +260,8 @@ def test_hurdle_leaves_out_a_failed_count_part(monkeypatch):
     assert part["converged"] is False and part["effects"] == [] and "did not converge" in part["status"]
     assert h["count_given_some_plain_nb"]["effects"]
     caveats = M.group_caveats({"status": "ok", "hurdle": h, "checks": {"placebo": PLACEBO_NOISE}}, free=False)
-    assert any("did not converge" in c for c in caveats)
+    assert any("no stable fit" in c and "not corrected for the missing zeros" in c for c in caveats)
+    assert not any("did not converge" in c for c in caveats)     # the technical reason stays in "failure"
 
 
 def effect(key, ratio, low, high, p):
@@ -219,18 +292,58 @@ def test_placebo_caveat_is_built_from_the_numbers():
     smaller = M.placebo_caveat(placebo((0.995, 0.99, 0.999, 0.01), (0.98, 0.97, 0.99, 1e-4),
                                        (0.982, 0.97, 0.99, 1e-4), (0.998, 0.99, 1.0, 0.5)))
     assert "smaller than the real effect" in smaller
+    # the free games' numbers: the real week within noise, the placebo not
+    noise = M.placebo_caveat(placebo((0.969, 0.939, 0.9996, 0.04), (0.992, 0.958, 1.028, 0.6),
+                                     (1.009, 0.971, 1.049, 0.6), (0.965, 0.931, 0.999, 0.04), n=11928))
+    assert "nothing clear" in noise and "0.992, 0.958 to 1.028" in noise
+    assert "explains a lot" not in noise and "smaller than" not in noise
+
+
+def holiday_group(spring_x=(1.13, 0.76, 1.68, 0.5), hurdle_x=(0.712, 0.548, 0.926, 0.01)):
+    return {"reviews": {"effects": [
+                effect("cn_spring", 0.63, 0.46, 0.86, 0.004), effect("cn_spring_x_schinese", *spring_x),
+                effect("cn_national", 0.44, 0.29, 0.67, 0.001),
+                effect("cn_national_x_schinese", 1.09, 0.64, 1.84, 0.7)]},
+            "chance_test": {"cn_spring": {"ratio_alone": 0.70, "p_value": 0.085, "windows": 2}},
+            "hurdle": {"any_reviews": {"effects": [
+                {**effect("cn_spring_x_schinese", *hurdle_x[:3], hurdle_x[3]), "odds_ratio": hurdle_x[0]},
+                {**effect("cn_national_x_schinese", 0.86, 0.46, 1.59, 0.6), "odds_ratio": 0.86}]}}}
+
+
+HOLIDAY_WINDOWS = {"cn_spring": [{"name": "a", "overlaps": ["sale"]}, {"name": "b", "overlaps": []}],
+                   "cn_national": [{"name": "c", "overlaps": ["fest"]}],
+                   "with_schinese": {"cn_spring": effect("cn_spring_schinese", 0.71, 0.50, 1.01, 0.06),
+                                     "cn_national": effect("cn_national_schinese", 0.48, 0.30, 0.77, 0.002)}}
 
 
 def test_holiday_note_from_the_numbers():
-    g = {"reviews": {"effects": [
-        {**effect("cn_spring", 0.64, 0.46, 0.87, 0.01), "chance_p": 0.21},
-        effect("cn_spring_x_schinese", 1.14, 0.76, 1.72, 0.5),
-        effect("cn_national", 0.43, 0.28, 0.65, 0.001), effect("cn_national_x_schinese", 1.10, 0.65, 1.87, 0.7)]}}
-    windows = {"cn_spring": [{"name": "a", "overlaps": ["sale"]}, {"name": "b", "overlaps": []}],
-               "cn_national": [{"name": "c", "overlaps": ["fest"]}]}
-    note = M.holiday_note(g, windows)
-    assert "0.64 (0.46 to 0.87), chance test p = 0.21" in note and "not about Chinese players" in note
+    note = M.holiday_note(holiday_group(), HOLIDAY_WINDOWS)
+    assert "games without Simplified Chinese 37% fewer reviews (0.63 (0.46 to 0.86))" in note
+    assert "games with it no clear difference (0.71 (0.50 to 1.01))" in note     # the combined effect
+    assert "games with it 52% fewer reviews (0.48 (0.30 to 0.77))" in note
+    assert "the chance test (all games pooled) gives 0.70 with p = 0.085" in note
+    assert "no clear difference, but the intervals are wide" in note and "not about Chinese players" not in note
+    assert "less likely to get any review" in note and "0.71 (0.55 to 0.93)" in note   # the hurdle extra
+    assert "National Day were" not in note                       # its hurdle extra is within noise
     assert "2 of the 3 holiday windows" in note and "2 Spring Festival and 1 National Day" in note
+    clear = M.holiday_note(holiday_group(spring_x=(1.6, 1.1, 2.3, 0.01), hurdle_x=(0.9, 0.7, 1.1, 0.4)),
+                           HOLIDAY_WINDOWS)
+    assert "wide" not in clear and "any review" not in clear
+
+
+def test_combined_effect_uses_the_covariance():
+    class Res:
+        params = pd.Series({"a": -0.5, "b": 0.1})
+        def cov_params(self):
+            return pd.DataFrame([[0.04, -0.01], [-0.01, 0.09]], index=["a", "b"], columns=["a", "b"])
+
+    monkey = pd.DataFrame({"b": [1, 0, 1]})
+    c = M.combined_effect(Res(), monkey, "a", "b")
+    se = np.sqrt(0.04 + 0.09 - 0.02)
+    assert c["rate_ratio"] == pytest.approx(np.exp(-0.4), rel=1e-3) and c["games_with"] == 2
+    assert c["low"] == pytest.approx(np.exp(-0.4 - 1.959964 * se), rel=1e-3)
+    assert c["high"] == pytest.approx(np.exp(-0.4 + 1.959964 * se), rel=1e-3)
+    assert M.combined_effect(Res(), monkey, "a", "c") is None
 
 
 def test_chance_test_pieces():
@@ -242,13 +355,24 @@ def test_chance_test_pieces():
         moved = M.move_windows(windows, rng, 90 * week, 200 * week)
         assert len(moved) == 2
         for m, w in zip(moved, windows):
-            assert (m["start"] - w["start"]) % week == 0 and m["end"] - m["start"] == w["end"] - w["start"]
+            assert round((m["start"] - w["start"]) / week * 168) % 168 in (0, 1, 167)   # whole weeks, give or take DST
             assert 90 * week <= m["start"] and m["end"] <= 200 * week
         assert not any(M._clash(a, b) for a in moved for b in windows)
         assert not M._clash(*moved)
     assert M.move_windows(windows, rng, 99 * week, 102 * week) is None       # no room for the second window
     tagged = {"name": "t", "start": 0, "end": 10, "tags": {"Roguelike"}}
     assert not M._clash(tagged, {**tagged, "tags": {"Puzzle"}}) and M._clash(tagged, {**tagged, "name": "u"})
+    # a fake window never sits on a real one, even one for other tags
+    fests = [{"name": "r", "start": 100 * week, "end": 101 * week, "tags": {"Roguelike"}},
+             {"name": "p", "start": 103 * week, "end": 104 * week, "tags": {"Puzzle"}}]
+    for _ in range(50):
+        moved = M.move_windows(fests, rng, 99 * week, 106 * week)
+        assert moved is not None and not any(M._overlap(m, f) for m in moved for f in fests)
+    # the same Pacific clock time across daylight saving: 10:00 PST in January to 10:00 PDT in July
+    pacific = M.event_data.PACIFIC
+    jan = datetime(2025, 1, 6, 10, tzinfo=pacific)
+    moved = datetime.fromtimestamp(M._shift(jan.timestamp(), 26), pacific)
+    assert (moved.date(), moved.hour, moved.minute) == (date(2025, 7, 7), 10, 0)
     # one coefficient with the rest held fixed recovers a known rate ratio
     n = 20000
     eta = rng.normal(1.0, 0.5, n)
@@ -256,3 +380,14 @@ def test_chance_test_pieces():
     mu = np.exp(eta + np.log(0.7) * d)
     y = rng.negative_binomial(1.0, 1 / (1 + mu)).astype(float)
     assert np.exp(M.one_coefficient(y, eta, 1.0, d)) == pytest.approx(0.7, abs=0.05)
+
+
+def test_chance_test_draws_do_not_depend_on_the_other_indicators(frames, monkeypatch):
+    fr, info = frames
+    s = fr["paid"]
+    args = (s, False, "competition", info["events"], info["tag_names"], 8)
+    monkeypatch.setattr(M, "PERMUTED", ("sale", "next_fest"))
+    both = M.chance_tests(*args)
+    monkeypatch.setattr(M, "PERMUTED", ("next_fest",))
+    alone = M.chance_tests(*args)
+    assert both["next_fest"]["draws_used"] > 0 and both["next_fest"] == alone["next_fest"]

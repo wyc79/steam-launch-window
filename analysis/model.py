@@ -26,7 +26,8 @@ import logging
 import math
 import time
 import warnings
-from datetime import date
+import zlib
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -73,8 +74,12 @@ LABELS = {
     "next_fest": "launch during Next Fest",
     "demo_last_fest": "demo out during the last Next Fest before launch",
     "themed_fest": "launch during a themed fest for one of its top tags",
-    "cn_spring": "launch during China's Spring Festival holiday",
-    "cn_national": "launch during China's National Day holiday",
+    "cn_spring": "launch during China's Spring Festival holiday (games without Simplified Chinese)",
+    "cn_national": "launch during China's National Day holiday (games without Simplified Chinese)",
+    "cn_spring_schinese": "launch during China's Spring Festival holiday (games with Simplified Chinese: "
+                          "main effect times extra)",
+    "cn_national_schinese": "launch during China's National Day holiday (games with Simplified Chinese: "
+                            "main effect times extra)",
     "cn_spring_x_schinese": "Spring Festival launch with Simplified Chinese (extra, on top)",
     "cn_national_x_schinese": "National Day launch with Simplified Chinese (extra, on top)",
     "us_thanksgiving": "launch between US Thanksgiving and Cyber Monday",
@@ -141,6 +146,7 @@ def build_frames(data_dir: Path, events_path: Path, gp_dir: Path | None = None,
             s["comp_tier"] = F.similar_counts(s, pool, same_tier=True)
             s["comp_tier_placebo"] = F.similar_counts(s, pool, offset_weeks=PLACEBO_WEEKS, same_tier=True)
             s["log_niche_price"] = np.log(niche_price(s, pool, info["sample"]))
+            s = s[s["log_niche_price"].notna()].copy()
         add_columns(s, free)
         frames[group] = s
         info["sample"][group] = len(s)
@@ -149,15 +155,13 @@ def build_frames(data_dir: Path, events_path: Path, gp_dir: Path | None = None,
 
 def niche_price(s: pd.DataFrame, pool: pd.DataFrame, counts: dict) -> np.ndarray:
     """The niche's median price from launches in the year before each game. Small
-    niches fall back to all paid launches in that year; the first days of the data,
-    with too few of those, to the median of all paid launches."""
+    niches fall back to all paid launches in that year. NaN where even that has too
+    few launches (the first days of the data): those games are left out."""
     median = F.niche_median_price(s, pool)
     small = np.isnan(median)
     counts["paid_niche_median_fallback"] = int(small.sum())
     median[small] = F.market_median_price(s[small], pool)
-    left = np.isnan(median)
-    counts["paid_niche_median_overall"] = int(left.sum())
-    median[left] = np.median(pool["price"][pool["price"] > 0])
+    counts["paid_without_earlier_prices"] = int(np.isnan(median).sum())
     return median
 
 
@@ -461,6 +465,8 @@ def effects(res, s: pd.DataFrame, keys=None, ratio: str = "rate") -> list[dict]:
         values = s[k]
         if set(values.unique()) <= {0, 1}:
             row["games_with"] = int(values.sum())
+            if k in CN_HOLIDAYS and f"{k}_x_schinese" in params.index:  # the effect is for games without it
+                row["games_with"] -= int(s[f"{k}_x_schinese"].sum())
         else:
             row["mean"], row["median"] = _r(float(values.mean())), _r(float(values.median()))
         if k in COMPETITION:
@@ -554,9 +560,9 @@ def run_group(s: pd.DataFrame, free: bool, events: list[dict] | None = None, tag
         out["chance_test"] = chance_tests(s, free, competition, events, tag_names or {}, permutations, main.params)
         for e in out["reviews"]["effects"]:
             t = out["chance_test"].get(e["key"])
-            if t and "p_value" in t:
-                e["chance_p"], e["windows"] = t["p_value"], t["windows"]
-        out["holidays"] = holiday_summary(s, out, events)
+            if t and "p_value" in t:  # the chance test's own estimate: the event alone, all games pooled
+                e["chance_p"], e["chance_ratio_alone"], e["windows"] = t["p_value"], t["ratio_alone"], t["windows"]
+        out["holidays"] = holiday_summary(s, out, events, main)
     zero = float((s["y"] == 0).mean())
     out["status"] = "unreliable" if zero > MAX_ZERO_SHARE else "ok"
     out["headline"] = "with_followers" if out["followers"].get("headline") else "reviews"
@@ -583,10 +589,13 @@ def chance_tests(s: pd.DataFrame, free: bool, competition: str, events: list[dic
     The main model is refitted without the indicator (and its Simplified Chinese
     extra). Holding that fit fixed, the indicator's own coefficient is estimated
     alone (one parameter, alpha fixed), for the real windows and for `draws` sets of
-    fake ones. Each fake set moves every real window by a random whole number of
-    weeks (same length, weekday and hour; themed fests keep their tags), inside the
-    sample period, not overlapping a real window or another fake one."""
-    rng = np.random.default_rng(seed)
+    fake ones. So `ratio_alone` and the p-value are for all games pooled (for a
+    Chinese holiday: with and without Simplified Chinese). Each fake set moves every
+    real window by a random whole number of weeks (same length, weekday and Pacific
+    clock time; themed fests keep their tags), inside the sample period, not
+    overlapping any real window of the indicator or another fake one. Each indicator
+    has its own random generator, seeded from `seed` and its name, so adding an
+    indicator does not change the others' draws."""
     ts = s["launch_ts"].to_numpy(dtype=float)
     first, last = float(ts.min()), float(ts.max())
     y = s["y"].to_numpy(dtype=float)
@@ -604,6 +613,7 @@ def chance_tests(s: pd.DataFrame, free: bool, competition: str, events: list[dic
         eta = np.log(base.predict())
         alpha = float(base.params["alpha"])
         b_real = one_coefficient(y, eta, alpha, real)
+        rng = np.random.default_rng([seed, zlib.crc32(col.encode())])
         fake = []
         for _ in range(draws):
             moved = move_windows(windows, rng, first, last)
@@ -642,20 +652,21 @@ def one_coefficient(y: np.ndarray, eta: np.ndarray, alpha: float, d: np.ndarray,
 
 def move_windows(windows: list[dict], rng: np.random.Generator, first: float, last: float,
                  tries: int = 200) -> list[dict] | None:
-    """Each window moved by a random whole number of weeks into [first, last], clear of
-    every real window and of the other moved ones (windows with tags only clash when
-    their tags overlap). None if no such placement is found."""
+    """Each window moved by a random whole number of weeks into [first, last], keeping
+    its Pacific clock time across daylight saving changes. A moved window never
+    overlaps a real window (whatever their tags), and moved windows only clash with
+    each other when their tags overlap (as the real ones may). None if no such
+    placement is found."""
     week = 7 * F.DAY
     placed: list[dict] = []
     for w in windows:
-        lo = math.ceil((first - w["start"]) / week)
-        hi = math.floor((last - w["end"]) / week)
-        if hi < lo:
-            return None
+        lo = math.ceil((first - w["start"]) / week) - 1   # one more week each side: the shift
+        hi = math.floor((last - w["end"]) / week) + 1     # in Pacific time can move it by an hour
         for _ in range(tries):
             k = int(rng.integers(lo, hi + 1))
-            m = {**w, "start": w["start"] + k * week, "end": w["end"] + k * week}
-            if not any(_clash(m, o) for o in (*windows, *placed)):
+            m = {**w, "start": _shift(w["start"], k), "end": _shift(w["end"], k)}
+            if (first <= m["start"] and m["end"] <= last and not any(_overlap(m, o) for o in windows)
+                    and not any(_clash(m, o) for o in placed)):
                 placed.append(m)
                 break
         else:
@@ -663,14 +674,23 @@ def move_windows(windows: list[dict], rng: np.random.Generator, first: float, la
     return placed
 
 
+def _shift(ts: float, weeks: int) -> float:
+    """UTC seconds `ts` moved by whole weeks at the same Pacific clock time."""
+    return (datetime.fromtimestamp(ts, event_data.PACIFIC) + timedelta(weeks=weeks)).timestamp()
+
+
+def _overlap(a: dict, b: dict) -> bool:
+    return a["start"] < b["end"] and b["start"] < a["end"]
+
+
 def _clash(a: dict, b: dict) -> bool:
-    overlap = a["start"] < b["end"] and b["start"] < a["end"]
-    return overlap and (a["tags"] is None or b["tags"] is None or bool(a["tags"] & b["tags"]))
+    return _overlap(a, b) and (a["tags"] is None or b["tags"] is None or bool(a["tags"] & b["tags"]))
 
 
-def holiday_summary(s: pd.DataFrame, g: dict, events: list[dict]) -> dict:
-    """The Chinese holidays: windows in the sample, the Steam events each one
-    overlapped, the extra effect for games with Simplified Chinese, and a note."""
+def holiday_summary(s: pd.DataFrame, g: dict, events: list[dict], res=None) -> dict:
+    """The Chinese holidays: windows in the sample and the Steam events each one
+    overlapped; from the main fit `res`, the combined effect for games with Simplified
+    Chinese (main effect times extra, with its own interval); and a note."""
     first, last = float(s["launch_ts"].min()), float(s["launch_ts"].max())
     steam = [w for c in ("sale", "next_fest", "themed_fest") for w in F.event_windows(events, c)]
     out: dict = {}
@@ -681,41 +701,87 @@ def holiday_summary(s: pd.DataFrame, g: dict, events: list[dict]) -> dict:
                 rows.append({"name": w["name"],
                              "overlaps": [o["name"] for o in steam if o["start"] < w["end"] and w["start"] < o["end"]]})
         out[col] = rows
+    out["with_schinese"] = {} if res is None else {
+        col: c for col in CN_HOLIDAYS if (c := combined_effect(res, s, col, f"{col}_x_schinese")) is not None}
     out["note"] = holiday_note(g, out)
     out["site_use"] = ("Show Chinese holidays only as calendar context for games that support Simplified Chinese, "
                        "marked unconfirmed. Not advice for other games.")
     return out
 
 
-def _effect(g: dict, key: str) -> dict | None:
-    return next((e for e in g["reviews"]["effects"] if e["key"] == key), None)
+def combined_effect(res, s: pd.DataFrame, main: str, extra: str) -> dict | None:
+    """The rate ratio of `main` plus `extra` (the effect for games that have both), with a
+    95% interval from the fit's (clustered) covariance. None if either was not fitted."""
+    from scipy import stats
+
+    if main not in res.params.index or extra not in res.params.index:
+        return None
+    V = res.cov_params()
+    b = float(res.params[main] + res.params[extra])
+    se = math.sqrt(float(V.loc[main, main] + V.loc[extra, extra] + 2 * V.loc[main, extra]))
+    return {"key": f"{main}_schinese", "label": LABELS.get(f"{main}_schinese", main), "rate_ratio": _r(math.exp(b)),
+            "low": _r(math.exp(b - 1.959964 * se)), "high": _r(math.exp(b + 1.959964 * se)),
+            "p": float(f"{2 * stats.norm.sf(abs(b / se)):.3g}"), "games_with": int(s[extra].sum())}
 
 
-def _ci(e: dict) -> str:
-    return f"{e['rate_ratio']:.2f} ({e['low']:.2f} to {e['high']:.2f})"
+def _effect(g: dict, key: str, part: str = "reviews") -> dict | None:
+    return next((e for e in g[part]["effects"] if e["key"] == key), None)
 
 
-def holiday_note(g: dict, windows: dict) -> str:
-    """The caveat for the Chinese holidays, from the numbers."""
-    parts, extras, counts, overlapped = [], [], [], 0
+def _ci(e: dict, ratio: str = "rate_ratio") -> str:
+    return f"{e[ratio]:.2f} ({e['low']:.2f} to {e['high']:.2f})"
+
+
+def _clear(e: dict) -> bool:
+    return e["low"] > 1 or e["high"] < 1
+
+
+def _change(e: dict) -> str:
+    """'37% fewer reviews', '20% more reviews' or 'no clear difference', from the interval."""
+    if not _clear(e):
+        return "no clear difference"
+    return f"{abs(e['rate_ratio'] - 1) * 100:.0f}% {'fewer' if e['rate_ratio'] < 1 else 'more'} reviews"
+
+
+def holiday_note(g: dict, h: dict) -> str:
+    """The caveat for the Chinese holidays, from the numbers. `h`: the windows per
+    holiday and the combined effects for games with Simplified Chinese."""
+    parts, extras, hurdle, counts, overlapped = [], [], [], [], 0
     for col, name in (("cn_spring", "Spring Festival"), ("cn_national", "National Day")):
         e, x = _effect(g, col), _effect(g, f"{col}_x_schinese")
         if e is None:
             continue
-        p = f", chance test p = {e['chance_p']:.2g}" if "chance_p" in e else ""
-        parts.append(f"{name} {_ci(e)}{p}")
+        text = f"{name}: games without Simplified Chinese {_change(e)} ({_ci(e)})"
+        c = h.get("with_schinese", {}).get(col)
+        if c is not None:
+            text += f", games with it {_change(c)} ({_ci(c)})"
+        t = g.get("chance_test", {}).get(col)
+        if t and "p_value" in t:
+            text += f"; the chance test (all games pooled) gives {t['ratio_alone']:.2f} with p = {t['p_value']:.2g}"
+        parts.append(text)
         if x is not None:
-            extras.append(f"{x['rate_ratio']:.2f} ({x['low']:.2f} to {x['high']:.2f})")
-        counts.append(f"{len(windows[col])} {name}")
-        overlapped += sum(bool(w["overlaps"]) for w in windows[col])
+            extras.append((name, x))
+        hx = _effect(g["hurdle"], f"{col}_x_schinese", "any_reviews") if "hurdle" in g else None
+        if hx is not None:
+            hurdle.append((name, hx))
+        counts.append(f"{len(h[col])} {name}")
+        overlapped += sum(bool(w["overlaps"]) for w in h[col])
     if not parts:
         return ""
-    total = sum(len(windows[c]) for c in CN_HOLIDAYS)
-    clear = [x for x in (_effect(g, f"{c}_x_schinese") for c in CN_HOLIDAYS) if x and (x["low"] > 1 or x["high"] < 1)]
-    text = f"Chinese holidays (rate ratios): {'; '.join(parts)}."
+    total = sum(len(h[c]) for c in CN_HOLIDAYS)
+    text = f"Chinese holidays (rate ratios, 95% intervals): {'; '.join(parts)}."
     if extras:
-        text += (f" The extra effect for games with Simplified Chinese is {' and '.join(extras)}, "
-                 + ("so the dip is not about Chinese players." if not clear else "so it differs for them."))
+        listed = " and ".join(f"{_ci(x)} for {name}" for name, x in extras)
+        if not any(_clear(x) for _, x in extras):
+            text += (f" In the review-count model the extra effect of Simplified Chinese is {listed}: no clear "
+                     "difference, but the intervals are wide, so a difference is not ruled out.")
+        else:
+            text += f" In the review-count model the extra effect of Simplified Chinese is {listed}."
+    for name, hx in hurdle:
+        if _clear(hx):
+            text += (f" In the \"any reviews\" part, games with Simplified Chinese launched during {name} were "
+                     f"{'less' if hx['odds_ratio'] < 1 else 'more'} likely to get any review than other games "
+                     f"launched then (extra odds ratio {_ci(hx, 'odds_ratio')}).")
     text += (f" {overlapped} of the {total} holiday windows overlapped another Steam event (a sale, Next Fest or a "
              f"themed fest), and there are only {' and '.join(counts)} windows, so the week-clustered intervals "
              "overstate how sure this is. Not a general rule.")
@@ -783,11 +849,14 @@ def placebo_caveat(check: dict) -> str | None:
     together = {e["key"]: e for e in check["together"]["effects"]}
     text = (f"Placebo: the same competition measure 8 weeks after launch goes with {_per_launch(alone)} reviews per "
             f"launch (rate ratio {alone['rate_ratio']:.3f}, {alone['low']:.3f} to {alone['high']:.3f}), against "
-            f"{_per_launch(real)} for the launch week itself ({real['rate_ratio']:.3f}) on the same "
-            f"{check['placebo']['n']:,} games.")
+            f"{_per_launch(real)} for the launch week itself ({real['rate_ratio']:.3f}, {real['low']:.3f} to "
+            f"{real['high']:.3f}) on the same {check['placebo']['n']:,} games.")
     same_way = (alone["rate_ratio"] < 1) == (real["rate_ratio"] < 1)
     size = abs(math.log(alone["rate_ratio"])) / max(abs(math.log(real["rate_ratio"])), 1e-12)
-    if not same_way:
+    if not _clear(real):
+        text += (" The launch week itself shows nothing clear (within noise) while the placebo is not zero, so "
+                 "this measure picks up how crowded a niche and a period are, not the week.")
+    elif not same_way:
         text += " It goes the other way from the launch week's number, so the measure is not clean."
     elif size >= 0.67:
         text += (" It is about as large as the real effect or larger, so general crowding of the niche and the "
@@ -811,10 +880,10 @@ def group_caveats(g: dict, free: bool) -> list[str]:
     note = g.get("holidays", {}).get("note")
     if note:
         out.append(note + " " + g["holidays"]["site_use"])
-    if g["hurdle"]["count_given_some"].get("converged") is False:
-        why = g["hurdle"]["count_given_some"]["failure"]
-        out.append(f"The hurdle model's count part (zero-truncated negative binomial) failed: {why}. It is left "
-                   "out; a plain negative binomial on the games with reviews is reported instead.")
+    if g["hurdle"]["count_given_some"].get("converged") is False:  # the technical reason is in its "failure"
+        out.append("The hurdle model's count part (how many reviews, given at least one) has no stable fit on this "
+                   "data, so it is left out. A plain count model on the games with reviews is reported instead; "
+                   "it is not corrected for the missing zeros.")
     return out
 
 
@@ -840,11 +909,15 @@ def report(result: dict) -> str:
         lines.append(f"\n== {group}: {g['reviews']['n']} games, {g['reviews']['weeks']} weeks, "
                      f"competition measure {g['competition_measure']}")
         for e in g["reviews"]["effects"]:
-            chance = f"  chance p {e['chance_p']} ({e['windows']} windows)" if "chance_p" in e else ""
+            chance = (f"  chance p {e['chance_p']} ({e['windows']} windows; alone, all games {e['chance_ratio_alone']})"
+                      if "chance_p" in e else "")
             lines.append(f"  {e['key']:24s} {e['rate_ratio']:.3f} [{e['low']:.3f}, {e['high']:.3f}]"
                          f"  {e.get('games_with', e.get('mean'))}{chance}")
         if "revenue" in g:
             lines.append("  revenue: " + _brief(g["revenue"]["effects"]))
+        if g.get("holidays", {}).get("with_schinese"):
+            lines.append("  holidays, games with Simplified Chinese: "
+                         + _brief(list(g["holidays"]["with_schinese"].values())))
         lines.append("  hurdle any: " + _brief(g["hurdle"]["any_reviews"]["effects"], "odds_ratio"))
         count = g["hurdle"]["count_given_some"]
         lines.append(f"  hurdle count (converged {count['converged']}): " + _brief(count["effects"]))
@@ -873,7 +946,7 @@ def report(result: dict) -> str:
 def _brief(effects: list[dict], ratio: str = "rate_ratio") -> str:
     return ", ".join(f"{e['key']} {e[ratio]:.3f} [{e['low']:.3f}, {e['high']:.3f}]" for e in effects
                      if e["key"] in KEY_EFFECTS or e["key"] in COMPETITION or e["key"] == "log_followers"
-                     or e["key"].endswith("_x_schinese"))
+                     or e["key"].startswith("cn_"))
 
 
 def main(argv=None) -> int:
