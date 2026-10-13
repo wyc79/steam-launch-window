@@ -1,5 +1,6 @@
-// Trends: the selection's past launches per quarter, from 2022 Q1 to the quarter
-// of `today` (partial: launches before `today`). A port of analysis/trends.py,
+// Trends: the selection's past launches of games still on Steam (`listed`; a row
+// without the flag counts) per quarter, from 2022 Q1 to the quarter of `today`
+// (partial: launches before `today`). A port of analysis/trends.py,
 // which is the reference and documents the rules; test/golden.test.js checks this
 // file against it.
 
@@ -49,7 +50,12 @@ export function quarterly(history, today, { selection = [], mode = "and", langua
   const every = Object.fromEntries(GROUPS.map((g) => [g, qs.map(() => 0)]));
   for (const h of history) {
     const day = h.launch_date;
-    if (!PANEL_TYPES.includes(h.launch_type) || !(TREND_FROM <= day && day < today) || !speaks(h.langs, languages)) {
+    if (
+      !PANEL_TYPES.includes(h.launch_type) ||
+      h.listed === false ||
+      !(TREND_FROM <= day && day < today) ||
+      !speaks(h.langs, languages)
+    ) {
       continue;
     }
     const i = index.get(`${+day.slice(0, 4)} ${quarterOf(+day.slice(5, 7))}`);

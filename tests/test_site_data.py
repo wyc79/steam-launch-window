@@ -149,8 +149,23 @@ def test_history_leaves_out_ea_exit(data, tmp_path):
     _, _, _, hist, _ = built(data, tmp_path)
     assert sorted(hist) == [10, 12]
     assert hist[10] == {"appid": 10, "launch_date": "2025-03-03", "launch_type": "full", "tags": [1774],
-                        "langs": ["english"], "free": False, "price_cents": 999, "reviews_30d": 12}
+                        "langs": ["english"], "free": False, "price_cents": 999, "reviews_30d": 12, "listed": True}
     assert hist[12]["reviews_30d"] is None and hist[12]["price_cents"] is None
+
+
+def test_history_marks_games_the_newest_listing_run_no_longer_lists(data, tmp_path):
+    d = data[0]
+    fields = ["appid", "launch_date", "launch_type", "tags", "languages", "is_free", "price_cents", "reviews_30d",
+              "last_listed"]
+    row = {"launch_type": "full", "tags": "1774:9", "languages": "english", "is_free": "0", "price_cents": "999",
+           "reviews_30d": "1"}
+    storage.write_csv(d / "history" / "games.csv", [
+        {**row, "appid": 10, "launch_date": "2025-03-03", "last_listed": "2026-10-19"},
+        {**row, "appid": 12, "launch_date": "2026-10-01", "last_listed": "2026-10-12"},  # removed since
+        {**row, "appid": 13, "launch_date": "2026-10-02", "last_listed": ""},  # never stamped: counts as listed
+    ], fields)
+    hist = built(data, tmp_path)[3]
+    assert {a: g["listed"] for a, g in hist.items()} == {10: True, 12: False, 13: True}
 
 
 def test_events_get_their_utc_window(data, tmp_path):

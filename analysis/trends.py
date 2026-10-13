@@ -3,16 +3,18 @@
 The reference for site/src/lib/trends.js, checked with the golden files that
 analysis/golden.py writes. Launches are the history panel's (full and Early
 Access, not `ea_exit`), with or without a 30-day review count yet, as in the top
-bar's past launch count.
+bar's past launch count, but only games still on Steam (`listed`, from
+site_data; a row without the flag counts as listed). The history keeps a row
+when Steam removes the game, while games removed before the first listing run
+(October 2026) were never seen: counting only listed games treats every quarter
+alike.
 
 - Quarters run from TREND_FROM (2022 Q1, where the data starts) to the quarter
   that holds `today`. That last quarter is `partial`: it counts launches before
   `today` only, so `days` says how many of its days are in.
 - The partial quarter and the RECENT_FULL full quarters before it are `recent`:
-  they may still change. The history was listed in October 2026, so older
-  quarters hold only games still on Steam then (Steam removes many games over
-  time) and counts rise toward today; recent games also still carry the tags
-  their developers set, before player votes reshape them.
+  their games still carry the tags their developers set, before player votes
+  reshape them.
 - Per group (paid, free): `niche` the selection's launches, `all` every launch
   of the group in the picked languages (any tags), `share` niche / all (None
   when no launch), and running totals of both from 2022 Q1 on.
@@ -56,8 +58,8 @@ def quarters(today: date) -> list[dict]:
 
 
 def quarterly(history, today: date, selection=(), mode: str = "and", languages=()) -> dict:
-    """Past launches per quarter for the selection and for all games (same group and
-    languages), from 2022 Q1 to the quarter of `today` (partial: launches before
+    """Past launches of games still on Steam per quarter for the selection and for
+    all games (same group and languages), from 2022 Q1 to the quarter of `today` (partial: launches before
     `today`). Returns {"quarters": quarters(today), "paid": [...], "free": [...]},
     one entry per quarter: niche, all, share (None without launches), cumulative
     and cumulative_all (running totals from 2022 Q1)."""
@@ -68,7 +70,8 @@ def quarterly(history, today: date, selection=(), mode: str = "and", languages=(
     since, until = TREND_FROM.isoformat(), today.isoformat()
     for h in history:
         day = h["launch_date"]
-        if h["launch_type"] not in PANEL_TYPES or not since <= day < until or not speaks(h["langs"], languages):
+        if (h["launch_type"] not in PANEL_TYPES or not h.get("listed", True) or not since <= day < until
+                or not speaks(h["langs"], languages)):
             continue
         i = index[int(day[:4]), (int(day[5:7]) - 1) // 3 + 1]
         group = group_of(h)

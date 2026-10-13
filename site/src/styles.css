@@ -1046,11 +1046,13 @@ main { display: block; }
    recent quarters, row 2 the plot (a bar up from 0 per quarter, the round steps as
    soft rules behind it), row 3 the quarter, row 4 the years. Recent quarters are
    hatched, like the far weeks' "dates still being set"; the picked one is red. */
-.seg.is-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seg.is-many { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.seg label[hidden] { display: none; }
 .tr-views { max-width: 34rem; margin-bottom: var(--s4); }
 .tr-fallback, .tr-summary { margin: 0 0 var(--s3); max-width: var(--measure); }
 .tr-fallback:empty, .tr-summary:empty { display: none; }
 .tr-summary { font-weight: 700; font-variant-numeric: tabular-nums; }
+.tr-summary.is-few { font-weight: 400; color: var(--ink-2); }
 .tr-readout { min-height: 1.55em; margin: 0 0 var(--s3); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
 .tr-scroll { padding: 4px; margin: -4px; }
 .tr {
@@ -1109,6 +1111,7 @@ main { display: block; }
 .tr-q:focus-visible { outline: 2px solid var(--accent-ui); outline-offset: 2px; z-index: 2; }
 .tr-plot { position: relative; display: block; height: var(--plot-h); }
 .tr-q:hover .tr-plot { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.tr-q:hover .tr-cut { background: color-mix(in srgb, var(--ink) 6%, var(--paper)); }
 .tr-bar { position: absolute; bottom: 0; left: 16%; right: 16%; height: var(--h); background: var(--ink-2); }
 .tr-q.is-recent .tr-bar {
   --mark: var(--ink-2);
@@ -1117,6 +1120,16 @@ main { display: block; }
 }
 .tr-q.is-picked .tr-bar { background: var(--accent-ui); }
 .tr-q.is-picked.is-recent .tr-bar { --mark: var(--accent-ui); background: repeating-linear-gradient(135deg, var(--mark) 0 2px, transparent 2px 5px); }
+/* the quarter under way above the full quarters' scale: cut near the top, like a broken axis */
+.tr-cut {
+  position: absolute;
+  top: 10px;
+  left: 8%;
+  right: 8%;
+  height: 4px;
+  background: var(--paper);
+  transform: skewY(-12deg);
+}
 .tr-name {
   padding-top: var(--s1);
   font-size: .6875rem;
@@ -1145,6 +1158,14 @@ main { display: block; }
 .tr-notes { margin-top: var(--s4); padding-top: var(--s3); border-top: 1px solid var(--rule-soft); }
 .tr-notes p { margin: 0 0 var(--s1); max-width: 56rem; }
 .tr-notes p:empty { display: none; }
+/* Windows high contrast drops background colours: the bars keep system colours */
+@media (forced-colors: active) {
+  .tr-bar { forced-color-adjust: none; background: CanvasText; }
+  .tr-q.is-recent .tr-bar { background: repeating-linear-gradient(135deg, CanvasText 0 2px, Canvas 2px 5px); box-shadow: inset 0 0 0 1px CanvasText; }
+  .tr-q.is-picked .tr-bar { background: Highlight; }
+  .tr-q.is-picked.is-recent .tr-bar { background: repeating-linear-gradient(135deg, Highlight 0 2px, Canvas 2px 5px); box-shadow: inset 0 0 0 1px Highlight; }
+  .tr-cut { forced-color-adjust: none; background: Canvas; }
+}
 /* wide screens have room for "so far" under the quarter under way */
 @media (min-width: 1024px) {
   .tr-q.is-partial .tr-short { display: none; }

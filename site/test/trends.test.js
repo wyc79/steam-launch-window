@@ -1,6 +1,6 @@
 // Trends, drawn into a small stand-in DOM (test/fakedom.js): 20 quarters as a
 // listbox the arrow keys move through, a readout of the picked or pointed-at
-// quarter, the view switch (share off with no tags), and a line instead of a
+// quarter, the view switch (no share with no tags), and a line instead of a
 // chart when nothing matches.
 
 import { beforeEach, describe, expect, test } from "vitest";
@@ -54,19 +54,19 @@ describe("the quarters", () => {
     expect(picked()).toBe(16);
     expect(options().filter((o) => o.getAttribute("tabindex") === "0")).toHaveLength(1);
     expect(options()[16].getAttribute("aria-label")).toBe("2026 Q1: 1 of 2 paid launches (50.0%)");
-    expect(options()[18].getAttribute("aria-label")).toBe("2026 Q3 (recent): 1 of 2 paid launches (50.0%)");
+    expect(options()[18].getAttribute("aria-label")).toBe("2026 Q3 (recent, tags may still change): 1 of 2 paid launches (50.0%)");
     expect(readout()).toBe("2026 Q1: 1 of 2 paid launches (50.0%)");
   });
 
   test("the quarter under way is marked partial and says so far", () => {
     const last = options()[19];
     expect(last.classList.contains("is-partial")).toBe(true);
-    expect(last.getAttribute("aria-label")).toMatch(/^2026 Q4 so far \(Oct 1 to Oct 12\): /);
+    expect(last.getAttribute("aria-label")).toMatch(/^2026 Q4 so far \(Oct 1 to Oct 12; recent, tags may still change\): /);
     expect(last.querySelector(".tr-sofar").textContent).toBe("so far");
     expect(options().map((o) => o.classList.contains("is-recent"))).toEqual([...Array(17).fill(false), true, true, true]);
-    expect(body.querySelector(".tr-recent-label").textContent).toBe("recent: may still change");
+    expect(body.querySelector(".tr-recent-label").textContent).toBe("recent: tags may still change");
     expect(body.querySelector(".tr-recent").getAttribute("style")).toBe("--from:19;--span:3");
-    expect(body.querySelector(".tr-notes").textContent).toContain("Hatched: recent quarters, which may still change; 2026 Q4 is not over (12 of 92 days so far).");
+    expect(body.querySelector(".tr-notes").textContent).toContain(en.trends.partial("2026 Q4", "12", "92"));
     expect(body.querySelector(".tr-notes").textContent).toContain(en.trends.removed);
     expect(body.querySelector(".tr-notes").textContent).toContain(en.trends.noForecast);
   });
@@ -115,18 +115,23 @@ describe("the view switch", () => {
     expect(radio("cumulative").checked).toBe(true);
     expect(readout()).toBe("2026 Q1: 17 paid launches since 2022 (1 that quarter)");
     radio("count").dispatch("change");
-    expect(body.querySelector(".tr-summary").textContent).toMatch(/^Paid launches in English with your tags: 1 a quarter/);
+    // one launch a quarter: too few to compare 2022 with recent years
+    expect(body.querySelector(".tr-summary").textContent).toBe(en.trends.tooFew(20));
   });
 
-  test("with no tags the share is off, and the counts show with one line saying why", () => {
+  test("with no tags the share is not offered, and the counts show", () => {
     start({ ...DEFAULT });
-    expect(radio("share").disabled).toBe(true);
+    const choice = (v) => radio(v).parent;
+    expect(choice("share").hidden).toBe(true);
+    expect([choice("count").hidden, choice("cumulative").hidden]).toEqual([false, false]);
     expect(radio("count").checked).toBe(true);
-    expect(body.querySelector(".tr-fallback").textContent).toBe(en.trends.fallback);
+    expect(body.querySelector(".tr-fallback").textContent).toBe(en.trends.noShare);
     expect(readout()).toBe("2026 Q1: 2 paid launches");
-    section.draw({ ...DEFAULT, tags: [1] }); // a tag picked: back to the share
+    radio("cumulative").dispatch("change");
+    expect(radio("cumulative").checked).toBe(true);
+    section.draw({ ...DEFAULT, tags: [1] }); // a tag picked: the share is back, and first
+    expect(choice("share").hidden).toBe(false);
     expect(radio("share").checked).toBe(true);
-    expect(radio("share").disabled).toBe(false);
     expect(body.querySelector(".tr-fallback").textContent).toBe("");
   });
 });

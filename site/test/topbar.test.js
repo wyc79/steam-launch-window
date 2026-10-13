@@ -24,17 +24,17 @@ test("links to the four sections in page order, in the bar and (numbers only) in
   const bar = topbar(en, createState());
   const links = bar.el.querySelectorAll(".bar-nav a");
   expect(links.map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
-    ["01 History", "#history"],
-    ["02 Ahead", "#ahead"],
-    ["03 Season", "#season"],
-    ["04 Trends", "#trends"],
+    ["01 Trends", "#trends"],
+    ["02 History", "#history"],
+    ["03 Ahead", "#ahead"],
+    ["04 Season", "#season"],
   ]);
   const short = bar.summary.querySelectorAll(".summary-nav a");
   expect(short.map((a) => [a.textContent, a.getAttribute("aria-label")])).toEqual([
-    ["01", "01 History"],
-    ["02", "02 Ahead"],
-    ["03", "03 Season"],
-    ["04", "04 Trends"],
+    ["01", "01 Trends"],
+    ["02", "02 History"],
+    ["03", "03 Ahead"],
+    ["04", "04 Season"],
   ]);
 });
 
@@ -62,7 +62,7 @@ test("one raw counts toggle sets the shared measure, and its hint names both sec
   box.dispatch("change");
   expect(state.get().measure).toBe("raw");
   expect(bar.el.querySelector(".raw-toggle").getAttribute("title")).toBe(
-    "Plain counts instead of a comparison with a usual week, in sections 01 and 02",
+    "Plain counts instead of a comparison with a usual week, in sections 02 and 03",
   );
   state.set({ measure: "relative" });
   expect(box.checked).toBe(false);

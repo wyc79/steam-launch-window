@@ -7,7 +7,7 @@
 // over the chart reads out the picked or pointed-at quarter. Numbers come from
 // numbers.js (lib/trends.js quarterly), text from trendview.js.
 
-import { trendView, VIEWS } from "../trendview.js";
+import { trendView, VIEWS, viewsFor } from "../trendview.js";
 import { fill, h, uid } from "./dom.js";
 import { sectionNumber } from "./sections.js";
 
@@ -17,7 +17,8 @@ export function trendsSection(s, body) {
   const t = s.trends;
   let numbers = null;
   let st = null;
-  let view = "share"; // the view asked for; with no tags "share" shows the counts
+  let view = "share"; // the view picked; with no tags there is no share, and picking a tag brings it back
+  let hadTags = false;
   let picked = -1; // -1 until the first draw picks the last quarter before the recent ones
   let options = [];
   let bars = [];
@@ -36,15 +37,12 @@ export function trendsSection(s, body) {
       },
     }),
   );
+  const choices = VIEWS.map((v, i) => h("label", {}, inputs[i], h("span", {}, t.views[v])));
   const switcher = h(
     "fieldset",
     { class: "ctl tr-views" },
     h("legend", { class: "label" }, t.show),
-    h(
-      "div",
-      { class: "seg is-3" },
-      VIEWS.map((v, i) => h("label", {}, inputs[i], h("span", {}, t.views[v]))),
-    ),
+    h("div", { class: "seg is-many" }, choices),
   );
   const fallback = h("p", { class: "tr-fallback quiet" });
   const summary = h("p", { class: "tr-summary" });
@@ -94,7 +92,7 @@ export function trendsSection(s, body) {
       "div",
       {
         role: "option",
-        class: `tr-q${b.recent ? " is-recent" : ""}${b.partial ? " is-partial" : ""}${i === picked ? " is-picked" : ""}`,
+        class: `tr-q${b.recent ? " is-recent" : ""}${b.partial ? " is-partial" : ""}${b.over ? " is-over" : ""}${i === picked ? " is-picked" : ""}`,
         style: `--i:${i + 2};--h:${pct(b.value)}`,
         tabindex: i === picked ? "0" : "-1",
         "aria-selected": String(i === picked),
@@ -103,7 +101,7 @@ export function trendsSection(s, body) {
         onmouseenter: () => showReadout(i),
         onfocus: () => i !== picked && pick(i, false),
       },
-      h("span", { class: "tr-plot", "aria-hidden": "true" }, h("span", { class: "tr-bar" })),
+      h("span", { class: "tr-plot", "aria-hidden": "true" }, h("span", { class: "tr-bar" }), b.over && h("span", { class: "tr-cut" })),
       h(
         "span",
         { class: "tr-name", "aria-hidden": "true" },
@@ -152,14 +150,18 @@ export function trendsSection(s, body) {
       body.dataset.drawn = "true";
       fill(body, frame);
     }
+    if (st.tags.length && !hadTags) view = "share"; // a tag picked: the share is back, and first
+    hadTags = st.tags.length > 0;
     const q = numbers.trends(st);
     const v = trendView(q, st.group, view, s, { tags: st.tags, languages: st.languages });
+    const offered = viewsFor(st.tags);
     inputs.forEach((input, i) => {
       input.checked = VIEWS[i] === v.view;
-      input.disabled = VIEWS[i] === "share" && !st.tags.length;
+      choices[i].hidden = !offered.includes(VIEWS[i]);
     });
-    fallback.textContent = v.fallback ? t.fallback : "";
+    fallback.textContent = st.tags.length ? "" : t.noShare;
     summary.textContent = v.empty ? "" : (v.summary ?? "");
+    summary.classList.toggle("is-few", v.few);
     partial.textContent = v.partial ?? "";
     body.removeAttribute("aria-busy");
     const key = [q, st.group, v.view, st.languages.join()];

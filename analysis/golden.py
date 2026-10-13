@@ -401,8 +401,8 @@ def season_cases() -> Cases:
 def trend_history():
     """Launches 2022 to 2026: shooters all along (more each year), cozy games from
     2024 Q2 on, some with both tags, Simplified Chinese and free ones, Early Access
-    and ea_exit rows, launches without a review count yet, and launches outside the
-    window (2021, today and later)."""
+    and ea_exit rows, launches without a review count yet, launches outside the
+    window (2021, today and later), and games Steam has removed (not `listed`)."""
     rows, day = [], date(2022, 1, 1)
     i = 0
     while day < date(2026, 10, 20):
@@ -415,6 +415,11 @@ def trend_history():
         day += timedelta(days=max(1, 9 - (day.year - 2022) * 2))  # more launches each year
     rows += [past("2021-12-31"), past("2024-05-05", launch_type="ea_exit"), past("2025-02-02", tags=(PIXEL,),
                                                                                   langs=("schinese",))]
+    # Steam has removed these since: left out, in a recent quarter and an older one
+    rows += [{**past("2026-08-03", tags=(COZY,)), "listed": False}, {**past("2026-08-04"), "listed": False},
+             {**past("2023-03-03", tags=(COZY,), free=True), "listed": False}]
+    for r in rows:
+        r.setdefault("listed", True)
     return rows
 
 

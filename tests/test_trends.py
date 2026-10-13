@@ -52,6 +52,11 @@ def test_launches_are_the_panels_and_count_without_reviews_yet():
     assert tr.quarterly(history, TODAY)["paid"][-2]["all"] == 3
 
 
+def test_only_games_still_listed():
+    history = [past("2026-07-01"), {**past("2026-07-02"), "listed": False}, {**past("2026-07-03"), "listed": True}]
+    assert tr.quarterly(history, TODAY)["paid"][-2]["all"] == 2
+
+
 def test_only_launches_from_2022_and_before_today():
     history = [past("2021-12-31"), past("2022-01-01"), past("2026-10-12"), past("2026-10-13"), past("2027-01-05")]
     q = tr.quarterly(history, TODAY)

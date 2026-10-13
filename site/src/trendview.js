@@ -9,8 +9,12 @@ import { toDay, toIso } from "./lib/dates.js";
 import { en } from "./strings.js";
 
 export const VIEWS = ["share", "count", "cumulative"];
+export const MIN_COMPARE = 20; // the line over the chart compares two windows only with this many launches in each
 const STEPS = [1, 2, 2.5, 5, 10];
 const TICKS = 4; // about this many steps up the axis
+
+// The views the switch offers: with no tags the share is 100% everywhere, so it is left out.
+export const viewsFor = (tags) => (tags.length ? VIEWS : VIEWS.filter((v) => v !== "share"));
 
 // A share as a percentage: one decimal, or two significant digits under 1%
 // ("0.04%"), so a small niche does not read as 0.0%.
@@ -35,8 +39,14 @@ export function niceTicks(max, whole) {
   return out;
 }
 
-const tickText = (x, whole, s) =>
-  whole ? formatNumber(x, s) : numberFormat(s.locale, { style: "percent", maximumFractionDigits: 2 }).format(x);
+// The tick labels: counts as numbers; shares with as many decimals as the step
+// needs (0.025% steps get three), so no two ticks read the same.
+export function tickTexts(ticks, whole, s = en) {
+  if (whole) return ticks.map((x) => formatNumber(x, s));
+  const exact = (d) => ticks.every((x) => Math.abs(Math.round(x * 100 * 10 ** d) - x * 100 * 10 ** d) < 1e-6);
+  const digits = [0, 1, 2, 3, 4, 5].find(exact) ?? 6;
+  return ticks.map((x) => numberFormat(s.locale, { style: "percent", maximumFractionDigits: digits }).format(x));
+}
 
 // "in English", "in English or Simplified Chinese", "in 3 languages", "in any language"
 export function langsText(languages, s = en) {
@@ -55,21 +65,27 @@ function quarterName(q, s) {
   return t.soFarName(name, formatDate(q.start, s), formatDate(toIso(toDay(q.start) + q.days - 1), s));
 }
 
-// q: quarterly's result. view: the view asked for (share, count or cumulative); with
-// no tags the share is 100% everywhere, so "share" shows the counts (`fallback`).
-// Returns { view, fallback, empty, bars, ticks, years, recent, summary, partial }: one
-// bar per quarter with its height (0 to 1 of the axis), its label and short name;
-// `recent` the first recent quarter and how many (they may still change).
+// an average a quarter: whole numbers, one decimal under 10 (so 0.5 is not "0")
+const perQuarter = (x, s) =>
+  numberFormat(s.locale, { maximumFractionDigits: x < 10 ? 1 : 0 }).format(x < 10 ? x : Math.round(x));
+
+// q: quarterly's result. view: the view picked (share, count or cumulative); with no
+// tags there is no share (viewsFor), so "share" shows the counts. Returns { view,
+// empty, bars, ticks, years, recent, summary, few, partial }: one bar per quarter with its
+// height (0 to 1 of the axis; `over` when the quarter under way runs off a scale set by
+// the full quarters), its label and short name; `recent` the first recent quarter and
+// how many (their tags may still change).
 export function trendView(q, group, view, s = en, { tags = [], languages = [] } = {}) {
   const t = s.trends;
-  const fallback = view === "share" && !tags.length;
-  const shown = fallback ? "count" : view;
+  const shown = viewsFor(tags).includes(view) ? view : "count";
   const rows = q[group];
   const word = s.season[group]; // "paid", "free"
   const f = (n) => formatNumber(n, s);
   const value = (r) => (shown === "share" ? (r.share ?? 0) : shown === "count" ? r.niche : r.cumulative);
   const whole = shown !== "share";
-  const ticks = niceTicks(Math.max(0, ...rows.map(value)), whole);
+  // a few days of a new quarter can set a share far off; a running total never jumps
+  const scaled = rows.filter((_, i) => shown === "cumulative" || !q.quarters[i].partial);
+  const ticks = niceTicks(Math.max(0, ...scaled.map(value)), whole);
   const top = ticks.at(-1);
 
   const bars = q.quarters.map((qq, i) => {
@@ -80,7 +96,16 @@ export function trendView(q, group, view, s = en, { tags = [], languages = [] } 
     else if (shown === "cumulative") label = t.since(name, f(r.cumulative), word, f(r.niche));
     else if (tags.length) label = t.of(name, f(r.niche), f(r.all), word, formatShare(r.share, s));
     else label = t.plain(name, f(r.niche), r.niche, word);
-    return { year: qq.year, short: `Q${qq.q}`, partial: qq.partial, recent: qq.recent, value: value(r) / top, label };
+    const over = value(r) > top;
+    return {
+      year: qq.year,
+      short: `Q${qq.q}`,
+      partial: qq.partial,
+      recent: qq.recent,
+      value: Math.min(1, value(r) / top),
+      over,
+      label: over ? t.offScale(label) : label,
+    };
   });
 
   const years = [];
@@ -100,28 +125,35 @@ export function trendView(q, group, view, s = en, { tags = [], languages = [] } 
   const langs = langsText(languages, s);
   const who = tags.length ? cap(t.who(word, langs)) : t.whoAll(word, langs);
   let summary = null;
+  let few = false; // too few launches in a window to compare them
   if (settled.length >= 8) {
-    if (shown === "share") {
-      const share = (list) => (sum(list, "all") ? formatShare(sum(list, "niche") / sum(list, "all"), s) : "n/a");
-      summary = t.summaryShare(word, langs, share(first), share(last), span);
-    } else if (shown === "count") {
-      const avg = (list) => f(Math.round(sum(list, "niche") / list.length));
-      summary = t.summaryCount(who, avg(first), avg(last), span);
+    few = shown !== "cumulative" && (sum(first, "niche") < MIN_COMPARE || sum(last, "niche") < MIN_COMPARE);
+    if (shown === "cumulative") summary = t.summaryCumulative(who, f(rows.at(-1).cumulative));
+    else if (few) summary = t.tooFew(MIN_COMPARE);
+    else if (shown === "share") {
+      const share = (list) => formatShare(sum(list, "niche") / sum(list, "all"), s);
+      summary = t.summaryShare(word, langs, share(first), f(sum(first, "niche")), share(last), f(sum(last, "niche")), span);
     } else {
-      summary = t.summaryCumulative(who, f(rows.at(-1).cumulative));
+      const avg = (list) => perQuarter(sum(list, "niche") / list.length, s);
+      summary = t.summaryCount(who, avg(first), avg(last), span);
     }
   }
 
   const now = q.quarters.at(-1);
+  const texts = tickTexts(ticks, whole, s);
   return {
     view: shown,
-    fallback,
     empty: !rows.some((r) => r.niche) ? t.empty : null,
     bars,
-    ticks: ticks.map((x) => ({ at: x / top, text: tickText(x, whole, s) })),
+    ticks: ticks.map((x, i) => ({ at: x / top, text: texts[i] })),
     years,
     recent: { from: bars.findIndex((b) => b.recent), span: bars.filter((b) => b.recent).length },
     summary,
-    partial: now?.partial ? t.partial(t.quarter(now.year, now.q), f(now.days), f(now.length)) : null,
+    few,
+    partial: now?.partial
+      ? now.days
+        ? t.partial(t.quarter(now.year, now.q), f(now.days), f(now.length))
+        : t.partialStart(t.quarter(now.year, now.q))
+      : null,
   };
 }

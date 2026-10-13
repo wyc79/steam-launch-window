@@ -86,6 +86,12 @@ test("the trends hover shade was found", () => {
   expect(hoverShare).not.toBeNull();
 });
 
+test("the trend bars keep system colours in forced colours (Windows high contrast drops backgrounds)", () => {
+  const forced = css.slice(css.indexOf("@media (forced-colors: active)"));
+  expect(forced).toMatch(/\.tr-bar \{ forced-color-adjust: none; background: CanvasText; \}/);
+  expect(forced).toMatch(/\.tr-q\.is-picked \.tr-bar \{ background: Highlight; \}/);
+});
+
 test("the rules were found", () => {
   expect(steps).toHaveLength(8);
   expect(far).toHaveLength(7);

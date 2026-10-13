@@ -6,7 +6,7 @@ import { REPO } from "./masthead.js";
 import { h } from "./dom.js";
 
 // page order; the numbers (01, 02, ...) follow it
-export const SECTIONS = ["history", "ahead", "season", "trends"];
+export const SECTIONS = ["trends", "history", "ahead", "season"];
 
 export function sectionNumber(key) {
   return String(SECTIONS.indexOf(key) + 1).padStart(2, "0");

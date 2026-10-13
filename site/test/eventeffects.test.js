@@ -37,14 +37,14 @@ test("lane events map to the model's keys", () => {
   expect([SALE, FEST, NEXT, NATIONAL, SPRING].map(eventKey)).toEqual([
     "sale",
     "themed_fest",
-    null, // Next Fest: section 01 has no line for it
+    null, // Next Fest: What history says has no line for it
     "cn_national",
     "cn_spring",
   ]);
 });
 
 describe("paid", () => {
-  test("advice events get their size, as section 01 says it", () => {
+  test("advice events get their size, as What history says gives it", () => {
     expect(eventEffect(MODEL, "paid", SALE)).toBe("Past paid launches during a seasonal sale got 37% fewer reviews.");
     expect(eventEffect(MODEL, "paid", FEST)).toBe(
       "Past paid launches during a themed fest matching their tags got 45% fewer reviews.",
