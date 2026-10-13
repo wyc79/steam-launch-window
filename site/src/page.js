@@ -52,7 +52,7 @@ export function connect({
       part.start(numbers, meta);
       data.events.then((events) => !failed && part.setEvents(events), quiet);
     }
-    // model.json: the lines in What history says, and the week row in Competition ahead
+    // model.json: the lines in What history says, and the lane tooltips in Competition ahead
     for (const part of [history, ahead]) {
       if (part?.setModel) data.model.then((model) => !failed && part.setModel(model), quiet);
     }

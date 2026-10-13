@@ -131,7 +131,7 @@ launches; 4% have no review in 30 days). Compared with otherwise similar launche
   them as unconfirmed, not as advice.
 - China's holidays, games with Simplified Chinese: National Day 61% fewer (40% to
   74%), from only 36 games; Spring Festival no clear difference. The pooled chance
-  test confirms neither (1.58, p 0.09; 1.08, p 0.82).
+  test confirms neither (National Day 1.08, p 0.82; Spring Festival 1.58, p 0.09).
 
 ## How much to trust it
 

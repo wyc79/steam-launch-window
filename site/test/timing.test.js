@@ -98,8 +98,8 @@ const MODEL = { paid: PAID, free: FREE };
 
 const PAID_LINES = [
   "Avoid launching during a Steam seasonal sale: such launches got 37% fewer reviews (24% to 47% fewer).",
-  "Avoid a themed fest that matches your tags: such launches got 45% fewer reviews (35% to 54% fewer).",
-  "If you have a demo, have it out before Next Fest. Launches whose demo was out by the last Next Fest got 71% more reviews (36% to 115% more) than those whose demo came out after it, and no clear difference from launches with no demo (a cautious range).",
+  "Avoid a themed fest that matches your game's tags: such launches got 45% fewer reviews (35% to 54% fewer).",
+  "If you have a demo, have it out before Next Fest. Launches whose demo was out by the last Next Fest got 71% more reviews (36% to 115% more) than those whose demo came out after it, and no clear difference from launches with no demo.",
   "A demo that came out after the last Next Fest went with 40% fewer reviews (28% to 51% fewer) than no demo.",
   "Weekly competition: small at most; much of it is general crowding (a niche here is games with similar tags, a shared language and the same price tier, not just your tags).",
 ];
@@ -128,6 +128,12 @@ describe("paid games", () => {
     expect(zh.lines).toEqual(PAID_LINES); // never advice
   });
 
+  test("without the joint estimate, a shown range is marked cautious; \"no clear difference\" is not", () => {
+    const model = { paid: { ...PAID, reviews: { effects: [e("demo_last_fest", 1.2, 1.1, 1.3), e("demo", 0.5, 0.45, 0.55)] } } };
+    expect(timingLines(model, "paid").lines[0]).toMatch(/than launches with no demo \(a cautious range\)\.$/);
+    expect(timingLines(MODEL, "paid").lines[2]).toMatch(/no clear difference from launches with no demo\.$/);
+  });
+
   test("the joint demo estimate is used when model.json has it", () => {
     const joint = { ...PAID, demo_with_fest: e("demo_with_fest", 1.25, 1.05, 1.49) };
     expect(timingLines({ paid: joint }, "paid").lines[2]).toBe(
@@ -143,8 +149,8 @@ describe("free games", () => {
     expect(v.heading).toBe("Free games, compared with otherwise similar launches:");
     expect(v.lines).toEqual([
       "Steam seasonal sales: no clear effect.",
-      "Themed fests for your tags: no clear effect.",
-      "If you have a demo, have it out before Next Fest. Launches whose demo was out by the last Next Fest got 95% more reviews (9% to 247% more) than those whose demo came out after it, and no clear difference from launches with no demo (a cautious range).",
+      "Themed fests for your game's tags: no clear effect.",
+      "If you have a demo, have it out before Next Fest. Launches whose demo was out by the last Next Fest got 95% more reviews (9% to 247% more) than those whose demo came out after it, and no clear difference from launches with no demo.",
       "A demo that came out after the last Next Fest went with 62% fewer reviews (37% to 77% fewer) than no demo.",
       "Weekly competition: a clear effect for free games; part of it is general crowding (a niche here is games with similar tags and a shared language, not just your tags).",
       "US Thanksgiving to Cyber Monday: fewer reviews in past years (4 years), not confirmed by a chance test; the week also falls in Steam's Autumn Sale most years.",
@@ -161,9 +167,9 @@ describe("free games", () => {
   });
 
   test("China's holidays: each holiday from the effect for games with Simplified Chinese", () => {
-    // Spring Festival is not clear for those games: not named; National Day is, from 36 games
+    // Spring Festival is not clear for those games: not named; National Day is, from 36 games (no number shown)
     expect(v.china).toBe(
-      "National Day (unconfirmed): fewer reviews for games with Simplified Chinese in past years, from few games (36), not confirmed by a chance test. Every one of these holiday windows overlapped a Steam sale or fest.",
+      "National Day (unconfirmed): fewer reviews for games with Simplified Chinese in past years, from few games, not confirmed by a chance test. Every one of these holiday windows overlapped a Steam sale or fest.",
     );
     const none = { ...FREE, holidays: holidays({ cn_spring: e("x", 1.1, 0.8, 1.4) }) };
     expect(timingLines({ free: none }, "free", { languages: ["schinese"] }).china).toBe(

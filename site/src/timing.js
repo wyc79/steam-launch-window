@@ -70,7 +70,7 @@ export function effectOf(m, key) {
 }
 
 // The one rule for an event (a sale, a themed fest, a US holiday), shared by the
-// lines and the heatmap's "past launches in a week like this" row. Returns null (not
+// lines and the lane tooltips in Competition ahead (eventeffects.js). Returns null (not
 // fitted), or { kind, e, years }: "none" when the range takes in 1.0; "advice" when
 // it leaves 1.0 out and the chance test agrees (p < 0.05; an event the model ran no
 // chance test for counts as agreeing, except a holiday, which then stays unconfirmed);
@@ -145,7 +145,7 @@ export function chinaLine(m, s = en) {
   const named = CN_HOLIDAYS.map((k) => chinaVerdict(m, k)).filter(Boolean);
   if (!named.length) return t.chinaNone;
   const parts = named.map((v) => {
-    const few = v.games !== null && v.games < FEW_GAMES ? v.games : null;
+    const few = v.games !== null && v.games < FEW_GAMES; // said without the number, like the rest
     return t.chinaHoliday(t.chinaNames[v.key], v.fewer ? t.fewer : t.more, few, v.confirmed);
   });
   const windows = named.flatMap((v) => m.holidays?.[v.key] ?? []);
@@ -187,8 +187,9 @@ export function timingLines(model, group, { languages = [] } = {}, s = en) {
       // the joint estimate from the main fit, when the main fit is the headline
       const joint = m.headline === "with_followers" ? null : (m.demo_with_fest ?? null);
       const both = joint ?? combine(demo, fest);
+      // the cautious note goes with a range shown, not with "no clear difference"
       const note = joint ? "" : t.cautious;
-      text += `, and ${clear(both) ? t.demoVsNone(change(both, s)) : t.demoAsNone}${note}`;
+      text += `, and ${clear(both) ? `${t.demoVsNone(change(both, s))}${note}` : t.demoAsNone}`;
     }
     lines.push(fest.rate_ratio > 1 ? `${t.demoAdvice} ${text}.` : `${text}.`);
     if (demo && clear(demo)) lines.push(t.demoAfter(change(demo, s)));

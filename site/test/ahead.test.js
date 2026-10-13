@@ -76,9 +76,10 @@ describe("an opened week", () => {
 
   test("lists every game in a labelled scroll area, exact dates first", () => {
     const list = body.querySelector(".ah-list");
-    expect([list.getAttribute("tabindex"), list.getAttribute("aria-label")]).toEqual([
+    expect([list.getAttribute("role"), list.getAttribute("tabindex"), list.getAttribute("aria-label")]).toEqual([
+      "region",
       "0",
-      "Games in the week of Week of Oct 19 to Oct 25",
+      "Games in the week of Oct 19 to Oct 25",
     ]);
     const parts = list.querySelectorAll(".ah-part");
     expect(parts.map((p) => p.querySelector("h4").textContent)).toEqual([
@@ -168,6 +169,14 @@ describe("what past launches during an event did", () => {
     expect(body.querySelector(".hm-block-name").textContent).toBe("Scream V Fest"); // no number drawn
     expect(body.querySelectorAll(".hm-week")[2].getAttribute("aria-label")).toContain(
       "Events: Steam Scream V Fest 2026. Past paid launches during a themed fest matching their tags got 45% fewer reviews.",
+    );
+  });
+
+  test("the opened week's Events line carries the effect too (phones have no lanes)", () => {
+    const body = drawWith(MODEL);
+    body.querySelectorAll(".hm-cell")[2].click(); // the week of Oct 26
+    expect(body.querySelector(".ah-detail-events").textContent).toContain(
+      "Steam Scream V Fest 2026, Oct 26 to Nov 2. Past paid launches during a themed fest matching their tags got 45% fewer reviews.",
     );
   });
 

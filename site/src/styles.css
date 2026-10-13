@@ -845,7 +845,7 @@ main { display: block; }
     justify-content: flex-end;
     padding: 0 0 var(--s1);
   }
-  .hm-row-name { font-size: var(--fs-meta); }
+  .hm-row-name { font-size: var(--fs-meta); overflow-wrap: anywhere; } /* narrow columns: a long tag may break */
   .hm-cell { grid-row: var(--wk); grid-column: var(--tc); scroll-margin: 3.5rem 0 var(--s2); }
   .hm-part { font-size: .75rem; flex-basis: 1.5rem; }
   /* the legend fits the width */
@@ -936,7 +936,6 @@ main { display: block; }
    spread across years behind it), then the events lanes. */
 .ol-key { margin: 0 0 var(--s1); max-width: var(--measure); font-size: var(--fs-small); color: var(--ink-2); }
 .ol-good { margin: 0 0 var(--s1); font-size: var(--fs-small); font-weight: 700; }
-.ol-from { margin: 0 0 var(--s4); }
 .ol-note { margin: 0 0 var(--s3); }
 .ol-note:empty { display: none; }
 .ol-scroll { padding: 4px; margin: -4px; }

@@ -47,7 +47,7 @@ export function shortName(name) {
 
 // covers at least MIN_DAYS of the week starting on day `start`, so a Steam event
 // that ends at 10:00 on a Monday is not counted in that week too
-export function inWeek(e, start) {
+function inWeek(e, start) {
   return Math.min(e.to, start + 7) - Math.max(e.from, start) >= MIN_DAYS;
 }
 

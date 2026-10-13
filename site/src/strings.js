@@ -148,10 +148,11 @@ export const en = {
     // the week list's search
     search: "Find a game in this week",
     searchCount: (shown, total) => `${shown} of ${total} games`,
-    listLabel: (week) => `Games in the week of ${week}`,
+    listLabel: (from, to) => `Games in the week of ${from} to ${to}`,
     noMatch: "No game in this week matches.",
     // what past launches during a lane's event did, in its tooltip and label (eventeffects.js)
-    effectKey: "An event's tooltip says how past launches during it did: 30-day reviews, our stand-in for sales.",
+    effectKey:
+      "An event's tooltip, and its opened week, say how past launches during it did: 30-day reviews, our stand-in for sales.",
     effect: {
       advice: (who, name, pct, dir) => `Past ${who} launches ${name} got ${pct} ${dir} reviews.`,
       unconfirmed: (who, name, dir) => `Past ${who} launches ${name}: ${dir} reviews (unconfirmed).`,
@@ -203,7 +204,7 @@ export const en = {
     // advice: the range leaves out 1.0 and, where the model ran one, the chance test agrees
     saleAvoid: (change) => `Avoid launching during a Steam seasonal sale: such launches got ${change}.`,
     saleGood: (change) => `Launches during a Steam seasonal sale got ${change}.`,
-    festAvoid: (change) => `Avoid a themed fest that matches your tags: such launches got ${change}.`,
+    festAvoid: (change) => `Avoid a themed fest that matches your game's tags: such launches got ${change}.`,
     festGood: (change) => `Launches during a themed fest that matched their tags got ${change}.`,
     holidays: {
       us_thanksgiving: (change, years) => `Avoid US Thanksgiving to Cyber Monday: in ${years} years, such launches got ${change}.`,
@@ -216,7 +217,7 @@ export const en = {
     // the range leaves out 1.0 but the chance test does not confirm it: not advice
     names: {
       sale: "Steam seasonal sales",
-      themed_fest: "Themed fests for your tags",
+      themed_fest: "Themed fests for your game's tags",
       us_thanksgiving: "US Thanksgiving to Cyber Monday",
       xmas_newyear: "Christmas to New Year",
     },
@@ -251,7 +252,7 @@ export const en = {
     // China's holidays: one context line, no numbers, only with Simplified Chinese picked
     chinaNames: { cn_spring: "Spring Festival", cn_national: "National Day" },
     chinaHoliday: (name, dir, few, confirmed) =>
-      `${name} (unconfirmed): ${dir} reviews for games with Simplified Chinese in past years${few === null ? "" : `, from few games (${few})`}${confirmed ? "" : ", not confirmed by a chance test"}.`,
+      `${name} (unconfirmed): ${dir} reviews for games with Simplified Chinese in past years${few ? ", from few games" : ""}${confirmed ? "" : ", not confirmed by a chance test"}.`,
     chinaOverlap: "Every one of these holiday windows overlapped a Steam sale or fest.",
     chinaNone: "China holidays (unconfirmed): no clear dip for games with Simplified Chinese in past launches.",
     caveat: "These are patterns in past launches, not proof of cause.",

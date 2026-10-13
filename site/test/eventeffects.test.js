@@ -37,7 +37,7 @@ test("lane events map to the model's keys", () => {
   expect([SALE, FEST, NEXT, NATIONAL, SPRING].map(eventKey)).toEqual([
     "sale",
     "themed_fest",
-    "next_fest",
+    null, // Next Fest: section 01 has no line for it
     "cn_national",
     "cn_spring",
   ]);

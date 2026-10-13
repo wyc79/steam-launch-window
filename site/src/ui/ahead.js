@@ -6,7 +6,17 @@
 
 import { formatNumber } from "../count.js";
 import { bandEvents } from "../events.js";
-import { buildView, countText, CUTS, eventText, formatCut, formatDate, formatValue, trendLines } from "../heatview.js";
+import {
+  buildView,
+  countText,
+  CUTS,
+  eventText,
+  formatCut,
+  formatDate,
+  formatValue,
+  shownValue,
+  trendLines,
+} from "../heatview.js";
 import { WEEKS } from "../lib/heatmap.js";
 import { tagNames } from "../tags.js";
 import { eventEffect } from "../eventeffects.js";
@@ -229,7 +239,9 @@ export function aheadSection(s, body) {
   document.addEventListener("keydown", (e) => e.key === "Escape" && hideTip());
   // the box is fixed to the screen: it follows its cell when the page scrolls (a focused
   // cell scrolls itself into view)
-  window.addEventListener?.("scroll", () => tipAt && !tip.hidden && showTip(...tipAt), { passive: true });
+  // (capture: also when the heatmap scrolls inside its own area)
+  const follow = () => tipAt && !tip.hidden && showTip(...tipAt);
+  window.addEventListener?.("scroll", follow, { passive: true, capture: true });
 
   function findCell(el) {
     for (let r = 0; r < cells.length; r++) {
@@ -357,10 +369,11 @@ export function aheadSection(s, body) {
   }
 
   // how the cell's parts add up: "0.8 + 0.7 = about 1.5 typical weeks", or in games
+  // the total is the sum of the parts as shown, so the line adds up as written
   function sumText(c) {
-    const total = c.parts.reduce((sum, p) => sum + p.value, 0);
-    const shown = c.parts.map((p) => p.text).join(" + ");
     const games = raw() || view.rows[open.row].counts;
+    const total = c.parts.reduce((sum, p) => sum + shownValue(p.value, games && p.part === "exact"), 0);
+    const shown = c.parts.map((p) => p.text).join(" + ");
     return games ? a.sumRaw(shown, countText(total, s)) : a.sumNormal(shown, formatValue(total, s));
   }
 
@@ -375,6 +388,7 @@ export function aheadSection(s, body) {
     const cellText = row.cells[open.week].parts.map((p) => `${a.parts[p.part]} ${p.text}`).join(s.bar.sep);
     // the list: a search box, a live count, and the games in a scroll area; typing
     // redraws only the list, so the box keeps its focus
+    const searching = document.activeElement?.classList?.contains("ah-search");
     const listId = uid("ah-list");
     const found = h("p", { class: "ah-found", "aria-live": "polite" });
     const list = h("div", {
@@ -382,7 +396,7 @@ export function aheadSection(s, body) {
       class: "ah-list",
       role: "region",
       tabindex: "0",
-      "aria-label": a.listLabel(a.week(w.date, w.to)),
+      "aria-label": a.listLabel(w.date, w.to),
     });
     const drawList = () => {
       const shown = findGames(items, open.query);
@@ -438,6 +452,7 @@ export function aheadSection(s, body) {
       items.length > 0 && [h("div", { class: "ah-find" }, search, found), list],
     );
     if (items.length) drawList();
+    if (searching) detail.querySelector(".ah-search")?.focus(); // a redraw keeps the search box in use
   }
 
   // ---------- drawing ----------

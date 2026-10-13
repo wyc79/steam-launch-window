@@ -12,7 +12,10 @@ import { chinaVerdict, percent, ready, verdict } from "./timing.js";
 // the model's key for a band event (events.js bandEvents), or null
 export function eventKey(e) {
   if (e.kind === "seasonal_sale") return "sale";
-  if (e.kind === "themed_fest" || e.kind === "next_fest") return e.kind;
+  if (e.kind === "themed_fest") return e.kind;
+  // Next Fest is left out: section 01 has no line for launching during it, and a
+  // tooltip should never give a number that section 01 does not
+  if (e.kind === "next_fest") return null;
   if (e.kind !== "cn_holiday") return null;
   if (/Spring Festival/.test(e.name)) return "cn_spring";
   return /National Day/.test(e.name) ? "cn_national" : null;

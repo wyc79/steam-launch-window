@@ -36,7 +36,7 @@ export function seasonSection(s, body, intro = null) {
   const labelId = uid("ol-label");
   const frame = [h("p", { id: labelId, class: "visually-hidden" }, t.label), keyLine, good, note, chart, detail];
 
-  // "How busy each coming week usually is across Steam (all paid games in English, not just your tags)."
+  // "How busy each coming week usually is, from past years' launches of paid games in English."
   function introText(st) {
     const sec = s.sections.season;
     const names = st.languages.map((c) => s.languages[c] ?? c);
