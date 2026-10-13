@@ -30,13 +30,20 @@ test("games and launches come back with tag ids and language codes", async () =>
   const data = loadData("", fakeFetch(FILES));
   expect(await data.upcoming).toEqual([{ appid: 1, tags: [19], langs: ["english"] }]);
   expect(await data.history).toEqual([{ appid: 2, tags: [19], langs: ["english"] }]);
-  await expect(data.all).resolves.toHaveLength(4);
+  await expect(data.all).resolves.toHaveLength(3);
 });
 
 test("model.json is optional", async () => {
   const { "model.json": _, ...rest } = FILES;
   const data = loadData("", fakeFetch(rest));
   expect(await data.model).toBeNull();
+  await expect(data.all).resolves.toBeDefined();
+});
+
+test("events.json is optional too: missing, the page goes on without the events lanes", async () => {
+  const { "events.json": _, ...rest } = FILES;
+  const data = loadData("", fakeFetch(rest));
+  expect(await data.events).toBeNull();
   await expect(data.all).resolves.toBeDefined();
 });
 

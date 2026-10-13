@@ -34,11 +34,12 @@ def test_language_filter():
 
 def test_day_dates_count_once_in_their_week_and_only_inside_the_window():
     games = [game("day", "2026-10-14"), game("day", "2026-10-25"), game("day", "2026-10-05"),
-             game("day", "2027-06-01")]
+             game("day", "2027-01-10"), game("day", "2027-01-11"), game("day", "2027-06-01")]
     h = hm.heatmap(games, TODAY)
     assert [c["exact"] for c in h["paid"][:3]] == [1, 1, 0]
-    assert sum(c["exact"] for c in h["paid"]) == 2  # last week and 33 weeks out are not shown
-    assert h["weeks"][0] == "2026-10-12" and len(h["weeks"]) == 26
+    assert h["paid"][-1]["exact"] == 1  # Sunday Jan 10 is in the 13th week; Jan 11 starts the 14th
+    assert sum(c["exact"] for c in h["paid"]) == 3  # last week and weeks after the 13th are not shown
+    assert h["weeks"][0] == "2026-10-12" and len(h["weeks"]) == hm.WEEKS == 13
 
 
 def test_month_dates_spread_only_over_days_still_ahead():

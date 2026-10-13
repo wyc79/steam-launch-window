@@ -26,7 +26,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from datetime import date, timedelta
 
-WEEKS = 26
+WEEKS = 13  # Competition ahead: a quarter; announced dates say little beyond it
 SPREAD = ("month", "quarter")
 GROUPS = ("paid", "free")
 CELL = ("exact", "spread", "year", "hype", "year_hype", "no_hype")

@@ -3,10 +3,11 @@
 
 import { fromTable } from "./lib/data.js";
 
-export const REQUIRED = ["meta", "upcoming", "history", "events"];
+export const REQUIRED = ["meta", "upcoming", "history"];
 
 // Promises for each file, parsed: upcoming and history as rows with tag ids and
-// language codes. model.json is optional: missing or broken, it resolves to null.
+// language codes. model.json and events.json are optional: missing or broken, they
+// resolve to null (the page then goes without the model lines or the events lanes).
 export function loadData(base, fetchFn = fetch) {
   const get = (name) =>
     fetchFn(`${base}${name}.json`).then((r) => {
@@ -16,7 +17,7 @@ export function loadData(base, fetchFn = fetch) {
   const meta = get("meta");
   const upcoming = get("upcoming");
   const history = get("history");
-  const events = get("events");
+  const events = get("events").catch(() => null);
   const model = get("model").catch(() => null);
   const data = {
     meta,

@@ -1,8 +1,8 @@
 // The selection's numbers, computed once and shared: the top bar's count and its
-// red, and (step 4) section 03's history panel read the same cached objects.
-// matchCount and historyPanel give both groups, so paid / free costs nothing.
+// red, the heatmap (Competition ahead), and (later) the history panel read the same
+// cached objects. Each result holds both groups, so paid / free costs nothing.
 
-import { groupOf, historyPanel, matchCount, speaks } from "./lib/heatmap.js";
+import { groupOf, heatmap, historyPanel, matchCount, speaks, weekGames } from "./lib/heatmap.js";
 import { query } from "./state.js";
 
 const KEEP = 20; // recent selections kept; older ones are computed again
@@ -39,11 +39,48 @@ export function tagCounts(games, { languages, group }) {
   return out;
 }
 
-export function createNumbers(games, history) {
+// what the heatmap depends on: tags (in the order picked, which is the order of
+// its rows), mode and languages; both groups are in each result, and the panel's
+// measure does not touch it
+export function heatmapKey(st) {
+  return JSON.stringify([st.tags, st.mode, sorted(st.languages)]);
+}
+
+// today: the snapshot date, the heatmap's first week
+export function createNumbers(games, history, today) {
   const results = new Map();
   const perTag = new Map();
+  const maps = new Map();
+  const perRow = new Map();
+  let byId = null;
+  // one heatmap row, kept on its own: picking a second tag reuses the first tag's row
+  const row = (tags, st) =>
+    remember(perRow, JSON.stringify([sorted(tags), tags.length > 1 ? st.mode : "", sorted(st.languages)]), () => ({
+      tags,
+      ...heatmap(games, today, { selection: tags, mode: st.mode, languages: st.languages, history }),
+    }));
   return {
     has: (st) => results.has(numbersKey(st)),
+    hasHeatmap: (st) => maps.has(heatmapKey(st)),
+    // what heatmapRows(...) gives with the typical week, for the heatmap (each
+    // tag alone, then the combination; test/numbers.test.js checks they agree)
+    heatmap: (st) =>
+      remember(maps, heatmapKey(st), () => {
+        const rows = st.tags.map((t) => row([t], st));
+        if (st.tags.length !== 1) rows.push(row([...st.tags], st));
+        return rows;
+      }),
+    // one row's games in one week, for the picked group, in weekGames' order; on
+    // demand, not cached (one pass over the upcoming games)
+    weekGames: (st, tags, week, year) =>
+      weekGames(games, today, week, { selection: tags, mode: st.mode, languages: st.languages, year }).filter(
+        (g) => groupOf(g) === st.group,
+      ),
+    // appid -> upcoming game
+    game: (appid) => {
+      byId ??= new Map(games.map((g) => [g.appid, g]));
+      return byId.get(appid);
+    },
     // { counts: matchCount(...), panel: historyPanel(...) } for the selection
     get: (st) =>
       remember(results, numbersKey(st), () => {

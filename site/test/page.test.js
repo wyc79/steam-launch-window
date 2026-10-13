@@ -18,7 +18,7 @@ function deferred() {
 function fakeData() {
   const files = Object.fromEntries(["meta", "upcoming", "history", "events", "model"].map((k) => [k, deferred()]));
   const data = Object.fromEntries(Object.entries(files).map(([k, d]) => [k, d.promise]));
-  data.all = Promise.all(["meta", "upcoming", "history", "events"].map((k) => data[k]));
+  data.all = Promise.all(["meta", "upcoming", "history"].map((k) => data[k]));
   return { files, data };
 }
 
@@ -52,30 +52,27 @@ describe("a file that fails", () => {
   test("keeps its error line when the slower files arrive later", async () => {
     const { files, calls, numbers, flush } = start();
     files.meta.resolve(META);
-    files.events.reject(new Error("events.json: HTTP 404")); // fast failure
+    files.history.reject(new Error("history.json: HTTP 404")); // fast failure
     await tick();
-    files.upcoming.resolve(GAMES); // slow successes
-    files.history.resolve(HISTORY);
+    files.upcoming.resolve(GAMES); // slow success
     expect(await numbers).toBeNull();
     flush();
     expect(calls.filter((c) => c.startsWith("count"))).toEqual([]);
     expect(calls.at(-1)).toBe("error");
   });
 
-  test("replaces a count already drawn, and nothing redraws it", async () => {
+  test("events.json is optional: without it (loadData gives null) the count still draws", async () => {
     const { files, calls, selection, flush } = start();
+    files.events.resolve(null);
     files.meta.resolve(META);
     files.upcoming.resolve(GAMES);
     files.history.resolve(HISTORY);
     await tick();
     flush();
-    expect(calls.at(-1)).toMatch(/^count /);
-    files.events.reject(new Error("events.json: HTTP 500"));
-    await tick();
-    selection.set({ group: "free" });
     selection.addTag(1);
     flush();
-    expect(calls.at(-1)).toBe("error");
+    expect(calls).not.toContain("error");
+    expect(calls.at(-1)).toMatch(/^count /);
   });
 });
 
@@ -113,5 +110,81 @@ describe("drawing the count", () => {
     expect(later).toHaveBeenCalledTimes(1); // nothing new to compute
     expect(calls.at(-1)).toBe("count 0 of 0 upcoming · 0 of 0 past launches");
     expect(shared.get(selection.get())).toBe(before);
+  });
+});
+
+describe("section 01", () => {
+  // a fake section: records what connect asks of it
+  function fakeAhead() {
+    const calls = [];
+    return {
+      calls,
+      start: (numbers, meta) => calls.push(`start ${meta.snapshot_date}`),
+      setEvents: (events) => calls.push(`events ${events?.length ?? "failed"}`),
+      draw: (st) => calls.push(`draw ${st.group} ${st.tags.join(",")}`),
+      busy: () => calls.push("busy"),
+    };
+  }
+
+  function startWith(ahead) {
+    const { files, data } = fakeData();
+    const { bar, calls } = fakeBar();
+    bar.setSummary = (line) => calls.push(`summary ${line}`);
+    const queue = [];
+    const selection = createState();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const parts = { settle: vi.fn() };
+    const numbers = connect({ data, selection, bar, parts, ahead, s: en, later: (fn) => queue.push(fn) });
+    const flush = () => queue.splice(0).forEach((fn) => fn());
+    return { files, calls, selection, numbers, flush };
+  }
+
+  test("gets the numbers, the events, and each selection after the paint, with the summary", async () => {
+    const ahead = fakeAhead();
+    const { files, calls, selection, numbers, flush } = startWith(ahead);
+    files.meta.resolve(META);
+    files.upcoming.resolve(GAMES);
+    files.history.resolve(HISTORY);
+    files.events.resolve([{ name: "x" }]);
+    const shared = await numbers;
+    await tick();
+    expect(ahead.calls.slice(0, 3)).toEqual(["start 2026-10-13", "busy", "events 1"]);
+    flush();
+    expect(ahead.calls.at(-1)).toBe("draw paid ");
+    expect(calls.at(-1)).toBe("summary All tags · Paid · 1 upcoming");
+    shared.heatmap(selection.get()); // what the real section computes when it draws
+    selection.set({ group: "free" }); // both cached: drawn at once
+    expect(ahead.calls.at(-1)).toBe("draw free ");
+    selection.addTag(1); // new numbers: busy, then drawn after the paint
+    expect(ahead.calls.at(-1)).toBe("busy");
+    flush();
+    expect(ahead.calls.at(-1)).toBe("draw free 1");
+  });
+
+  test("never draws after a file fails", async () => {
+    const ahead = fakeAhead();
+    const { files, numbers, flush } = startWith(ahead);
+    files.meta.resolve(META);
+    files.history.reject(new Error("history.json: HTTP 404"));
+    await tick();
+    files.upcoming.resolve(GAMES);
+    files.events.resolve([]);
+    expect(await numbers).toBeNull();
+    flush();
+    expect(ahead.calls).toEqual([]);
+  });
+
+  test("hears that events.json failed (null) and still draws", async () => {
+    const ahead = fakeAhead();
+    const { files, numbers, flush } = startWith(ahead);
+    files.meta.resolve(META);
+    files.upcoming.resolve(GAMES);
+    files.history.resolve(HISTORY);
+    files.events.resolve(null);
+    await numbers;
+    await tick();
+    flush();
+    expect(ahead.calls).toContain("events failed");
+    expect(ahead.calls.at(-1)).toBe("draw paid ");
   });
 });

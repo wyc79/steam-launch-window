@@ -1,12 +1,27 @@
 import { describe, expect, test } from "vitest";
-import { countLine, formatNumber, tooFewPast } from "../src/count.js";
+import { countLine, formatNumber, summaryLine, tooFewPast } from "../src/count.js";
 import { toDay, toIso } from "../src/lib/dates.js";
 import { historyPanel, matchCount, MIN_GROUP } from "../src/lib/heatmap.js";
+import { en } from "../src/strings.js";
 
 const COUNTS = {
   paid: { upcoming: [1204, 20495], past: [3950, 82910] },
   free: { upcoming: [17, 1520], past: [5, 12232] },
 };
+
+describe("the phone summary", () => {
+  const st = (tags, group = "paid") => ({ tags, group });
+
+  test("reads tags, group and upcoming games of that group", () => {
+    expect(summaryLine(st([1, 2, 3]), COUNTS)).toBe("3 tags · Paid · 1,204 upcoming");
+    expect(summaryLine(st([7], "free"), COUNTS)).toBe("1 tag · Free · 17 upcoming");
+    expect(summaryLine(st([]), COUNTS)).toBe("All tags · Paid · 1,204 upcoming");
+  });
+
+  test("has a label that says where tapping goes", () => {
+    expect(en.bar.summaryLabel("1 tag · Free · 17 upcoming")).toBe("1 tag · Free · 17 upcoming. Back to the controls");
+  });
+});
 
 describe("match count text", () => {
   test("reads as in the plan, with thousands separators and a middle dot", () => {

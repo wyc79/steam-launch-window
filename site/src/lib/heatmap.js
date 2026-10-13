@@ -5,7 +5,7 @@
 
 import { toDay, toIso, parts, weekStartDay } from "./dates.js";
 
-export const WEEKS = 26;
+export const WEEKS = 13; // Competition ahead: a quarter (heatmap.py WEEKS)
 const SPREAD = ["month", "quarter"];
 export const GROUPS = ["paid", "free"];
 const CELL = ["exact", "spread", "year", "hype", "year_hype", "no_hype"];

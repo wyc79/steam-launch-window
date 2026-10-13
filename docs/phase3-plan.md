@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); steps 1 and 2 built (PR #23, PR #24); step 3 built (PR #25, waiting for review).
+Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26, waiting for review).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -55,37 +55,22 @@ own pieces:
 
 ## Page
 
-One page with numbered sections, and a separate Methods page.
+One page with numbered sections, and a separate Methods page. There is no big
+title: the masthead's site name is the page's `h1`, with a one-line description
+and the "Patterns, not promises" note under it, so the controls sit high on the
+first screen. Sections are numbered in page order (`ui/sections.js`), so the
+numbers below follow from the order.
 
 **Top bar (sticky, except on phones):** the tag picker (type to search Steam tags, picked tags as
 removable chips), all of these / any of these, paid / free, languages (default English),
 and the match count ("1,204 of 20,495 upcoming, 3,950 of 82,910
-past launches"), which turns red when past launches are too few for section 03.
-The count is for the picked group (paid or free), so it agrees with the heatmap
-below it.
+past launches"), which turns red when past launches are too few for the history
+section ("Too few for section 01"). The count is for the picked group (paid or
+free), so it agrees with the heatmap. On phones, where the bar does not stick, a
+one-line summary ("3 tags · Paid · 1,204 upcoming") stays on top once the bar has
+scrolled away; tapping it goes back and focuses the tag field.
 
-**01 Competition ahead.** The 26-week heatmap.
-- Rows: each picked tag alone, then the combination (AND or OR). Columns: weeks
-  from this one. Phones turn it sideways (weeks as rows).
-- Each cell shows exact and spread dates as two visible parts. Normalized by
-  default ("1.0 = a usual week"); a raw counts toggle, off by default. Weeks more
-  than 4 out are faded, labelled "dates still being set".
-- Year-only dates: a hatched layer behind a toggle, off by default, and a
-  "sometime in 2027: N games" line beside the heatmap.
-- An event band above the weeks: Steam sales, Next Fests, themed fests whose
-  tags match. Chinese holidays only when Simplified Chinese is among the picked
-  languages, marked unconfirmed.
-- Click or focus a week: its games, with the "moved here from October 2026, 3
-  days ago" marker and the follower count when known (marked when it is an
-  estimate from wishlist rank). Order: games whose top 10 tags match first, then
-  the most followers (unknown last), then name, then appid.
-
-**02 Typical for this time of year.** The seasonal outlook for the same 26
-weeks (the all-games pattern for the picked languages, paid or free): a value
-and its spread per week, with the events that drive it on hover ("after Next
-Fest October").
-
-**03 What history says.**
+**01 What history says.**
 - The history panel for the selection: quiet, normal and busy launch weeks
   (normalized by default), with the 75th and 90th percentile of 30-day reviews
   leading and the median after it.
@@ -93,6 +78,45 @@ Fest October").
   launching in a seasonal sale, in a themed fest that matches your tags, after
   a demo in the last Next Fest. Weekly competition: "small, mostly general
   crowding". Free games: "not ready yet" until their recount lands.
+
+**02 Typical for this time of year.** The seasonal outlook for the next 26
+weeks (the all-games pattern for the picked languages, paid or free): a value
+and its spread per week, with the events that drive it on hover ("after Next
+Fest October"). It stays at 26 weeks: it comes from past years, so dates not
+yet set do not thin it out.
+
+**03 Competition ahead.** The heatmap for the next 13 weeks (decided
+2026-10-13: beyond a quarter, announced dates say little).
+- Rows: each picked tag alone, then the combination (AND or OR). Columns: weeks
+  from this one, the date on top. Phones turn it sideways (weeks as rows).
+- Each cell shows exact and spread dates as two visible parts (E and S on
+  small screens). Normalized by default ("1.0 = as many as a typical week",
+  a typical week being the row's average week of real launches over the last 52
+  weeks); a raw counts toggle, off by default, changes only the numbers, not the
+  shades. The shade follows the number as shown. Weeks more than 4 out are faded,
+  labelled "dates still being set".
+- Rows with under one launch in a typical week (or none) show plain counts,
+  unshaded, and their row head says how few launches the year had: one launch
+  more or less would swing their ratio wildly.
+- Year-only dates: a hatched layer behind a toggle, off by default, and a
+  "sometime in 2027: N games" line that names the row it counts (the combination).
+- Events lanes under the dates, in the same week columns, with their own
+  "Events" label and a rule before the heatmap rows: Steam sales, Next Fests,
+  themed fests whose tags match, and Chinese holidays only when Simplified Chinese
+  is among the picked languages, marked unconfirmed. Each event is a block over
+  the weeks it covers, its name from its first week up to the next event in its
+  lane. Rule (`src/events.js`): a themed fest shows when one of the picked tags is
+  among its tags, the model's rule with the picked tags in place of a game's top 10
+  (no tags picked, or a fest without tags: not shown); other holidays and releases
+  are left out. On phones the events are text in each week's row. If
+  `events.json` fails, the heatmap draws without the lanes and says so in one line.
+- Enter or a click opens a week (arrow keys move between weeks and rows): its
+  games in parts, exact dates first and always in full, then month or quarter
+  dates (and year only, with the year layer), each part after 20 games behind
+  "Show all". Each game has its store link, date, the "moved here from October
+  2026, 3 days ago" marker and the follower count when known (marked when it is an
+  estimate from wishlist rank). Order inside each part: games whose top 10 tags
+  match first, then the most followers (unknown last), then name, then appid.
 
 **Methods (separate page).** Built from `docs/methods.md`: sources, what each
 number means, the caveats in full, and credit to Games Popularity.
@@ -174,13 +198,24 @@ A `site` workflow builds and deploys to GitHub Pages:
    when the history panel would hide the picked group (`historyPanel(...).shown`, parts under
    `MIN_GROUP`). `src/numbers.js` computes `matchCount` and `historyPanel` once per tags,
    mode, languages and panel measure (the measure is in the selection), so paid / free costs
-   nothing and section 03 can read the same panel. The count is recomputed after the click
+   nothing and the history section can read the same panel. The count is recomputed after the click
    paints, once for several quick clicks. The tag list shows each tag's upcoming games for
    the picked languages and paid / free. On phones (under 640px) the bar does not stick.
    Analytics are not loaded on localhost. The theme choice is kept under its own key
    (`slw-theme`), since wyc79.github.io writes `yc-theme` on the same origin and defaults
    it to light.
-4. Sections 01 to 03.
+4. Sections 01 to 03. Part 1 built: Competition ahead (now section 03) and the phone summary
+   bar. `src/ui/ahead.js` draws the heatmap, the events lanes and the week's games;
+   `src/heatview.js` and `src/weekdetail.js` turn the numbers into text, shade steps and labels;
+   `src/events.js` picks the events. The heatmap is a plain HTML grid (ARIA `grid`, arrow keys,
+   Enter opens a week), not SVG: the numbers are real text in every cell, focus is native, and
+   phones swap rows and columns in CSS. Shades: 8 steps from paper to ink, cut at 0.1, 0.25,
+   0.5, 1, 1.5, 2 and 3 times a typical week; from 1.0 the shade turns dark, which also skips
+   the greys where no text passes 4.5:1. Far weeks use lighter steps with ink text.
+   `numbers.js` caches each heatmap row (a picked tag's row is reused when more tags are
+   added); a week's games are computed when it opens, for the picked group. `heatmap.py` and
+   `heatmap.js` `WEEKS` went from 26 to 13 (golden cases rewritten); the seasonal outlook keeps
+   its own 26. Part 2: sections 01 and 02.
 5. Methods page.
 6. The deploy workflow, then a review of the live site.
 

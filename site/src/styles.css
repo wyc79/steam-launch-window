@@ -51,6 +51,27 @@
   --tint: color-mix(in srgb, var(--ink) 7%, var(--paper));
   color-scheme: light;
 
+  /* The heatmap ramp, paper to ink (0, 7, 16, 27, 62, 71, 80, 90% ink). Steps 0 to
+     3 take ink text, 4 to 7 paper text; the jump between 3 and 4 skips the greys
+     where neither passes 4.5:1, and sits at 1.0, a usual week. Far weeks use the
+     "far" steps (45% of the way): all take ink text. test/contrast.test.js checks
+     every pair in both themes. */
+  --heat-0: #F2F0E9;
+  --heat-1: #E2E0DA;
+  --heat-2: #CECCC6;
+  --heat-3: #B5B4AF;
+  --heat-4: #676663;
+  --heat-5: #525250;
+  --heat-6: #3E3E3C;
+  --heat-7: #282727;
+  --heat-far-1: #EBE9E2;
+  --heat-far-2: #E2E0D9;
+  --heat-far-3: #D7D5CF;
+  --heat-far-4: #B3B2AD;
+  --heat-far-5: #AAA9A4;
+  --heat-far-6: #A1A09B;
+  --heat-far-7: #979692;
+
   --font: "Inter", "Helvetica Neue", Helvetica, Arial, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 
   --fs-display: clamp(2.5rem, 1rem + 6vw, 7rem);
@@ -91,6 +112,21 @@
     --rule-soft: rgba(242, 240, 233, .2);
     --accent-ui: color-mix(in srgb, var(--accent) 60%, #F2F0E9); /* #C4717A */
     color-scheme: dark;
+    --heat-0: #111111;
+    --heat-1: #212120;
+    --heat-2: #353534;
+    --heat-3: #4E4D4B;
+    --heat-4: #9D9B97;
+    --heat-5: #B1AFAA;
+    --heat-6: #C5C3BE;
+    --heat-7: #DCDAD3;
+    --heat-far-1: #181818;
+    --heat-far-2: #212121;
+    --heat-far-3: #2C2C2B;
+    --heat-far-4: #504F4D;
+    --heat-far-5: #595856;
+    --heat-far-6: #62615F;
+    --heat-far-7: #6C6B68;
   }
 }
 :root[data-theme="dark"] {
@@ -100,6 +136,21 @@
   --rule-soft: rgba(242, 240, 233, .2);
   --accent-ui: color-mix(in srgb, var(--accent) 60%, #F2F0E9);
   color-scheme: dark;
+  --heat-0: #111111;
+  --heat-1: #212120;
+  --heat-2: #353534;
+  --heat-3: #4E4D4B;
+  --heat-4: #9D9B97;
+  --heat-5: #B1AFAA;
+  --heat-6: #C5C3BE;
+  --heat-7: #DCDAD3;
+  --heat-far-1: #181818;
+  --heat-far-2: #212121;
+  --heat-far-3: #2C2C2B;
+  --heat-far-4: #504F4D;
+  --heat-far-5: #595856;
+  --heat-far-6: #62615F;
+  --heat-far-7: #6C6B68;
 }
 @media (max-width: 1023px) { :root { --cols: 6; } }
 @media (max-width: 639px)  { :root { --cols: 4; } }
@@ -213,7 +264,14 @@ img { max-width: 100%; }
   .mast-utils { grid-column: 3 / span 2; grid-row: 2; }
 }
 
-/* ---------- Title ---------- */
+/* the tool page: the site name is the h1, and a short line under the masthead
+   stands in for a big title, so the controls sit high on the first screen */
+.mast-title { margin: 0; font: inherit; letter-spacing: inherit; }
+.page-head:has(.mast-lede) { border-bottom: 0; padding-bottom: var(--s4); }
+.mast-lede { margin-top: var(--s4); }
+.mast-lede .lede { font-size: var(--fs-body); max-width: 46em; margin-bottom: var(--s1); }
+
+/* ---------- Title (the Methods page) ---------- */
 .hero { padding-top: var(--s8); padding-bottom: var(--s7); }
 .hero h1 {
   font-size: var(--fs-display);
@@ -463,6 +521,326 @@ main { display: block; }
   .page-section::before { grid-column: 1 / -1; grid-row: 1; padding: 0 0 var(--s2); }
   .page-section > h2 { grid-column: 1 / -1; grid-row: 2; }
   .page-section > .intro { grid-column: 1 / -1; grid-row: 3; }
+}
+
+/* ---------- Competition ahead ---------- */
+/* Toggles, the "sometime in" line and the legend, above the heatmap */
+.ah-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--s3) var(--s6);
+  margin-bottom: var(--s5);
+}
+.ah-toggles { flex: 1 1 28rem; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s5); min-width: 0; }
+.ah-toggle { display: inline-flex; align-items: center; gap: .5em; min-height: 2rem; font-size: var(--fs-small); cursor: pointer; }
+.ah-toggle input { flex: none; width: 1rem; height: 1rem; margin: 0; accent-color: var(--ink); }
+.ah-sometime { flex-basis: 100%; margin: 0; color: var(--ink-2); font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
+.ah-sometime .label { margin-right: .3em; }
+.ah-legend { display: flex; flex-direction: column; gap: var(--s1); max-width: 27rem; }
+.ah-legend-text { font-size: var(--fs-small); color: var(--ink-2); line-height: 1.3; }
+.ah-scale { display: flex; gap: 2px; }
+.ah-swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 2.25rem;
+  font-size: var(--fs-meta);
+  line-height: 1;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.ah-swatch .hm-part { height: .75rem; flex: none; }
+.ah-status { margin: 0 0 var(--s4); font-weight: 700; }
+.ah-status:empty, .ah-events-note:empty { display: none; }
+.ah-events-note { margin: 0 0 var(--s3); }
+
+/* The heatmap: one CSS grid, a label column then a column per week. Rows
+   (role=row) and the events lanes are display: contents, so every item sits in
+   the same grid: each carries its desktop row line (--tr), its week (--wk) and
+   its phone column (--tc); phones put weeks in rows. */
+.hm-scroll { padding: 4px; margin: -4px; } /* room for the focus ring */
+.hm-wrap {
+  --label-w: clamp(9rem, 16%, 13rem);
+  --col-min: 3rem;
+  min-width: calc(var(--label-w) + var(--weeks, 13) * (var(--col-min) + 2px));
+}
+.hm,
+.hm-marks {
+  display: grid;
+  grid-template-columns: var(--label-w) repeat(var(--weeks), minmax(var(--col-min), 1fr));
+  column-gap: 2px;
+}
+.hm { row-gap: 6px; }
+.hm [role="row"], .hm-band { display: contents; }
+.hm-corner { grid-row: 1; grid-column: 1; align-self: end; }
+.hm-corner span, .hm-mark-now, .hm-mark-far, .hm-band-label {
+  font-size: var(--fs-meta);
+  font-weight: 700;
+  letter-spacing: var(--track-meta);
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.hm-corner span, .hm-band-label { color: var(--ink-2); }
+.hm-week {
+  grid-row: 1;
+  grid-column: var(--wk);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+  padding: 2px 0 4px;
+  border-top: 3px solid transparent;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  text-align: center;
+}
+.hm-date { font-size: var(--fs-small); white-space: nowrap; }
+.hm-week.is-far .hm-date { color: var(--ink-2); }
+.hm-week.is-current { border-top-color: var(--accent-ui); }
+.hm-week.is-current .hm-date { color: var(--accent-ui); font-weight: 700; }
+.hm-week.is-open .hm-date { font-weight: 700; text-decoration: underline 2px var(--accent-ui); text-underline-offset: .25em; }
+.hm-now, .hm-far-note, .hm-week-events { display: none; }
+
+/* "This week" and "Dates still being set" above the weeks */
+.hm-marks { margin-bottom: var(--s1); }
+.hm-mark-now { grid-column: var(--from) / var(--to); color: var(--accent-ui); white-space: nowrap; }
+.hm-mark-far { grid-column: var(--from) / -1; padding-left: var(--s2); border-left: 1px solid var(--ink-2); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* The events lanes, under the dates: "Events", a lane per kind, then a rule
+   before the heatmap rows. Each event is a block over the weeks it covers; its
+   name runs from its first week to the next event in the lane. */
+.hm-band-label { grid-row: var(--tr); grid-column: 1; padding-top: var(--s2); }
+.hm-lane-name { grid-row: var(--tr); grid-column: 1; align-self: center; font-size: var(--fs-meta); line-height: 1.2; color: var(--ink-2); padding-right: var(--s2); }
+.hm-block { grid-row: var(--tr); grid-column: var(--from) / var(--to); min-height: 1.5rem; background: var(--fill); }
+.hm-block-name {
+  grid-row: var(--tr);
+  grid-column: var(--from) / var(--to);
+  z-index: 1;
+  align-self: center;
+  min-width: 0;
+  padding: 0 .4rem;
+  font-size: var(--fs-meta);
+  line-height: 1.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hm-band-rule { grid-row: var(--tr); grid-column: 1 / -1; height: 0; margin: var(--s2) 0; border-top: 1px solid var(--rule-soft); }
+/* kinds: the same fills on phones (.hm-tag), all with ink text */
+.is-seasonal_sale { --fill: var(--heat-3); }
+.is-next_fest { --fill: var(--heat-2); }
+.is-themed_fest { --fill: var(--tint); }
+.is-cn_holiday { --fill: transparent; }
+.hm-block.is-themed_fest { box-shadow: inset 3px 0 0 var(--ink-2); }
+.hm-block.is-cn_holiday, .hm-tag.is-cn_holiday { outline: 1px dashed var(--ink); outline-offset: -1px; }
+
+.hm-rowhead {
+  grid-row: var(--tr);
+  grid-column: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--s2);
+  align-content: center;
+  min-width: 0;
+  padding-right: var(--s2);
+}
+/* long tag names wrap at spaces (or hyphenate), never mid-word */
+.hm-row-name { grid-column: 1; font-size: var(--fs-small); font-weight: 700; line-height: 1.2; overflow-wrap: normal; hyphens: auto; }
+.hm-row-note { grid-column: 1; font-size: var(--fs-meta); line-height: 1.3; color: var(--ink-2); }
+.hm-rowhead.is-counts .hm-row-note { color: var(--ink); font-weight: 700; }
+.hm-row-parts { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 1px; align-self: center; }
+.hm-row-parts span { height: 1.75rem; font-size: var(--fs-meta); line-height: 1.75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); }
+
+.hm-cell {
+  grid-row: var(--tr);
+  grid-column: var(--wk);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  cursor: pointer;
+  scroll-margin: calc(var(--bar-h, 0px) + var(--s2)) 0 var(--s2);
+}
+.hm-cell:focus { outline: none; }
+.hm-cell:focus-visible { outline: 2px solid var(--accent-ui); outline-offset: 2px; z-index: 1; }
+/* hover and the open week: a ring inside the cell, with paper between it and the fill */
+.hm-cell::after { content: ""; position: absolute; inset: 0; pointer-events: none; }
+.hm-cell:hover::after { box-shadow: inset 0 0 0 1px var(--paper), inset 0 0 0 2px var(--ink); }
+.hm-cell.is-open::after { box-shadow: inset 0 0 0 2px var(--accent-ui), inset 0 0 0 4px var(--paper); }
+
+/* one part of a week (exact, spread, year): a fill from the ramp and its number */
+.hm-part {
+  position: relative;
+  flex: 1 0 1.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--fill);
+  color: var(--on);
+  font-size: .875rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.hm-part-tag { display: none; }
+.s0 { --fill: var(--heat-0); --on: var(--ink); box-shadow: inset 0 0 0 1px var(--rule-soft); }
+.s1 { --fill: var(--heat-1); --on: var(--ink); }
+.s2 { --fill: var(--heat-2); --on: var(--ink); }
+.s3 { --fill: var(--heat-3); --on: var(--ink); }
+.s4 { --fill: var(--heat-4); --on: var(--paper); }
+.s5 { --fill: var(--heat-5); --on: var(--paper); }
+.s6 { --fill: var(--heat-6); --on: var(--paper); }
+.s7 { --fill: var(--heat-7); --on: var(--paper); }
+/* far weeks: the faded steps, all with ink text */
+.is-far .s1 { --fill: var(--heat-far-1); --on: var(--ink); }
+.is-far .s2 { --fill: var(--heat-far-2); --on: var(--ink); }
+.is-far .s3 { --fill: var(--heat-far-3); --on: var(--ink); }
+.is-far .s4 { --fill: var(--heat-far-4); --on: var(--ink); }
+.is-far .s5 { --fill: var(--heat-far-5); --on: var(--ink); }
+.is-far .s6 { --fill: var(--heat-far-6); --on: var(--ink); }
+.is-far .s7 { --fill: var(--heat-far-7); --on: var(--ink); }
+/* year only: hatching in the step's shade, the number on paper */
+.hm-part.is-year {
+  --on: var(--ink);
+  background: repeating-linear-gradient(135deg, var(--fill) 0 1.5px, transparent 1.5px 4.5px), var(--paper);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--rule-soft);
+}
+.hm-part.is-year > span { padding: 0 2px; background: var(--paper); }
+.ah-swatch .is-year { background: repeating-linear-gradient(135deg, var(--heat-5) 0 1.5px, transparent 1.5px 4.5px), var(--paper); }
+
+/* Key, caveats and the week's games, under the heatmap */
+.ah-notes { margin-top: var(--s4); max-width: var(--measure); font-size: var(--fs-small); color: var(--ink-2); }
+.ah-key { margin: 0 0 var(--s2); }
+.ah-caveats { margin: 0; padding: 0; list-style: none; }
+.ah-detail {
+  margin-top: var(--s6);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--rule-soft);
+  scroll-margin-top: calc(var(--bar-h, 0px) + var(--s4));
+}
+.ah-hint { margin: 0; }
+.ah-detail-head { margin-bottom: var(--s3); }
+.ah-detail h3 { font-size: 1.25rem; margin-bottom: var(--s1); }
+.ah-detail-for, .ah-detail-cell, .ah-detail-events, .ah-detail-count { margin: 0 0 var(--s1); font-size: var(--fs-small); }
+.ah-detail-for { font-weight: 700; }
+.ah-detail-cell, .ah-detail-count { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ah-detail-events .label { margin-right: .4em; }
+.ah-part { max-width: 56rem; margin-top: var(--s5); }
+.ah-part h4 { margin: 0; font-size: var(--fs-meta); font-weight: 700; letter-spacing: var(--track-meta); text-transform: uppercase; color: var(--ink-2); }
+.ah-games { margin: var(--s2) 0 0; padding: 0; list-style: none; }
+.ah-games li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 var(--s4);
+  padding: var(--s2) 0;
+  border-top: 1px solid var(--rule-soft);
+  font-size: var(--fs-small);
+}
+.ah-game-meta { color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; }
+.ah-moved { grid-column: 1 / -1; color: var(--ink-2); font-size: var(--fs-meta); }
+.ah-more {
+  margin-top: var(--s3);
+  min-height: var(--control);
+  padding: 0 var(--s4);
+  border: 1px solid var(--ink);
+  background: var(--paper);
+  font-size: var(--fs-small);
+  cursor: pointer;
+}
+.ah-more:hover { background: var(--tint); }
+
+/* Tablets and small laptops: narrower weeks; the heatmap scrolls in its own area if it must */
+@media (max-width: 1023px) {
+  .hm-scroll { overflow-x: auto; }
+  .hm-wrap { --label-w: 7rem; --col-min: 2.5rem; }
+  .hm-part { font-size: .75rem; }
+  .hm-date { font-size: var(--fs-meta); }
+  .hm-row-name { font-size: var(--fs-meta); }
+  /* E, S and Y in each part instead of the row labels, which leaves the label column to the names */
+  .hm-row-parts { display: none; }
+  .hm-part-tag { display: block; position: absolute; left: 3px; top: 2px; font-size: .5625rem; line-height: 1; }
+}
+
+/* Phones: weeks run down (rows), the heatmap rows across (columns); the events
+   are text in each week's row instead of the lanes */
+@media (max-width: 639px) {
+  .hm-band, .hm-marks { display: none; }
+  .hm-wrap { --label-w: 6.5rem; min-width: calc(var(--label-w) + var(--rows) * 3rem); }
+  .hm { grid-template-columns: var(--label-w) repeat(var(--rows), minmax(3rem, 1fr)); row-gap: 2px; }
+  .hm-corner { grid-row: 1; grid-column: 1; }
+  .hm-week {
+    grid-row: var(--wk);
+    grid-column: 1;
+    justify-content: center;
+    padding: 2px var(--s2) 2px 6px;
+    border-top: 0;
+    border-left: 3px solid transparent;
+    text-align: left;
+  }
+  .hm-week.is-current { border-left-color: var(--accent-ui); }
+  .hm-date { font-size: var(--fs-small); font-weight: 700; }
+  .hm-week.is-far .hm-date { font-weight: 400; }
+  .hm-now { display: block; font-size: var(--fs-meta); font-weight: 700; color: var(--accent-ui); }
+  .hm-far-note { display: block; font-size: var(--fs-meta); color: var(--ink-2); }
+  .hm-week-events { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; }
+  .hm-tag { padding: 0 .3rem; background: var(--fill); color: var(--ink); font-size: var(--fs-meta); line-height: 1.3; overflow-wrap: normal; hyphens: auto; }
+  .hm-rowhead {
+    grid-row: 1;
+    grid-column: var(--tc);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0 0 var(--s1);
+  }
+  .hm-row-name { font-size: var(--fs-meta); }
+  .hm-cell { grid-row: var(--wk); grid-column: var(--tc); scroll-margin: 3.5rem 0 var(--s2); }
+  .hm-part { font-size: .75rem; flex-basis: 1.5rem; }
+  /* the legend fits the width */
+  .ah-scale { width: 100%; }
+  .ah-swatch { flex: 1 1 0; width: auto; min-width: 0; }
+  .ah-detail { scroll-margin-top: 3.5rem; }
+  .ah-games li { grid-template-columns: minmax(0, 1fr); }
+  .ah-game-meta { text-align: left; }
+}
+
+/* ---------- The phone summary ---------- */
+/* one line on top once the controls have scrolled away (topbar.js) */
+.summary {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 25;
+  width: 100%;
+  margin: 0;
+  padding: .6rem var(--margin);
+  border: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: var(--fs-small);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.summary:focus-visible { outline-offset: -4px; outline-color: var(--paper); }
+@media (max-width: 639px) {
+  .summary.is-away { display: block; }
+  html { scroll-padding-top: 3rem; }
+}
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap;
 }
 
 /* ---------- Footer ---------- */

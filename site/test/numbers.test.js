@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { matchCount } from "../src/lib/heatmap.js";
-import { createNumbers, numbersKey, tagCounts } from "../src/numbers.js";
+import { heatmapRows, matchCount, weekGames } from "../src/lib/heatmap.js";
+import { createNumbers, heatmapKey, numbersKey, tagCounts } from "../src/numbers.js";
 import { DEFAULT } from "../src/state.js";
 
 const game = (tags, langs, free = false) => ({ tags, langs, free });
@@ -82,5 +82,74 @@ describe("tag counts for the tag list", () => {
     expect(numbers.tagCounts(pick({ tags: [1, 2], mode: "or" }))).toBe(first);
     expect(numbers.tagCounts(pick({ group: "free" }))).not.toBe(first);
     expect(numbers.tagCounts(pick({ languages: ["schinese"] }))).not.toBe(first);
+  });
+});
+
+describe("the heatmap's numbers", () => {
+  const TODAY = "2026-10-13";
+  const dated = (appid, tags, free = false) => ({
+    appid,
+    name: `G${appid}`,
+    tags,
+    langs: ["english"],
+    free,
+    precision: "day",
+    date: "2026-10-14",
+    date_end: "2026-10-14",
+  });
+  const UP = [dated(1, [1, 2]), dated(2, [1]), dated(3, [1], true)];
+  const numbers = () => createNumbers(UP, HISTORY, TODAY);
+
+  test("are heatmapRows for the selection, with the typical week", () => {
+    const rows = numbers().heatmap(pick({ tags: [1, 2] }));
+    expect(rows).toEqual(heatmapRows(UP, TODAY, { selection: [1, 2], mode: "and", languages: ["english"], history: HISTORY }));
+    expect(rows.map((r) => r.tags)).toEqual([[1], [2], [1, 2]]);
+    expect(rows[0].typical).not.toBeNull();
+  });
+
+  test("are computed once: paid / free and the panel's measure reuse them", () => {
+    const shared = numbers();
+    const st = pick({ tags: [1] });
+    expect(shared.hasHeatmap(st)).toBe(false);
+    const rows = shared.heatmap(st);
+    for (const patch of [{ group: "free" }, { measure: "raw" }, { languages: ["english"] }]) {
+      expect(shared.hasHeatmap({ ...st, ...patch })).toBe(true);
+      expect(shared.heatmap({ ...st, ...patch })).toBe(rows);
+    }
+  });
+
+  test("a tag's own row is reused when more tags are picked", () => {
+    const shared = numbers();
+    const one = shared.heatmap(pick({ tags: [1] }));
+    const two = shared.heatmap(pick({ tags: [1, 2], mode: "or" }));
+    expect(two[0]).toBe(one[0]);
+    expect(two[2]).toEqual(heatmapRows(UP, TODAY, { selection: [1, 2], mode: "or", languages: ["english"], history: HISTORY })[2]);
+  });
+
+  test("keep the order tags were picked in (it is the order of the rows), not that of languages", () => {
+    expect(heatmapKey(pick({ tags: [2, 1] }))).not.toBe(heatmapKey(pick({ tags: [1, 2] })));
+    expect(heatmapKey(pick({ languages: ["schinese", "english"] }))).toBe(
+      heatmapKey(pick({ languages: ["english", "schinese"] })),
+    );
+    expect(numbers().heatmap(pick({ tags: [2, 1] })).map((r) => r.tags)).toEqual([[2], [1], [2, 1]]);
+  });
+
+  test("tags, mode and languages each give a new result; old ones drop out", () => {
+    const shared = numbers();
+    const base = shared.heatmap(pick({ tags: [1] }));
+    for (const patch of [{ tags: [2] }, { mode: "or" }, { languages: [] }]) {
+      expect(shared.heatmap(pick({ tags: [1], ...patch }))).not.toBe(base);
+    }
+    for (let t = 3; t < 25; t++) shared.heatmap(pick({ tags: [t] }));
+    expect(shared.hasHeatmap(pick({ tags: [1] }))).toBe(false);
+  });
+
+  test("a week's games are weekGames' list for the picked group, in its order", () => {
+    const shared = numbers();
+    const paid = shared.weekGames(pick({}), [1], "2026-10-12", false);
+    const all = weekGames(UP, TODAY, "2026-10-12", { selection: [1], mode: "and", languages: ["english"] });
+    expect(paid.map((g) => g.appid)).toEqual(all.filter((g) => !g.free).map((g) => g.appid));
+    expect(shared.weekGames(pick({ group: "free" }), [1], "2026-10-12", false).map((g) => g.appid)).toEqual([3]);
+    expect(shared.game(2).name).toBe("G2");
   });
 });
