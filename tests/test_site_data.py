@@ -130,7 +130,7 @@ def test_followers_come_from_latest_followers_csv_when_present(data, tmp_path):
 
     _, gp, _ = data
     scanned = sd.newest_followers(gp)
-    collect_gp.update_latest(gp)  # built by the collector from the same day files
+    collect_gp.build_latest(gp)  # built by the collector from the same day files
     assert sd.newest_followers(gp) == scanned == {1: 300}
     storage.write_csv(gp / "latest_followers.csv", [{"appid": 1, "followers": 310, "observed_at": "x"}],
                       collect_gp.LATEST_FIELDS)

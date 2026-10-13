@@ -115,8 +115,8 @@ def job(appid, kind="followers", since=None, priority=2):
     return cg.Job(priority=priority, order=(), kind=kind, appid=appid, since=since)
 
 
-def run(tmp_path, client, todo, state=None, budget=900):
-    return cg.run(todo, client, "KEY", state if state is not None else {}, tmp_path, NOW, budget)
+def run(tmp_path, client, todo, state=None, budget=900, **kw):
+    return cg.run(todo, client, "KEY", state if state is not None else {}, tmp_path, NOW, budget, **kw)
 
 
 def test_run_writes_points_state_and_a_run_row(tmp_path):
@@ -473,6 +473,12 @@ def test_main_exits_0_when_the_daily_ceiling_stops_the_run(tmp_path, monkeypatch
     assert cg.main(args) == 0
     monkeypatch.setattr(cg, "run", lambda *a, **k: {"stopped": "errors", "requests": 10})
     assert cg.main(args) == 1
+    seen = {}
+    monkeypatch.setattr(cg, "run", lambda *a, **k: seen.update(k) or {"stopped": "done"})
+    cg.main(args)
+    assert seen["build_latest_file"] is False
+    cg.main(args + ["--build-latest"])
+    assert seen["build_latest_file"] is True
 
 
 # -- latest followers ------------------------------------------------------------
@@ -481,10 +487,13 @@ def latest(path):
     return [(r["appid"], r["followers"], r["observed_at"]) for r in storage.read_csv(path / cg.LATEST_FILE)]
 
 
+FOLLOWER_FIELDS = ["appid", "followers", "observed_at", "fetched_at"]
+
+
 def test_latest_followers_keeps_the_newest_point_per_game(tmp_path):
     client = FakeGP({1: [page("followers", ("2026-10-20T10:00:00", 12), ("2026-10-19T10:00:00", 11))],
                      2: [page("players", ("2026-10-20T10:00:00", 5))]})
-    run(tmp_path, client, [job(1), job(2, kind="players")])
+    run(tmp_path, client, [job(1), job(2, kind="players")], build_latest_file=True)  # a new dataset: no day files
     assert latest(tmp_path) == [("1", "12", "2026-10-20T10:00:00+00:00")]  # players are not followers
     # a later run with an older point (a resumed long history) does not replace it
     client = FakeGP({1: [page("followers", ("2026-01-01T00:00:00", 3))],
@@ -494,17 +503,44 @@ def test_latest_followers_keeps_the_newest_point_per_game(tmp_path):
 
 
 def test_latest_followers_is_built_from_the_day_files_when_missing(tmp_path):
-    fields = ["appid", "followers", "observed_at", "fetched_at"]
     storage.write_csv(tmp_path / "followers" / "2026-10-12.csv.gz", [
         {"appid": 1, "followers": 50, "observed_at": "2026-10-11T00:00:00+00:00"},
         {"appid": 2, "followers": 7, "observed_at": "2026-10-11T00:00:00+00:00"},
-        {"appid": 2, "followers": "", "observed_at": "2026-10-12T00:00:00+00:00"}], fields)  # missing, not a value
+        {"appid": 2, "followers": "", "observed_at": "2026-10-12T00:00:00+00:00"}],  # missing, not a value
+        FOLLOWER_FIELDS)
     storage.write_csv(tmp_path / "followers" / "2026-10-13.csv.gz", [
         {"appid": 1, "followers": 40, "observed_at": "2026-09-01T00:00:00+00:00"},  # older point, later file
-        {"appid": 2, "followers": 9, "observed_at": "2026-10-12T12:00:00+00:00"}], fields)
-    run(tmp_path, FakeGP({}), [], budget=0)  # a run with nothing to do still builds it
+        {"appid": 2, "followers": 9, "observed_at": "2026-10-12T12:00:00+00:00"}], FOLLOWER_FIELDS)
+    run(tmp_path, FakeGP({}), [], budget=0, build_latest_file=True)  # a run with nothing to do still builds it
     assert latest(tmp_path) == [("1", "50", "2026-10-11T00:00:00+00:00"), ("2", "9", "2026-10-12T12:00:00+00:00")]
     # once it exists, the day files are not read again
     (tmp_path / "followers" / "2026-10-12.csv.gz").unlink()
-    run(tmp_path, FakeGP({3: [page("followers", ("2026-10-20T10:00:00", 1))]}), [job(3)])
+    run(tmp_path, FakeGP({3: [page("followers", ("2026-10-20T10:00:00", 1))]}), [job(3)], build_latest_file=True)
     assert [a for a, _, _ in latest(tmp_path)] == ["1", "2", "3"]
+
+
+def test_latest_followers_is_not_started_without_the_flag(tmp_path, caplog):
+    # a local run with only some day files must not start a file that would stay wrong
+    storage.write_csv(tmp_path / "followers" / "2026-10-12.csv.gz", [
+        {"appid": 1, "followers": 50, "observed_at": "2026-10-11T00:00:00+00:00"}], FOLLOWER_FIELDS)
+    run(tmp_path, FakeGP({3: [page("followers", ("2026-10-20T10:00:00", 1))]}), [job(3)])
+    assert not (tmp_path / cg.LATEST_FILE).exists()
+    assert cg.LATEST_FILE in caplog.text
+    assert (tmp_path / "followers" / f"{NOW.date()}.csv.gz").exists()  # the points themselves are saved
+
+
+def test_latest_followers_breaks_ties_like_the_site_scan(tmp_path):
+    from analysis import site_data
+
+    same = "2026-10-11T00:00:00+00:00"
+    storage.write_csv(tmp_path / "followers" / "2026-10-12.csv.gz",
+                      [{"appid": 1, "followers": 50, "observed_at": same}], FOLLOWER_FIELDS)
+    storage.write_csv(tmp_path / "followers" / "2026-10-13.csv.gz",
+                      [{"appid": 1, "followers": 52, "observed_at": same}], FOLLOWER_FIELDS)  # fetched again
+    scanned = site_data.newest_followers(tmp_path)
+    cg.build_latest(tmp_path)
+    assert latest(tmp_path) == [("1", "52", same)]
+    assert scanned == site_data.newest_followers(tmp_path) == {1: 52}   # the later fetch wins in both
+    # a run fetching the same point again replaces it too
+    cg.update_latest(tmp_path, [{"appid": 1, "followers": 53, "observed_at": same}])
+    assert latest(tmp_path) == [("1", "53", same)]

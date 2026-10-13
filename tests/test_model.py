@@ -271,28 +271,46 @@ def test_hurdle_leaves_out_a_failed_count_part(monkeypatch):
 def test_free_model_is_read_once_95_percent_are_recounted():
     pd = pytest.importorskip("pandas")
 
-    def frame(recounted, n=100, zeros=10):
-        return pd.DataFrame({"y": [0] * zeros + [5] * (n - zeros),
-                             "purchase": ["all"] * recounted + ["steam"] * (n - recounted)})
+    def frame(n=100, zeros=10):
+        return pd.DataFrame({"y": [0] * zeros + [5] * (n - zeros)})
 
     def caveats(g, free=True):
         return M.group_caveats({**g, "hurdle": {"count_given_some": {}}, "checks": {"placebo": PLACEBO_NOISE}}, free)
 
-    before = M.group_status(frame(94), free=True)
+    before = M.group_status(frame(), True, (100, 94))
     assert (before["status"], before["recounted_share"], before["recounted"]) == ("unreliable", 0.94, False)
+    assert before["recount"] == {"launches": 100, "recounted": 94}
     assert caveats(before) == [M.FREE_CAVEAT]
-    after = M.group_status(frame(95), free=True)
+    after = M.group_status(frame(), True, (100, 95))
     assert (after["status"], after["recounted_share"], after["recounted"]) == ("ok", 0.95, True)
     assert caveats(after) == []
-    # a file from before the recount has no reviews_purchase column: not recounted
-    old = M.group_status(frame(0).drop(columns="purchase"), free=True)
-    assert (old["status"], old["recounted_share"]) == ("unreliable", 0.0)
+    # no free launches at all: not recounted
+    assert M.group_status(frame(), True)["status"] == "unreliable"
     # recounted, but still mostly zeros: unreliable, with its own caveat
-    zeros = M.group_status(frame(100, zeros=85), free=True)
+    zeros = M.group_status(frame(zeros=85), True, (100, 100))
     assert zeros["status"] == "unreliable" and caveats(zeros) == [
         "85% of these launches have no reviews in their first 30 days, too many for the model to be read."]
     # paid games do not depend on the recount
-    assert M.group_status(frame(0), free=False) == {"status": "ok", "zero_share": 0.1}
+    assert M.group_status(frame(), False) == {"status": "ok", "zero_share": 0.1}
+
+
+def test_free_model_is_not_ready_while_a_recount_runs(tmp_path):
+    # the recount has started: every free row is "all", but only every 4th has its count back
+    make_data(tmp_path, n=800)
+    rows = storage.read_csv(tmp_path / "history" / "games.csv")
+    free = [r for r in rows if r["is_free"] == "1"]
+    for i, r in enumerate(free):
+        r["reviews_purchase"] = "all"
+        if i % 4:
+            r.update(reviews_30d="", reviews_30d_source="")
+    storage.write_csv(tmp_path / "history" / "games.csv", rows, FIELDS)
+    frames, info = M.build_frames(tmp_path, tmp_path / "events.yaml", tmp_path / "gp")
+    s = frames["free"]
+    assert (s["purchase"] == "all").all()          # the fitted rows alone would read 100% recounted
+    launches, done = info["free_recount"]
+    assert done == len(s) and launches > 3 * done
+    status = M.group_status(s, True, info["free_recount"])
+    assert status["status"] == "unreliable" and not status["recounted"] and status["recounted_share"] < 0.3
 
 
 def test_history_reads_reviews_purchase(tmp_path):

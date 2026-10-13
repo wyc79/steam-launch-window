@@ -1,3 +1,4 @@
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -12,6 +13,7 @@ class FakeApi:
     def __init__(self, tmp_path, remote: dict[str, str], sha="abc123"):
         self.remote, self.sha, self.dir = remote, sha, tmp_path / "hfcache"
         self.broken = None
+        self.listing_error = None
         self.commits = []
 
     def repo_info(self, repo_id, repo_type=None):
@@ -30,6 +32,8 @@ class FakeApi:
 
     def list_repo_files(self, repo_id, repo_type=None, revision=None):
         assert revision == self.sha
+        if self.listing_error:
+            raise self.listing_error
         return list(self.remote)
 
     def create_commit(self, repo_id, operations, *, commit_message, repo_type=None, parent_commit=None):
@@ -136,10 +140,37 @@ def test_fetch_fails_when_nothing_matches(tmp_path):
         hf_sync.fetch(FakeApi(tmp_path, {"gp/state.csv": "s"}), "me/data", "gp/followers/*.csv.gz", tmp_path / "x")
 
 
+def test_fetch_allow_none_accepts_no_match_but_not_an_error(tmp_path):
+    api = FakeApi(tmp_path, {"gp/state.csv": "s"})
+    assert hf_sync.fetch(api, "me/data", "gp/followers/*.csv.gz", tmp_path / "x", allow_none=True) == []
+    api.listing_error = ConnectionError("network down")
+    with pytest.raises(ConnectionError):
+        hf_sync.fetch(api, "me/data", "gp/followers/*.csv.gz", tmp_path / "x", allow_none=True)
+
+
+def test_a_killed_copy_leaves_no_half_written_file_for_push(tmp_path, monkeypatch):
+    def killed(src, dst):
+        Path(dst).write_text("half")
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(hf_sync.shutil, "copyfile", killed)
+    dest = tmp_path / "hf"
+    with pytest.raises(KeyboardInterrupt):
+        hf_sync.pull(FakeApi(tmp_path, {"gp/state.csv": "s"}), "me/data", [], dest, required=["gp/state.csv"])
+    assert not (dest / "gp/state.csv").exists() and (dest / "gp/state.csv.tmp").exists()
+    (dest / hf_sync.PARENT_FILE).write_text("abc123")
+    api = FakeApi(tmp_path, {})
+    hf_sync.push(api, "me/data", dest, "msg")
+    assert api.commits == []
+
+
 def test_cli_fetch_needs_no_token(tmp_path, monkeypatch):
     monkeypatch.delenv("HF_TOKEN", raising=False)
     seen = {}
-    monkeypatch.setattr(hf_sync, "fetch", lambda api, repo, pattern, dest, revision: seen.update(
-        repo=repo, pattern=pattern, revision=revision))
+    monkeypatch.setattr(hf_sync, "fetch", lambda api, repo, pattern, dest, revision, allow_none: seen.update(
+        repo=repo, pattern=pattern, revision=revision, allow_none=allow_none))
     assert hf_sync.main(["fetch", "--repo", "me/data", "--dest", str(tmp_path), "--glob", "gp/followers/*"]) == 0
-    assert seen == {"repo": "me/data", "pattern": "gp/followers/*", "revision": None}
+    assert seen == {"repo": "me/data", "pattern": "gp/followers/*", "revision": None, "allow_none": False}
+    assert hf_sync.main(["fetch", "--repo", "me/data", "--dest", str(tmp_path), "--glob", "gp/followers/*",
+                         "--allow-none"]) == 0
+    assert seen["allow_none"] is True

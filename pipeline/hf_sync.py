@@ -14,7 +14,9 @@ without .hf_parent. pull refuses a folder that already has files. Unchanged
 files are left out of the commit by huggingface_hub.
 fetch downloads every file matching a pattern (at --revision, default the
 current one) into a folder, keeping files already there; it fails when nothing
-matches. pull and push need HF_TOKEN; fetch reads a public dataset without one.
+matches, unless --allow-none. pull and push need HF_TOKEN; fetch reads a public
+dataset without one. Downloads are copied in through a .tmp file, so a killed
+run leaves no half-written file for push to send.
 """
 
 from __future__ import annotations
@@ -48,26 +50,34 @@ def pull(api, repo_id: str, names: list[str], dest: Path, required: list[str] = 
                 raise SystemExit(f"{name} is not in {repo_id}: refusing to start from nothing") from None
             log.info("%s: not in %s yet", name, repo_id)
             continue
-        target = dest / name
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(path, target)
+        _place(path, dest / name)
     (dest / PARENT_FILE).write_text(sha)
     return sha
 
 
-def fetch(api, repo_id: str, pattern: str, dest: Path, revision: str | None = None) -> list[str]:
+def _place(path: str, target: Path) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    tmp = target.with_name(target.name + ".tmp")  # push skips .tmp files
+    shutil.copyfile(path, tmp)
+    tmp.replace(target)
+
+
+def fetch(api, repo_id: str, pattern: str, dest: Path, revision: str | None = None,
+          allow_none: bool = False) -> list[str]:
+    """Download every file matching `pattern` (fnmatch, so `*` also matches `/`)."""
     revision = revision or api.repo_info(repo_id, repo_type=REPO_TYPE).sha
     names = sorted(n for n in api.list_repo_files(repo_id, repo_type=REPO_TYPE, revision=revision)
                    if fnmatch.fnmatchcase(n, pattern))
     if not names:
+        if allow_none:
+            log.info("no file in %s matches %s yet", repo_id, pattern)
+            return []
         raise SystemExit(f"no file in {repo_id} matches {pattern}")
     for name in names:
         target = dest / name
         if target.exists():  # pulled already, at the same revision
             continue
-        path = api.hf_hub_download(repo_id, name, repo_type=REPO_TYPE, revision=revision)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(path, target)
+        _place(api.hf_hub_download(repo_id, name, repo_type=REPO_TYPE, revision=revision), target)
     log.info("fetched %d files matching %s", len(names), pattern)
     return names
 
@@ -104,8 +114,9 @@ def main(argv=None) -> int:
     fe = sub.add_parser("fetch")
     fe.add_argument("--repo", required=True)
     fe.add_argument("--dest", type=Path, required=True)
-    fe.add_argument("--glob", required=True, help="e.g. gp/followers/*.csv.gz")
+    fe.add_argument("--glob", required=True, help="e.g. gp/followers/*.csv.gz (* also matches /)")
     fe.add_argument("--revision", default=None, help="default: the current revision")
+    fe.add_argument("--allow-none", action="store_true", help="exit 0 when no file matches (a new dataset)")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     token = os.environ.get("HF_TOKEN")
@@ -117,7 +128,7 @@ def main(argv=None) -> int:
     if args.cmd == "pull":
         pull(api, args.repo, args.file, args.dest, args.require)
     elif args.cmd == "fetch":
-        fetch(api, args.repo, args.glob, args.dest, args.revision)
+        fetch(api, args.repo, args.glob, args.dest, args.revision, args.allow_none)
     else:
         push(api, args.repo, args.src, args.message)
     return 0

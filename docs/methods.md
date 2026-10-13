@@ -150,8 +150,13 @@ games.
   launches show 0 reviews in their first 30 days although they do have reviews.
   The free model is fitted but marked unreliable until free games are recounted
   with all reviews. The model checks this in the data: it reads the free model
-  once at least 95% of free launches in the sample have `reviews_purchase=all`
-  (`recounted_share` in `model.json`).
+  once at least 95% of free launches in the sample period are recounted
+  (`recounted_share` in `model.json`). A launch counts as recounted when it has
+  `reviews_purchase=all` and a 30-day count again. Launches still waiting for
+  their count stay in the total. A recount marks every free row `all` when it
+  starts and blanks the counts it will redo, so the mark alone would read 100% at
+  once. The free model also stays unreliable while more than 80% of its launches
+  have no reviews.
 - **Today's view of the past:** price, demo, tags and Early Access state are
   today's, not launch day's. Games delisted before we started collecting are
   missing, so older years look a bit better than they were.

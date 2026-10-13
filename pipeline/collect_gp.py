@@ -31,8 +31,9 @@ Writes (under --gp-dir; the daily job syncs it with gp/ in the public Hugging Fa
   followers/YYYY-MM-DD.csv.gz  points fetched that UTC day: appid, followers, observed_at, fetched_at
   players/YYYY-MM-DD.csv.gz    same, with players
   latest_followers.csv         the newest follower point per game (by observed_at): appid,
-                               followers, observed_at; updated with each run's points, and
-                               built from every followers/*.csv.gz when it is missing
+                               followers, observed_at; updated with each run's points. When it
+                               is missing, --build-latest builds it from every followers/*.csv.gz
+                               (all of them must be in --gp-dir); without the flag it is not kept
   state.csv                    per (appid, kind): see below
   runs.csv                     one row per run: requests, results, why it stopped
 state.csv columns: last_pulled (last answer from the API), last_tried (last attempt,
@@ -237,7 +238,9 @@ def _save_points(gp_dir: Path, day: str, points: dict[str, list[dict]]) -> None:
 
 
 def _keep_newest(latest: dict[int, dict], rows) -> None:
-    """Merge follower points into {appid: row}; a later point (or a later fetch of the same one) wins."""
+    """Merge follower points into {appid: row}. A later point wins; on an equal observed_at
+    the row merged last wins (a later fetch of the same point). analysis/site_data.py's
+    scan of the day files uses the same rule."""
     for r in rows:
         if r["followers"] in (None, ""):
             continue
@@ -246,21 +249,27 @@ def _keep_newest(latest: dict[int, dict], rows) -> None:
             latest[appid] = {"appid": appid, "followers": r["followers"], "observed_at": r["observed_at"]}
 
 
-def latest_followers(gp_dir: Path) -> dict[int, dict]:
-    """latest_followers.csv as {appid: row}, or built from every followers/*.csv.gz when it is missing."""
-    path = gp_dir / LATEST_FILE
-    if path.exists():
-        return {int(r["appid"]): r for r in storage.read_csv(path)}
+def _write_latest(gp_dir: Path, latest: dict[int, dict]) -> None:
+    storage.write_csv(gp_dir / LATEST_FILE, [latest[k] for k in sorted(latest)], LATEST_FIELDS)
+
+
+def build_latest(gp_dir: Path) -> None:
+    """latest_followers.csv from every followers/*.csv.gz, oldest day first. Only right
+    when all of them are here: a file built from some would stay wrong."""
     latest: dict[int, dict] = {}
     for f in sorted((gp_dir / "followers").glob("*.csv.gz")):
         _keep_newest(latest, storage.read_csv(f))
-    return latest
+    _write_latest(gp_dir, latest)
 
 
-def update_latest(gp_dir: Path, rows=()) -> None:
-    latest = latest_followers(gp_dir)
+def update_latest(gp_dir: Path, rows) -> None:
+    """Merge a run's follower points into latest_followers.csv, if it exists."""
+    path = gp_dir / LATEST_FILE
+    if not path.exists():
+        return
+    latest = {int(r["appid"]): r for r in storage.read_csv(path)}
     _keep_newest(latest, rows)
-    storage.write_csv(gp_dir / LATEST_FILE, [latest[k] for k in sorted(latest)], LATEST_FIELDS)
+    _write_latest(gp_dir, latest)
 
 
 def used_today(gp_dir: Path, day: str) -> int:
@@ -310,7 +319,8 @@ def failed_row(job: Job, old: dict, stamp: str) -> dict:
 # -- running -------------------------------------------------------------------
 
 def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datetime, budget: int, *,
-        policy: Policy = Policy(), checkpoint: int = 100, max_consecutive_errors: int = 10) -> dict:
+        policy: Policy = Policy(), checkpoint: int = 100, max_consecutive_errors: int = 10,
+        build_latest_file: bool = False) -> dict:
     day = now.date().isoformat()
     allowed = budget - used_today(gp_dir, day)
     if rate_limited_today(gp_dir, day):
@@ -322,7 +332,11 @@ def run(todo: list[Job], client, key: str, state: dict, gp_dir: Path, now: datet
     stats = collections.Counter()
     stopped, consecutive = "running", 0  # what a killed run leaves in runs.csv
     if not (gp_dir / LATEST_FILE).exists():
-        update_latest(gp_dir)  # first run with the file: build it from the day files
+        if build_latest_file:
+            build_latest(gp_dir)
+        else:
+            log.warning("no %s in %s: not kept this run (--build-latest builds it, with every followers "
+                        "file in place)", LATEST_FILE, gp_dir)
 
     def save():
         _save_points(gp_dir, day, points)
@@ -396,6 +410,8 @@ def main(argv=None) -> int:
                    help="requests allowed per UTC day, including earlier runs that day")
     p.add_argument("--gp-interval", type=float, default=1.2, help=f"seconds between requests to {gp.HOST}")
     p.add_argument("--dry-run", action="store_true", help="print the plan and exit")
+    p.add_argument("--build-latest", action="store_true",
+                   help=f"build a missing {LATEST_FILE} from followers/*.csv.gz; only with every day's file here")
     args = p.parse_args(argv)
     _, today = setup(args)
     now = datetime.now(timezone.utc)
@@ -416,7 +432,7 @@ def main(argv=None) -> int:
         raise SystemExit("set GP_API_KEY to fetch, or use --dry-run")
     # A single 429 can be passing (seen 2026-10-11), so the client retries twice before giving up.
     client = Client(host_intervals={gp.HOST: args.gp_interval}, host_max_retries={gp.HOST: 2})
-    stats = run(todo, client, key, state, args.gp_dir, now, args.budget)
+    stats = run(todo, client, key, state, args.gp_dir, now, args.budget, build_latest_file=args.build_latest)
     # Hitting the daily ceiling is an expected stop (progress is saved, the rest waits for
     # tomorrow), not a failure; errors and interruptions still fail the step.
     return 0 if stats["stopped"] in ("done", "budget", "rate_limited") else 1

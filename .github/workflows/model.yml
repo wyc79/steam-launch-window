@@ -14,7 +14,10 @@ name: model
 # Off by default. Needs:
 #   variable MODEL_RUN=on        to let the history run start the model
 #   variable HF_DATASET_REPO     the public dataset with gp/followers/
-# A manual run (Run workflow button) always runs it.
+# A manual run (Run workflow button) always runs it. Run from another branch, it
+# fits that branch's code but does not commit (the commit step is main only).
+# While MODEL_RUN is off, each history run still starts this workflow: the job is
+# skipped, but the run waits its turn in the data-branch queue like any other.
 
 on:
   workflow_run:
@@ -57,4 +60,5 @@ jobs:
       - name: Fit the model
         run: python -m analysis.model --data-dir _data --gp-dir "$RUNNER_TEMP/hf/gp" --out _data/site
       - name: Commit model.json
+        if: github.ref == 'refs/heads/main'  # a test run from a feature branch must not reach the data branch
         run: scripts/commit_data.sh "model $(date -u +%F)"

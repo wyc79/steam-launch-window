@@ -66,7 +66,8 @@ def newest_followers(gp_dir: Path | None) -> dict[int, int]:
     for f in sorted((gp_dir / "followers").glob("*.csv.gz")):
         for r in storage.read_csv(f):
             appid, at = int(r["appid"]), r["observed_at"]
-            if r["followers"] and (appid not in best or at > best[appid][0]):
+            # on an equal observed_at the later file wins, as in collect_gp's latest_followers.csv
+            if r["followers"] and (appid not in best or at >= best[appid][0]):
                 best[appid] = (at, int(r["followers"]))
     return {appid: v for appid, (_, v) in best.items()}
 

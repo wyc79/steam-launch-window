@@ -113,16 +113,19 @@ Two small pipeline additions (step 1, built):
 - **Latest followers:** `collect_gp` also keeps `gp/latest_followers.csv` (the
   newest count per game), so the daily build does not download every day's file.
   When the file is missing, the daily job downloads every followers file once and
-  the collector builds it from them. `analysis.site_data` reads it when present.
+  the collector builds it from them (`--build-latest`; other runs never start a
+  partial file). `analysis.site_data` reads it when present.
 - **Model output on the data branch:** the `model` workflow runs after each
   `collect history` run (switch `MODEL_RUN=on`) and writes `site/model.json` to
   the data branch, so the daily site build reuses it instead of fitting the model
   (about 5 minutes) every day. It downloads the follower files from the public
   dataset for the follower control.
 - **Free model status:** `model.json` marks the free model `ok` once at least 95%
-  of free launches in the sample are recounted (`reviews_purchase=all`, field
-  `recounted_share`); until then it stays `unreliable` with its caveat. The site
-  shows "not ready yet" from that status, not from a constant.
+  of free launches in the sample period are recounted (`reviews_purchase=all` and
+  a 30-day count, field `recounted_share`; launches still waiting for their count
+  stay in the total) and at most 80% have no reviews; until then it stays
+  `unreliable` with its caveat. The site shows "not ready yet" from that status,
+  not from a constant.
 
 ## Deploy
 
