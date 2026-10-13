@@ -249,10 +249,12 @@ describe("the niche trend line", () => {
       null,
     ];
     expect(trendLines(rows, trends, "paid")).toEqual([
-      "Cozy: 2.0x its share of past launches among upcoming games.",
-      "Platformer: 0.69x its share of past launches among upcoming games.",
+      "Cozy is 2.0x as large a share of upcoming games (exact dates) as of last year's launches.",
+      "Platformer is 0.69x as large a share of upcoming games (exact dates) as of last year's launches.",
     ]);
-    expect(trendLines(rows, trends, "free")).toEqual(["Card Game: 3.0x its share of past launches among upcoming games."]);
+    expect(trendLines(rows, trends, "free")).toEqual([
+      "Card Game is 3.0x as large a share of upcoming games (exact dates) as of last year's launches.",
+    ]);
   });
 
   test("says nothing for all games or when nothing is clear", () => {

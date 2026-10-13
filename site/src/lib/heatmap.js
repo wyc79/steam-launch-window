@@ -16,8 +16,8 @@ export const RELATIVE_WEEKS = 13; // the relative busy measure compares a week w
 export const TYPICAL_WEEKS = 52; // the heatmap's normalized view compares with launches over this many weeks
 export const LATER_AFTER = 2; // year-only dates more than this many years ahead ("2099") are summed as "later"
 export const TREND_MIN_EXACT = 10; // the niche trend needs this many niche games with exact dates
-export const TREND_RATIO = 1.25; // and a share at least this many times the past one (or at most its inverse)
-export const TREND_Z = 1.959964; // and a two-proportion z-test at p < 0.05, two-sided
+export const TREND_RATIO = 1.45; // and a share at least this many times the past one, or at most its inverse (trend_calibration.py)
+export const TREND_Z = 1.959964; // and a pooled two-proportion z at least this large
 export const MODES = ["and", "or"];
 export const MEASURES = ["relative", "raw"];
 
@@ -160,44 +160,46 @@ export function heatmapRows(games, today, { selection = [], mode = "and", langua
 
 const sum = (cells, f) => cells.reduce((a, c) => a + f(c), 0);
 
+// The niche trend from four counts: niche and all games with exact dates in the
+// upcoming weeks, niche and all launches in the past year. See heatmap.py trend_test.
+export function trendTest(exact, exactAll, past, pastAll) {
+  const shareUp = exactAll ? exact / exactAll : null;
+  const sharePast = pastAll ? past / pastAll : null;
+  const ratio = shareUp !== null && sharePast ? shareUp / sharePast : null;
+  let z = null;
+  if (exactAll && pastAll) {
+    const pooled = (exact + past) / (exactAll + pastAll);
+    const se = Math.sqrt(pooled * (1 - pooled) * (1 / exactAll + 1 / pastAll));
+    z = se ? (shareUp - sharePast) / se : 0;
+  }
+  const clear =
+    ratio !== null &&
+    z !== null &&
+    exact >= TREND_MIN_EXACT &&
+    past >= TYPICAL_WEEKS &&
+    (ratio >= TREND_RATIO || ratio <= 1 / TREND_RATIO) &&
+    Math.abs(z) >= TREND_Z;
+  return { ratio, exact, exact_all: exactAll, past, past_all: pastAll, z, clear };
+}
+
 // The niche trend from two heatmaps (with `history`) for the same languages and
 // today: the niche's and all games'. See nicheTrend.
 export function trendFrom(niche, everyone) {
   return Object.fromEntries(
-    GROUPS.map((g) => {
-      const up = sum(niche[g], (c) => c.exact + c.spread);
-      const upAll = sum(everyone[g], (c) => c.exact + c.spread);
-      const exact = sum(niche[g], (c) => c.exact);
-      const exactAll = sum(everyone[g], (c) => c.exact);
-      const past = Math.round(niche.typical[g] * TYPICAL_WEEKS);
-      const pastAll = Math.round(everyone.typical[g] * TYPICAL_WEEKS);
-      const shareUp = upAll ? up / upAll : null;
-      const sharePast = pastAll ? past / pastAll : null;
-      const ratio = shareUp !== null && sharePast ? shareUp / sharePast : null;
-      let z = null;
-      if (exactAll && pastAll) {
-        const pooled = (exact + past) / (exactAll + pastAll);
-        const se = Math.sqrt(pooled * (1 - pooled) * (1 / exactAll + 1 / pastAll));
-        z = se ? (exact / exactAll - past / pastAll) / se : 0;
-      }
-      const clear =
-        ratio !== null &&
-        z !== null &&
-        exact >= TREND_MIN_EXACT &&
-        past >= TYPICAL_WEEKS &&
-        (ratio >= TREND_RATIO || ratio <= 1 / TREND_RATIO) &&
-        Math.abs(z) >= TREND_Z &&
-        z > 0 === ratio > 1;
-      return [
-        g,
-        { ratio, upcoming: up, upcoming_all: upAll, exact, exact_all: exactAll, past, past_all: pastAll, z, clear },
-      ];
-    }),
+    GROUPS.map((g) => [
+      g,
+      trendTest(
+        sum(niche[g], (c) => c.exact),
+        sum(everyone[g], (c) => c.exact),
+        Math.round(niche.typical[g] * TYPICAL_WEEKS),
+        Math.round(everyone.typical[g] * TYPICAL_WEEKS),
+      ),
+    ]),
   );
 }
 
-// Per group, the niche's share of upcoming games (exact and spread dates in the
-// heatmap's weeks) over its share of the launches in the last TYPICAL_WEEKS, with
+// Per group, the niche's share of upcoming games (exact dates in the heatmap's
+// weeks) over its share of the launches in the last TYPICAL_WEEKS, with
 // `clear` when the site should say so. No tags: null. See heatmap.py niche_trend.
 export function nicheTrend(games, history, today, { selection = [], mode = "and", languages = [] } = {}) {
   if (!selection.length) return null;

@@ -60,10 +60,10 @@ often fake event dates on random weeks gave a result at least that far from
 | Launch... | Reviews, compared with otherwise similar launches | By chance: effect alone; p | Games |
 |---|---|---|---|
 | with 10 more launches in its niche and price tier that week | 9% fewer (6% to 11%) | | 67,791 (median 15 such launches) |
-| during a seasonal sale | 37% fewer (25% to 47%) | 0.75; 0.001 (19 sales) | 5,310 |
+| during a seasonal sale | 37% fewer (24% to 47%) | 0.75; 0.001 (19 sales) | 5,310 |
 | in the 7 days before a sale | 15% fewer (32% fewer to 6% more) | | 5,337 |
 | during Next Fest | 19% more (19% fewer to 75% more) | 1.13; 0.34 (14 fests) | 3,047 |
-| with a demo out during the last Next Fest | 71% more (36% to 114%) | | 10,394 |
+| with a demo out by the end of the last Next Fest, against a demo that came out after it | 71% more (36% to 115%) | | 10,394 |
 | during a themed fest for one of its tags | 45% fewer (35% to 54%) | 0.56; 0.04 (69 fests) | 1,008 |
 | within 3 days of a big paid release | no clear difference (11% fewer to 18% more) | | 21,375 |
 | during China's Spring Festival holiday, without Simplified Chinese | 37% fewer (14% to 54%) | 0.70; 0.08 (5 holidays, all games) | 877 |
@@ -75,6 +75,36 @@ often fake event dates on random weeks gave a result at least that far from
 | in Early Access | 18% more (0% to 38% more) | | 10,962 |
 
 Reviews x price (the revenue proxy) gives the same picture.
+
+Percentages here and on the site come from the rate ratios in `model.json`, rounded
+half up to whole percents (so 1 - 0.545 = 0.455 is 46%).
+
+**Demos.** The model has two demo terms: a demo before launch, and a demo out by the
+end of the last Next Fest before launch. They add up: against no demo, a demo that
+came out after the last Next Fest went with 40% fewer reviews (28% to 51%), and one
+out by its end with about as many (the product of the two, 1.02). `model.json` now
+also holds that combination with its own range (`demo_with_fest`, from the fit's
+clustered covariance); until the next model run writes it, the site uses a cautious
+range that treats the two terms as independent.
+
+## What we found (free games)
+
+Fitted on 2026-10-13, after every free launch was recounted with all reviews
+(11,989 launches, status `ok`; 3.8% have no review in 30 days). The site shows:
+
+- Seasonal sales, themed fests: no clear difference.
+- A demo out by the end of the last Next Fest, against one that came out after it:
+  95% more reviews (9% to 247%). A demo that came out after it, against no demo:
+  62% fewer (37% to 77%).
+- Weekly competition: each extra same-niche launch that week went with 4.9% fewer
+  reviews; with the placebo in the same fit, 3.9% (2.2% to 5.7%), still clear, so
+  part of it is general crowding.
+- US Thanksgiving to Cyber Monday 52% fewer (35% to 64%), Christmas to New Year 47%
+  fewer (25% to 63%), but the chance test does not confirm them (p 0.055 and 0.094,
+  4 years each), and most of those weeks fell in a Steam sale. The site shows them
+  as unconfirmed, not as advice.
+- China's holidays: no clear pattern (the chance test gives 1.58, p 0.09, and 1.08,
+  p 0.82).
 
 **Price.** At the same niche price, a game that costs twice as much got 81% more
 reviews (69% to 94%). That is not pricing advice: it shows which games charge
@@ -146,10 +176,10 @@ games.
   zeros, gives 0.55, 0.59 and 0.45). Games with Simplified Chinese launched
   during Spring Festival are the exception (above). The planned second part, a
   zero-truncated count model, has no stable fit on this data and is left out.
-- **Free games:** our review counts only include Steam purchases, so most free
-  launches show 0 reviews in their first 30 days although they do have reviews.
-  The free model is not fitted, and is marked unreliable, until free games are
-  recounted with all reviews. The model checks this in the data: it fits and reads
+- **Free games:** Steam purchase reviews alone left most free launches at 0 reviews
+  in their first 30 days, so free games were recounted with all reviews (done
+  2026-10-13; the free model is now fitted, status `ok`). The model checks this in
+  the data: it fits and reads
   the free model once at least 95% of the free launches the sample would include,
   with or without a count, are recounted (`recounted_share` in `model.json`). A
   launch counts as recounted when it has `reviews_purchase=all` and a 30-day
@@ -175,10 +205,12 @@ about timing.
 
 ## The niche trend (Competition ahead)
 
-A niche's share of upcoming games (exact and month or quarter dates in the
-next 13 weeks, counted as the heatmap counts them) divided by its share of the
-launches in the last 52 weeks, for the same languages and paid or free. The site
-names it only when it is clearly different: at least 10 niche games with exact
-dates, at least one niche launch a week last year, a ratio of 1.25 or more (or
-0.8 or less), and a two-proportion test on exact-date counts at p < 0.05.
-Announced games are not launches: not all will launch.
+A niche's share of upcoming games with exact dates in the next 13 weeks divided by
+its share of the launches in the last 52 weeks, for the same languages and paid or
+free. The site names it only when it is clearly different: at least 10 niche games
+with exact dates, at least one niche launch a week last year, a ratio of 1.45 or
+more (or 0.69 or less), and a pooled two-proportion z of at least 1.96. The cutoff
+comes from real launches (`analysis/trend_calibration.py`): with each 13 weeks of
+launches since 2023 in place of the upcoming games, the rule flags 4.4% of
+tag-quarters (paid 3.5%, free 6.0%), where nothing was announced. Announced games
+are not launches: not all will launch.

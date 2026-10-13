@@ -18,8 +18,9 @@ const reviews = (x, s) => formatNumber(Math.round(x), s);
 
 // panel: historyPanel's result. Returns { shown: false, text } when the panel is
 // hidden, else { shown: true, intro, rows, cuts, read }: one row per part with its
-// text and its bars as shares of the largest 90th percentile.
-export function panelView(panel, group, s = en) {
+// text and its bars as shares of the largest 90th percentile. tags: the picked tags
+// (none: the intro speaks of all games, not "games like yours").
+export function panelView(panel, group, s = en, { tags = [] } = {}) {
   const t = s.history;
   const g = panel[group];
   if (!g.shown) return { shown: false, text: g.games ? t.tooFew(formatNumber(MIN_GROUP, s)) : t.none };
@@ -42,7 +43,9 @@ export function panelView(panel, group, s = en) {
   const busy = formatBusy(g.parts.normal.busy_max, measure, s);
   return {
     shown: true,
-    intro: t.panelFor(s.bar[group], formatNumber(g.games, s)),
+    intro: tags.length
+      ? t.panelFor(s.bar[group], formatNumber(g.games, s))
+      : t.panelForAll(s.season[group], formatNumber(g.games, s)),
     rows,
     cuts: measure === "raw" ? t.cutsRaw(quiet, busy) : t.cutsRelative(quiet, busy),
     read: t.read,

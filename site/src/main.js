@@ -20,7 +20,7 @@ document.documentElement.lang = s.lang;
 const bar = topbar(s, selection);
 const parts = sections(s);
 const foot = footer(s);
-const history = historySection(s, parts.bodies.history, selection);
+const history = historySection(s, parts.bodies.history);
 const season = seasonSection(s, parts.bodies.season);
 const ahead = aheadSection(s, parts.bodies.ahead);
 

@@ -1,131 +1,167 @@
-// The launch timing lines from model.json: which lines show for paid and free
-// games, the "not ready" line, China's holidays only with Simplified Chinese, and
-// the words for a rate ratio and its range.
+// The launch timing lines from model.json: one rule for advice (the range leaves out
+// 1.0 and the chance test agrees), unconfirmed lines, "not ready", competition
+// described from the fit with the placebo, China's holidays as one line without
+// numbers, the demo lines, the headline fit, and the rounding of percentages.
 
 import { describe, expect, test } from "vitest";
 import { en } from "../src/strings.js";
-import { change, clear, combine, crowding, ready, timingLines } from "../src/timing.js";
+import { change, clear, combine, crowding, percentOf, ready, timingLines } from "../src/timing.js";
 
 const e = (key, rate_ratio, low, high, extra = {}) => ({ key, rate_ratio, low, high, p: 0.001, ...extra });
 const placebo = (alone, real, together) => ({
-  measure: "comp_tier_placebo",
+  measure: `${real.key}_placebo`,
   placebo: { effects: [alone] },
   real_same_sample: { effects: [real] },
   together: { effects: together },
+});
+const chance = (p_value, ratio_alone, windows) => ({ p_value, ratio_alone, windows });
+const holidays = (with_schinese, overlapped = true) => ({
+  cn_spring: [1, 2, 3, 4, 5].map((y) => ({ name: `Spring ${y}`, overlaps: overlapped ? ["a sale"] : [] })),
+  cn_national: [1, 2, 3, 4].map((y) => ({ name: `National ${y}`, overlaps: ["a fest"] })),
+  with_schinese,
 });
 
 // numbers from the 2026-10-13 model run
 const PAID = {
   status: "ok",
+  headline: "reviews",
   competition_measure: "comp_tier",
   reviews: {
     effects: [
       e("comp_tier", 0.991, 0.9879, 0.9941),
-      e("sale", 0.6343, 0.5326, 0.7553, { windows: 19 }),
+      e("sale", 0.6343, 0.5326, 0.7553),
       e("demo_last_fest", 1.71, 1.363, 2.145),
-      e("themed_fest", 0.5476, 0.4618, 0.6495, { windows: 69 }),
-      e("us_thanksgiving", 1.375, 0.7451, 2.539, { windows: 4 }),
-      e("xmas_newyear", 1.157, 0.7728, 1.732, { windows: 4 }),
+      e("themed_fest", 0.5476, 0.4618, 0.6495),
+      e("cn_spring", 0.6274, 0.4584, 0.8586),
+      e("cn_national", 0.4399, 0.2888, 0.67),
+      e("us_thanksgiving", 1.375, 0.7451, 2.539),
+      e("xmas_newyear", 1.157, 0.7728, 1.732),
       e("demo", 0.596, 0.4918, 0.7223),
     ],
   },
+  chance_test: {
+    sale: chance(0.000999, 0.7458, 19),
+    themed_fest: chance(0.04096, 0.5591, 69),
+    cn_spring: chance(0.08092, 0.7017, 5),
+    cn_national: chance(0.006993, 0.5097, 4),
+    us_thanksgiving: chance(0.4186, 1.259, 4),
+    xmas_newyear: chance(0.6094, 1.112, 4),
+  },
   checks: {
     placebo: placebo(e("comp_tier_placebo", 0.991, 0.988, 0.994), e("comp_tier", 0.99, 0.987, 0.994), [
-      e("comp_tier", 0.994, 0.988, 1.0, { p: 0.05 }),
-      e("comp_tier_placebo", 0.996, 0.99, 1.0),
+      e("comp_tier", 0.9941, 0.9878, 1.0),
+      e("comp_tier_placebo", 0.9955, 0.9907, 1.0),
     ]),
   },
-  holidays: {
-    with_schinese: {
-      cn_spring: e("cn_spring_schinese", 0.7087, 0.545, 0.9216),
-      cn_national: e("cn_national_schinese", 0.4783, 0.2424, 0.9439),
-    },
-  },
+  holidays: holidays({
+    cn_spring: e("cn_spring_schinese", 0.7087, 0.545, 0.9216),
+    cn_national: e("cn_national_schinese", 0.4783, 0.2424, 0.9439),
+  }),
 };
 const FREE = {
   status: "ok",
+  headline: "reviews",
   competition_measure: "competition",
   reviews: {
     effects: [
       e("competition", 0.9515, 0.9376, 0.9656),
-      e("sale", 0.8883, 0.6985, 1.13, { windows: 19 }),
+      e("sale", 0.8883, 0.6985, 1.13),
       e("demo_last_fest", 1.945, 1.09, 3.473),
-      e("themed_fest", 0.9752, 0.6667, 1.426, { windows: 69 }),
-      e("us_thanksgiving", 0.4819, 0.3552, 0.6536, { windows: 4 }),
-      e("xmas_newyear", 0.5261, 0.3713, 0.7455, { windows: 4 }),
+      e("themed_fest", 0.9752, 0.6667, 1.426),
+      e("cn_spring", 2.248, 0.9346, 5.407),
+      e("cn_national", 1.328, 0.6296, 2.803),
+      e("us_thanksgiving", 0.4819, 0.3552, 0.6536),
+      e("xmas_newyear", 0.5261, 0.3713, 0.7455),
       e("demo", 0.3831, 0.2314, 0.6341),
     ],
   },
+  chance_test: {
+    sale: chance(0.5514, 0.9342, 19),
+    themed_fest: chance(0.961, 0.9796, 69),
+    cn_spring: chance(0.08991, 1.585, 5),
+    cn_national: chance(0.8172, 1.084, 4),
+    us_thanksgiving: chance(0.05495, 0.5364, 4),
+    xmas_newyear: chance(0.09391, 0.6171, 4),
+  },
   checks: {
     placebo: placebo(e("competition_placebo", 0.947, 0.932, 0.962), e("competition", 0.946, 0.931, 0.961), [
-      e("competition", 0.961, 0.943, 0.978, { p: 0.0001 }),
-      e("competition_placebo", 0.965, 0.95, 0.98),
+      e("competition", 0.9608, 0.9434, 0.9784),
+      e("competition_placebo", 0.9654, 0.9478, 0.9834),
     ]),
   },
-  holidays: {
-    with_schinese: {
-      cn_spring: e("cn_spring_schinese", 1.274, 0.3476, 4.665),
-      cn_national: e("cn_national_schinese", 0.3935, 0.2562, 0.6044),
-    },
-  },
+  holidays: holidays({
+    cn_spring: e("cn_spring_schinese", 1.274, 0.3476, 4.665),
+    cn_national: e("cn_national_schinese", 0.3935, 0.2562, 0.6044),
+  }),
 };
 const MODEL = { paid: PAID, free: FREE };
+
+const PAID_LINES = [
+  "Avoid launching during a Steam seasonal sale: such launches got 37% fewer reviews (24% to 47% fewer).",
+  "Avoid a themed fest that matches your tags: such launches got 45% fewer reviews (35% to 54% fewer).",
+  "If you have a demo, have it out before Next Fest. Launches whose demo was out by the last Next Fest got 71% more reviews (36% to 115% more) than those whose demo came out after it, and no clear difference from launches with no demo (a cautious range).",
+  "A demo that came out after the last Next Fest went with 40% fewer reviews (28% to 51% fewer) than no demo.",
+  "Weekly competition: small at most; much of it is general crowding (a niche here is games with similar tags, a shared language and the same price tier, not just your tags).",
+];
 
 describe("paid games", () => {
   const v = timingLines(MODEL, "paid");
 
-  test("give advice for sales, themed fests and Next Fest demos, and describe competition", () => {
+  test("advice for sales and themed fests (the chance test agrees), the demo line, competition described", () => {
     expect(v.ready).toBe(true);
     expect(v.heading).toBe("Paid games, compared with otherwise similar launches:");
-    expect(v.lines).toEqual([
-      "Avoid launching during a Steam seasonal sale: such launches got 37% fewer reviews (24% to 47% fewer).",
-      "Avoid a themed fest that matches your tags: such launches got 45% fewer reviews (35% to 54% fewer).",
-      "If you have a demo, show it in Next Fest. Launches whose demo was in the last Next Fest got 71% more reviews (36% to 115% more) than those whose demo skipped it, and no clear difference from launches with no demo.",
-      "A demo that skipped Next Fest went with 40% fewer reviews (28% to 51% fewer) than no demo.",
-      "Weekly competition: small, mostly general crowding. Each extra launch in your niche and price tier that week: 0.9% fewer reviews (0.6% to 1.2% fewer).",
-    ]);
+    expect(v.lines).toEqual(PAID_LINES);
+    expect(v.caveat).toBe(en.history.caveat);
   });
 
-  test("leave out US holidays whose range takes in 1.0", () => {
-    expect(v.lines.join(" ")).not.toMatch(/Thanksgiving|Christmas/);
-    expect(v.note).toBeNull();
+  test("competition has no per-launch percentage", () => {
+    expect(v.lines.at(-1)).not.toMatch(/\d/);
   });
 
-  test("show China's holidays only with Simplified Chinese picked, marked unconfirmed", () => {
+  test("China's holidays: one line without numbers, only with Simplified Chinese", () => {
     expect(v.china).toBeNull();
     const zh = timingLines(MODEL, "paid", { languages: ["english", "schinese"] });
-    expect(zh.china.heading).toMatch(/unconfirmed, not advice/);
-    expect(zh.china.lines).toEqual([
-      "Spring Festival: 29% fewer reviews (8% to 45% fewer).",
-      "National Day: 52% fewer reviews (6% to 76% fewer).",
-    ]);
-    expect(zh.lines).toEqual(v.lines); // never advice
+    expect(zh.china).toBe(
+      "China holidays (unconfirmed): launches during Spring Festival and National Day got fewer reviews in past years, with or without Simplified Chinese, and every one overlapped a Steam sale or fest.",
+    );
+    expect(zh.china).not.toMatch(/\d/);
+    expect(zh.lines).toEqual(PAID_LINES); // never advice
   });
 
-  test("end with one short caveat", () => {
-    expect(v.caveat).toBe(en.history.caveat);
+  test("the joint demo estimate is used when model.json has it", () => {
+    const joint = { ...PAID, demo_with_fest: e("demo_with_fest", 1.25, 1.05, 1.49) };
+    expect(timingLines({ paid: joint }, "paid").lines[2]).toBe(
+      "If you have a demo, have it out before Next Fest. Launches whose demo was out by the last Next Fest got 71% more reviews (36% to 115% more) than those whose demo came out after it, and 25% more reviews (5% to 49% more) than launches with no demo.",
+    );
   });
 });
 
 describe("free games", () => {
   const v = timingLines(MODEL, "free", { languages: ["schinese"] });
 
-  test("say no clear effect for sales and themed fests, and show the US holidays with their caution", () => {
+  test("no clear effect for sales and themed fests; US holidays unconfirmed, not advice", () => {
     expect(v.heading).toBe("Free games, compared with otherwise similar launches:");
     expect(v.lines).toEqual([
       "Steam seasonal sales: no clear effect.",
       "Themed fests for your tags: no clear effect.",
-      "If you have a demo, show it in Next Fest. Launches whose demo was in the last Next Fest got 95% more reviews (9% to 247% more) than those whose demo skipped it, and no clear difference from launches with no demo.",
-      "A demo that skipped Next Fest went with 62% fewer reviews (37% to 77% fewer) than no demo.",
-      "Weekly competition: mostly general crowding. Each extra launch in your niche that week: 4.8% fewer reviews (3.4% to 6.2% fewer).",
-      "Avoid US Thanksgiving to Cyber Monday: such launches got 52% fewer reviews (35% to 64% fewer).",
-      "Avoid Christmas to New Year: such launches got 47% fewer reviews (25% to 63% fewer).",
+      "If you have a demo, have it out before Next Fest. Launches whose demo was out by the last Next Fest got 95% more reviews (9% to 247% more) than those whose demo came out after it, and no clear difference from launches with no demo (a cautious range).",
+      "A demo that came out after the last Next Fest went with 62% fewer reviews (37% to 77% fewer) than no demo.",
+      "Weekly competition: small; part of it is general crowding (a niche here is games with similar tags and a shared language, not just your tags).",
+      "US Thanksgiving to Cyber Monday: fewer reviews in past years (4 years), not confirmed by a chance test; the week also falls in Steam's Autumn Sale most years.",
+      "Christmas to New Year: fewer reviews in past years (4 years), not confirmed by a chance test; the week also falls in Steam's Winter Sale every year.",
     ]);
-    expect(v.note).toBe("The US holiday lines rest on only 4 years each.");
+    expect(v.lines.join(" ")).not.toMatch(/Avoid (US|Christmas)/);
   });
 
-  test("give China's holidays from the Simplified Chinese effect, unclear ones as no clear effect", () => {
-    expect(v.china.lines).toEqual(["Spring Festival: no clear effect.", "National Day: 61% fewer reviews (40% to 74% fewer)."]);
+  test("a US holiday the chance test confirms is advice, with its years", () => {
+    const confirmed = { ...FREE, chance_test: { ...FREE.chance_test, us_thanksgiving: chance(0.01, 0.53, 4) } };
+    expect(timingLines({ free: confirmed }, "free").lines).toContain(
+      "Avoid US Thanksgiving to Cyber Monday: in 4 years, such launches got 52% fewer reviews (35% to 64% fewer).",
+    );
+  });
+
+  test("China's holidays: no clear pattern when neither the chance test nor the main effects say fewer", () => {
+    expect(v.china).toBe("China holidays (unconfirmed): no clear pattern in past launches.");
   });
 });
 
@@ -137,6 +173,7 @@ describe("not ready", () => {
     ["failed", { ...MODEL, free: { status: "failed", error: "ValueError: boom" } }],
     ["unreliable with numbers left in", { ...MODEL, free: { ...FREE, status: "unreliable" } }],
     ["a group missing", { paid: PAID }],
+    ["headline fit missing", { ...MODEL, free: { ...FREE, headline: "with_followers", followers: {} } }],
   ])("%s: one line and no numbers", (_, model) => {
     const v = timingLines(model, "free", { languages: ["schinese"] });
     expect(v).toEqual({ ready: false, text: "Not ready yet." });
@@ -148,11 +185,24 @@ describe("not ready", () => {
   });
 });
 
+test("the headline fit is read: the follower-controlled one once it is the headline", () => {
+  const followers = { with_followers: { effects: [e("sale", 1.2, 1.1, 1.3)] } };
+  const v = timingLines({ paid: { ...PAID, headline: "with_followers", followers } }, "paid");
+  expect(v.lines).toEqual(["Launches during a Steam seasonal sale got 20% more reviews (10% to 30% more)."]);
+});
+
 describe("the words", () => {
   test("a range is said from the side of 1.0 the effect is on", () => {
     expect(change(e("x", 0.6343, 0.5326, 0.7553))).toBe("37% fewer reviews (24% to 47% fewer)");
     expect(change(e("x", 1.2, 1.05, 1.4))).toBe("20% more reviews (5% to 40% more)");
-    expect(change(e("x", 0.991, 0.9879, 0.9941), en, 1)).toBe("0.9% fewer reviews (0.6% to 1.2% fewer)");
+  });
+
+  test("percentages round half up, also where floating point lands just under a half", () => {
+    expect(1 - 0.545).toBeLessThan(0.455);
+    expect(percentOf(1 - 0.545)).toBe(46);
+    expect(percentOf(0.2447)).toBe(24);
+    expect(percentOf(0.125)).toBe(13);
+    expect(change(e("x", 0.7087, 0.545, 0.9216))).toBe("29% fewer reviews (8% to 46% fewer)");
   });
 
   test("clear means the range leaves out 1.0", () => {
@@ -161,32 +211,28 @@ describe("the words", () => {
     expect(clear(e("x", 1.1, 1.0, 1.3))).toBe(false);
   });
 
-  test("two effects that multiply: the product, with a cautious range", () => {
+  test("two effects that multiply, without a joint estimate: the product, with a cautious range", () => {
     const both = combine(e("demo", 0.596, 0.4918, 0.7223), e("demo_last_fest", 1.71, 1.363, 2.145));
     expect(both.rate_ratio).toBeCloseTo(1.0192, 4);
     expect(both.low).toBeLessThan(1);
     expect(both.high).toBeGreaterThan(1);
-    // equal widths on the log scale add as a square root of two
     const one = e("a", 1, Math.exp(-0.1), Math.exp(0.1));
     expect(Math.log(combine(one, one).high)).toBeCloseTo(0.1 * Math.SQRT2, 10);
   });
 
-  test("a demo line when Next Fest showed no clear difference", () => {
+  test("a demo line when the demo before Next Fest showed no clear difference", () => {
     const model = {
       paid: { ...PAID, reviews: { effects: [e("demo_last_fest", 1.1, 0.9, 1.3), e("demo", 0.6, 0.5, 0.7)] } },
     };
-    expect(timingLines(model, "paid").lines).toEqual(["A demo in Next Fest: no clear effect."]);
+    expect(timingLines(model, "paid").lines).toEqual(["A demo out before Next Fest: no clear effect."]);
   });
 
-  test("competition is only described when the placebo backs it", () => {
-    expect(crowding(PAID)).toBe("small, mostly general crowding");
-    expect(crowding(FREE)).toBe("mostly general crowding");
-    const weak = { checks: { placebo: placebo(e("p", 0.999, 0.99, 1.01), e("c", 0.99, 0.98, 0.995), []) } };
-    expect(crowding(weak)).toBeNull();
-    expect(crowding({})).toBeNull();
-    const lines = timingLines({ paid: { ...PAID, checks: {} } }, "paid").lines;
-    expect(lines.at(-1)).toBe(
-      "Weekly competition. Each extra launch in your niche and price tier that week: 0.9% fewer reviews (0.6% to 1.2% fewer).",
-    );
+  test("competition: from the fit with the placebo", () => {
+    const comp = e("comp_tier", 0.99, 0.98, 0.995);
+    expect(crowding(PAID, comp)).toBe("small at most; much of it is general crowding");
+    expect(crowding(FREE, comp)).toBe("small; part of it is general crowding");
+    const weak = { competition_measure: "c", checks: { placebo: placebo(e("p", 0.999, 0.99, 1.01), e("c", 0.99, 0.98, 0.995), [e("c", 0.99, 0.98, 0.995)]) } };
+    expect(crowding(weak, comp)).toBe("launches in busier weeks of their niche got fewer reviews");
+    expect(crowding({}, comp)).toBe("launches in busier weeks of their niche got fewer reviews");
   });
 });

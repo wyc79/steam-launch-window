@@ -1,22 +1,18 @@
 // What history says: the history panel (quiet, normal and busy weeks) and the
 // launch timing lines from the model. The panel is the one numbers.js computed for
 // the top bar's count, text from panelview.js; the lines come from timing.js. The
-// raw counts toggle sets the shared measure, so the count's red follows it.
+// shared raw counts toggle (top bar) sets the panel's measure.
 
 import { panelView } from "../panelview.js";
 import { timingLines } from "../timing.js";
 import { fill, h, uid } from "./dom.js";
 
-export function historySection(s, body, selection) {
+export function historySection(s, body) {
   const t = s.history;
   let numbers = null;
   let model; // undefined while loading, null when model.json is missing or broken
   let st = null;
 
-  const raw = h("input", {
-    type: "checkbox",
-    onchange: (e) => selection.set({ measure: e.target.checked ? "raw" : "relative" }),
-  });
   const panelTitle = uid("hs-panel");
   const timingTitle = uid("hs-timing");
   const panel = h("div", { class: "hs-panel" });
@@ -26,7 +22,6 @@ export function historySection(s, body, selection) {
       "div",
       { class: "hs-col hs-col-panel", role: "group", "aria-labelledby": panelTitle },
       h("h3", { id: panelTitle }, t.panelTitle),
-      h("label", { class: "ah-toggle hs-raw" }, raw, h("span", {}, t.raw)),
       panel,
     ),
     h(
@@ -59,8 +54,7 @@ export function historySection(s, body, selection) {
   }
 
   function drawPanel() {
-    const v = panelView(numbers.get(st).panel, st.group, s);
-    raw.checked = st.measure === "raw";
+    const v = panelView(numbers.get(st).panel, st.group, s, { tags: st.tags });
     if (!v.shown) {
       fill(panel, h("p", { class: "hs-few" }, v.text));
       return;
@@ -104,7 +98,7 @@ export function historySection(s, body, selection) {
         ),
       ),
       h("p", { class: "hs-cuts" }, v.cuts),
-      h("p", { class: "hs-read quiet" }, v.read, " ", t.barsKey),
+      h("p", { class: "hs-read quiet" }, v.read, h("span", { class: "hs-bars-key" }, " ", t.barsKey)),
     );
   }
 
@@ -126,18 +120,7 @@ export function historySection(s, body, selection) {
         { class: "hs-lines" },
         v.lines.map((line) => h("li", {}, line)),
       ),
-      v.note && h("p", { class: "hs-note quiet" }, v.note),
-      v.china &&
-        h(
-          "div",
-          { class: "hs-china" },
-          h("p", { class: "hs-china-head" }, v.china.heading),
-          h(
-            "ul",
-            { class: "hs-lines" },
-            v.china.lines.map((line) => h("li", {}, line)),
-          ),
-        ),
+      v.china && h("p", { class: "hs-china" }, v.china),
       h("p", { class: "hs-caveat quiet" }, v.caveat),
     );
   }

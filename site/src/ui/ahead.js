@@ -26,7 +26,8 @@ export function aheadSection(s, body) {
   let band = { events: [], lanes: [] };
   let bandFor = null; // [rows, events] the band was picked for
   let view = null;
-  const local = { raw: false, year: false };
+  const local = { year: false }; // the raw view is the shared measure (top bar)
+  const raw = () => st?.measure === "raw";
   let focus = { row: 0, week: 0 };
   let open = null; // { row, week, parts: Set of list parts shown in full }
   let cells = []; // [row][week] gridcell elements
@@ -50,7 +51,7 @@ export function aheadSection(s, body) {
   const controls = h(
     "div",
     { class: "ah-controls" },
-    h("div", { class: "ah-toggles" }, toggle(a.raw, "raw"), toggle(a.yearLayer, "year"), sometime),
+    h("div", { class: "ah-toggles" }, toggle(a.yearLayer, "year"), sometime),
     legend,
   );
   const status = h("p", { class: "ah-status", role: "status" });
@@ -222,7 +223,7 @@ export function aheadSection(s, body) {
       h("span", { class: "ah-swatch" }, h("span", { class: `hm-part ${cls}` }), h("span", {}, text));
     fill(
       legend,
-      h("span", { class: "ah-legend-text" }, local.raw ? a.scaleRaw : a.scaleNormal),
+      h("span", { class: "ah-legend-text" }, raw() ? a.scaleRaw : a.scaleNormal),
       h(
         "span",
         { class: "ah-scale", "aria-hidden": "true" },
@@ -304,7 +305,7 @@ export function aheadSection(s, body) {
         { class: "ah-detail-head" },
         h("h3", {}, a.week(w.date, w.to)),
         h("p", { class: "ah-detail-for" }, a.detailFor(row.label, s.bar[st.group])),
-        h("p", { class: "ah-detail-cell" }, cellText, local.raw || row.counts ? "" : ` ${a.unitNormal}`),
+        h("p", { class: "ah-detail-cell" }, cellText, raw() || row.counts ? "" : ` ${a.unitNormal}`),
       ),
       w.events.length > 0 &&
         h(
@@ -374,7 +375,7 @@ export function aheadSection(s, body) {
     const hadFocus = scroller.contains(document.activeElement);
     view = buildView(rows, {
       group: st.group,
-      raw: local.raw,
+      raw: raw(),
       year: local.year,
       mode: st.mode,
       names,

@@ -54,18 +54,18 @@ describe("the weeks", () => {
     const w = v.weeks[0];
     expect([w.value, w.spread, w.drivers]).toEqual([
       "0.97",
-      "0.73 to 1.21 across years",
+      "typical spread across years 0.73 to 1.21",
       "From the same week in past years; 1 week before Next Fest October.",
     ]);
     expect(w.label).toBe(
-      "Week of Oct 12 to Oct 18: usually 0.97, 0.73 to 1.21 across years. From the same week in past years; 1 week before Next Fest October.",
+      "Week of Oct 12 to Oct 18: usually 0.97, typical spread across years 0.73 to 1.21. From the same week in past years; 1 week before Next Fest October.",
     );
-    expect(w.detail).toBe("Week of Oct 12 to Oct 18: usually 0.97 (0.73 to 1.21 across years).");
+    expect(w.detail).toBe("Week of Oct 12 to Oct 18: usually 0.97 (typical spread across years 0.73 to 1.21).");
   });
 
   test("a week without enough past years says so", () => {
     const w = v.weeks[3];
-    expect([w.value, w.spread, w.drivers, w.bar]).toEqual(["–", null, null, null]);
+    expect([w.value, w.spread, w.drivers, w.bar]).toEqual(["n/a", null, null, null]);
     expect(w.label).toBe("Week of Nov 2 to Nov 8: not enough past years.");
   });
 
@@ -89,7 +89,7 @@ describe("the weeks", () => {
 
   test("the spread never goes under zero launches, and the scale has a floor", () => {
     const free = outlookView(OUTLOOK, "free", { events: EVENTS });
-    expect(free.weeks[2].spread).toBe("0.00 to 0.60 across years");
+    expect(free.weeks[2].spread).toBe("typical spread across years 0.00 to 0.60");
     expect(free.scale).toBe(1.1);
     const flat = outlookView({ weeks: ["2026-10-12"], paid: [{ expected: 1, sd: 0.01, parts: [] }] }, "paid");
     expect(flat.scale).toBe(MIN_SCALE);

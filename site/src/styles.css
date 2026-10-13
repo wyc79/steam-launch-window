@@ -311,7 +311,7 @@ fieldset.ctl { display: block; }
 .ctl-mode { grid-column: 6 / span 3; }
 .ctl-group { grid-column: 9 / span 2; }
 .ctl-langs { grid-column: 11 / span 2; }
-.count { grid-column: 1 / -1; }
+.count-row { grid-column: 1 / -1; }
 @media (max-width: 1023px) {
   .ctl-tags { grid-column: 1 / -1; }
   .ctl-mode { grid-column: 1 / span 2; }
@@ -469,11 +469,20 @@ fieldset.ctl { display: block; }
   .pick-panel ul { columns: 1; }
 }
 
-/* The match count */
-.count {
-  margin: 0;
+/* The match count, and the one raw counts toggle (sections 01 and 03) beside it */
+.count-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s1) var(--s5);
   padding-top: var(--s2);
   border-top: 1px solid var(--rule-soft);
+}
+.raw-toggle { display: inline-flex; align-items: center; gap: .5em; font-size: var(--fs-small); cursor: pointer; }
+.raw-toggle input { flex: none; width: 1rem; height: 1rem; margin: 0; accent-color: var(--ink); }
+.count {
+  margin: 0;
   font-size: var(--fs-small);
   font-variant-numeric: tabular-nums;
 }
@@ -834,7 +843,6 @@ main { display: block; }
   text-transform: uppercase;
   line-height: 1.4;
 }
-.hs-raw { margin-bottom: var(--s2); }
 .hs-intro, .hs-for { margin: 0 0 var(--s3); font-size: var(--fs-small); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .hs-few, .hs-not-ready { margin: 0; font-weight: 700; max-width: var(--measure); }
 .hs-table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); font-variant-numeric: tabular-nums; }
@@ -867,11 +875,8 @@ main { display: block; }
 .hs-lines { margin: 0; padding: 0; list-style: none; }
 .hs-lines li { padding: var(--s2) 0; border-top: 1px solid var(--rule-soft); line-height: 1.45; font-variant-numeric: tabular-nums; }
 .hs-lines li:first-child { border-top: 0; padding-top: 0; }
-.hs-note { margin: var(--s2) 0 0; }
 /* China's holidays: context, not advice, so set apart with the dashed line of the unconfirmed events */
-.hs-china { margin-top: var(--s4); padding-top: var(--s2); border-top: 1px dashed var(--ink); }
-.hs-china-head { margin: 0 0 var(--s2); font-size: var(--fs-small); font-weight: 700; }
-.hs-china .hs-lines li { font-size: var(--fs-small); }
+.hs-china { margin: var(--s4) 0 0; padding-top: var(--s2); border-top: 1px dashed var(--ink); font-size: var(--fs-small); max-width: var(--measure); }
 .hs-caveat { margin: var(--s4) 0 0; }
 @media (max-width: 1023px) {
   .hs-col-panel, .hs-col-timing { grid-column: 1 / -1; }
@@ -879,7 +884,7 @@ main { display: block; }
 @media (max-width: 639px) {
   .hs-table th, .hs-table td { padding: var(--s2) .3rem; }
   .hs-table th:last-of-type, .hs-table td:last-child { padding-right: 0; }
-  .hs-bar-cell { display: none; }
+  .hs-bar-cell, .hs-bars-key { display: none; }
   .hs-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
   .hs-short { display: inline; }
   .hs-lead { font-size: 1rem; }
@@ -890,6 +895,7 @@ main { display: block; }
    row 2 the weeks (each a bar from 1.0, up for busier, down for quieter, with the
    spread across years behind it), then the events lanes. */
 .ol-key { margin: 0 0 var(--s1); max-width: var(--measure); font-size: var(--fs-small); color: var(--ink-2); }
+.ol-good { margin: 0 0 var(--s1); font-size: var(--fs-small); font-weight: 700; }
 .ol-from { margin: 0 0 var(--s4); }
 .ol-note { margin: 0 0 var(--s3); }
 .ol-note:empty { display: none; }

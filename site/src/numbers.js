@@ -3,6 +3,7 @@
 // the heatmap and its trend line (Competition ahead) and the outlook (Typical for
 // this time of year). Each result holds both groups, so paid / free costs nothing.
 
+import { CHINESE, kindOf } from "./events.js";
 import { groupOf, heatmap, historyPanel, matchCount, speaks, trendFrom, weekGames } from "./lib/heatmap.js";
 import { outlook } from "./lib/season.js";
 import { query } from "./state.js";
@@ -11,6 +12,12 @@ const KEEP = 20; // recent selections kept; older ones are computed again
 export const OUTLOOK_WEEKS = 26; // the outlook comes from past years, so it can look further than the heatmap
 
 const sorted = (list) => [...list].sort();
+
+// The events the outlook's pattern uses: China's holidays only with Simplified
+// Chinese picked, as everywhere on the site.
+export function outlookEvents(events, languages) {
+  return languages.includes(CHINESE) ? events : events.filter((e) => kindOf(e) !== "cn_holiday");
+}
 
 // what the outlook depends on: the languages (it is the all-games pattern)
 export function outlookKey(st) {
@@ -62,7 +69,7 @@ export function createNumbers(games, history, today) {
   const perRow = new Map();
   const trends = new Map();
   const outlooks = new Map();
-  let outlookEvents = null;
+  let outlookFrom = null; // the events.json list the cached outlooks were made from
   let byId = null;
   // one heatmap row, kept on its own: picking a second tag reuses the first tag's row
   const row = (tags, st) =>
@@ -90,14 +97,17 @@ export function createNumbers(games, history, today) {
       }),
     // the seasonal outlook (both groups) for the selection's languages, from the
     // pattern of all games; events: events.json's list ([] when it failed)
-    hasOutlook: (st, events) => outlookEvents === events && outlooks.has(outlookKey(st)),
+    hasOutlook: (st, events) => outlookFrom === events && outlooks.has(outlookKey(st)),
     outlook: (st, events) => {
-      if (outlookEvents !== events) {
+      if (outlookFrom !== events) {
         outlooks.clear();
-        outlookEvents = events;
+        outlookFrom = events;
       }
       return remember(outlooks, outlookKey(st), () =>
-        outlook(history, events, today, { weeks: OUTLOOK_WEEKS, languages: st.languages }),
+        outlook(history, outlookEvents(events, st.languages), today, {
+          weeks: OUTLOOK_WEEKS,
+          languages: st.languages,
+        }),
       );
     },
     // one row's games in one week, for the picked group, in weekGames' order; on

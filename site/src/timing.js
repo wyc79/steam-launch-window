@@ -1,41 +1,51 @@
 // What history says, from the model (model.json, written by analysis/model.py): the
-// launch timing lines for the picked group. Sizes are rate ratios with 95% ranges,
-// said as plain percentages. A line gives a size only when its range leaves out 1.0
-// (no change); otherwise it says "no clear effect" or is left out. A group whose
-// status is not "ok" (or no model.json) shows one line, and none of its numbers.
+// launch timing lines for the picked group, from the fit the model calls its
+// headline. Sizes are rate ratios with 95% ranges, said as plain percentages.
+//
+// One rule for advice: an event line says "Avoid ..." only when its range leaves out
+// 1.0 and, where the model ran a chance test, the test agrees (p < 0.05). A range
+// that leaves out 1.0 without the chance test's support is an "unconfirmed" line,
+// not advice; a range that takes in 1.0 is "no clear effect" (US holidays are then
+// left out). Weekly competition is described, never given as a penalty. China's
+// holidays get one context line, without numbers. A group whose status is not "ok"
+// (or no model.json) shows one line, and none of its numbers.
 
 import { numberFormat } from "./format.js";
 import { en } from "./strings.js";
 
 const Z95 = 1.959964;
-// the holidays that get a line when their range leaves out 1.0; they rest on few years
+export const CHANCE_P = 0.05; // the chance test must agree at this level for advice
+export const EVENTS = ["sale", "themed_fest"];
+// the holidays that get a line when their range leaves out 1.0; one window a year
 export const US_HOLIDAYS = ["us_thanksgiving", "xmas_newyear"];
 export const CN_HOLIDAYS = ["cn_spring", "cn_national"];
 export const CHINESE = "schinese";
-// the placebo's share of the launch week's effect from which the competition number
-// is "mostly general crowding" (analysis/model.py placebo_caveat uses the same)
-export const CROWDING = 0.67;
+const EPSILON = 1e-9; // so 1 - 0.545 (0.45499...) rounds as the 0.455 it is
 
 export function clear(e) {
   return e.low > 1 || e.high < 1;
 }
 
-function percent(x, s, digits) {
-  return numberFormat(s.locale, { style: "percent", minimumFractionDigits: digits, maximumFractionDigits: digits }).format(x);
+// a share as a whole percentage, rounded half up (docs/methods.md uses the same rule)
+export function percentOf(x) {
+  return Math.floor(x * 100 + 0.5 + EPSILON);
+}
+
+function percent(x, s) {
+  return numberFormat(s.locale, { style: "percent", maximumFractionDigits: 0 }).format(percentOf(x) / 100);
 }
 
 // "37% fewer reviews (24% to 47% fewer)" from a rate ratio and its range
-export function change(e, s = en, digits = 0) {
+export function change(e, s = en) {
   const t = s.history;
   const fewer = e.rate_ratio < 1;
   const [lo, hi] = fewer ? [1 - e.high, 1 - e.low] : [e.low - 1, e.high - 1];
-  const p = (x) => percent(x, s, digits);
-  return t.change(p(Math.abs(e.rate_ratio - 1)), fewer ? t.fewer : t.more, p(lo), p(hi));
+  return t.change(percent(Math.abs(e.rate_ratio - 1), s), fewer ? t.fewer : t.more, percent(lo, s), percent(hi, s));
 }
 
-// Two effects that multiply (a demo, and a demo in the last Next Fest), with a range
-// that treats them as independent. The two estimates share the demo games, so they
-// pull against each other and the true range is narrower: this one is cautious.
+// Two effects that multiply (a demo, and a demo out by the last Next Fest), when
+// model.json has no joint estimate: the range treats them as independent. They share
+// the demo games and pull against each other, so the true range is narrower.
 export function combine(a, b) {
   const se = (e) => (Math.log(e.high) - Math.log(e.low)) / (2 * Z95);
   const log = Math.log(a.rate_ratio) + Math.log(b.rate_ratio);
@@ -43,81 +53,98 @@ export function combine(a, b) {
   return { rate_ratio: Math.exp(log), low: Math.exp(log - width), high: Math.exp(log + width) };
 }
 
-// "small, mostly general crowding" from the placebo check: the same measure 8 weeks
-// after launch, alone, against the launch week's on the same games, and both in one
-// model. Mostly crowding when the placebo is clear, goes the same way and is at
-// least CROWDING times as large; small when the launch week, next to the placebo,
-// is not clear at p < 0.01 (as the model's own caveat says). Null without the check.
-export function crowding(m, s = en) {
-  const check = m.checks?.placebo;
-  const alone = check?.placebo?.effects?.[0];
-  const real = check?.real_same_sample?.effects?.[0];
-  if (!alone || !real || !clear(alone)) return null;
-  const sameWay = alone.rate_ratio < 1 === real.rate_ratio < 1;
-  const size = Math.abs(Math.log(alone.rate_ratio)) / Math.max(Math.abs(Math.log(real.rate_ratio)), 1e-12);
-  if (!sameWay || size < CROWDING) return null;
-  const together = check.together?.effects?.find((e) => e.key === real.key);
-  return together && together.p >= 0.01 ? s.history.crowdSmall : s.history.crowd;
+// the fit the model reads: the follower-controlled one once it is the headline
+export function headlineFit(m) {
+  return m?.headline === "with_followers" ? m.followers?.with_followers : m?.reviews;
 }
 
 export function ready(model, group) {
   const m = model?.[group];
-  return !!m && m.status === "ok" && Array.isArray(m.reviews?.effects);
+  return !!m && m.status === "ok" && Array.isArray(headlineFit(m)?.effects);
+}
+
+// Weekly competition from the model's placebo check, as analysis/model.py describes
+// it: with the placebo (the same measure 8 weeks after launch) in the same fit, a
+// launch week that is no longer clear is "small at most; much of it is general
+// crowding"; one that stays clear is "small; part of it is general crowding". Without
+// a clear placebo the line only says which way it went.
+export function crowding(m, comp, s = en) {
+  const t = s.history;
+  const check = m.checks?.placebo;
+  const alone = check?.placebo?.effects?.[0];
+  const together = check?.together?.effects?.find((e) => e.key === m.competition_measure);
+  if (!alone || !together || !clear(alone)) return t.crowdNone(comp.rate_ratio < 1 ? t.fewer : t.more);
+  return clear(together) ? t.crowdPart : t.crowdAtMost;
+}
+
+// China's holidays as one line without numbers: "fewer" when the pooled chance test
+// says so for either holiday (p < 0.05) or both main effects (games without
+// Simplified Chinese) are clearly below 1.0, and neither is clearly above it.
+export function chinaLine(m, effect, s = en) {
+  const mains = CN_HOLIDAYS.map(effect).filter(Boolean);
+  const tests = CN_HOLIDAYS.map((k) => m.chance_test?.[k]).filter((x) => x && "p_value" in x);
+  const below = (e) => clear(e) && e.rate_ratio < 1;
+  const fewer =
+    !mains.some((e) => clear(e) && e.rate_ratio > 1) &&
+    (tests.some((x) => x.ratio_alone < 1 && x.p_value < CHANCE_P) || (mains.length === 2 && mains.every(below)));
+  const combined = CN_HOLIDAYS.map((k) => m.holidays?.with_schinese?.[k]).filter(Boolean);
+  const both = mains.length === 2 && mains.every(below) && combined.length === 2 && combined.every(below);
+  const windows = CN_HOLIDAYS.flatMap((k) => m.holidays?.[k] ?? []);
+  const overlapped = windows.length > 0 && windows.every((w) => w.overlaps?.length > 0);
+  return s.history.china(fewer, fewer && both, fewer && overlapped);
 }
 
 // The lines for `group` ("paid" or "free"). languages: the picked ones (China's
 // holidays only with Simplified Chinese). Returns { ready: false, text } or
-// { ready: true, heading, lines, china, note, caveat }; china is null or
-// { heading, lines }, note null or the US holidays' caution.
+// { ready: true, heading, lines, china, caveat }; china is null or one line.
 export function timingLines(model, group, { languages = [] } = {}, s = en) {
   const t = s.history;
   if (!ready(model, group)) return { ready: false, text: t.notReady };
   const m = model[group];
-  const effect = (key) => m.reviews.effects.find((e) => e.key === key) ?? null;
+  const effects = headlineFit(m).effects;
+  const effect = (key) => effects.find((e) => e.key === key) ?? null;
+  const chanceP = (key, e) => m.chance_test?.[key]?.p_value ?? e.chance_p ?? null;
+  const windows = (key, e) => m.chance_test?.[key]?.windows ?? e.windows ?? 0;
   const lines = [];
 
-  const event = (key, name, avoid, good) => {
+  // an event: advice, unconfirmed, or no clear effect (left out for the holidays)
+  const event = (key, avoid, good, holiday = false) => {
     const e = effect(key);
     if (!e) return;
-    lines.push(!clear(e) ? t.noEffect(name) : (e.rate_ratio < 1 ? avoid : good)(change(e, s)));
+    if (!clear(e)) {
+      if (!holiday) lines.push(t.noEffect(t.names[key]));
+      return;
+    }
+    const p = chanceP(key, e);
+    const n = holiday ? windows(key, e) : 0; // a holiday has one window a year
+    if (p === null || p < CHANCE_P) lines.push((e.rate_ratio < 1 ? avoid : good)(change(e, s), n));
+    else lines.push(t.unconfirmed(t.names[key], e.rate_ratio < 1 ? t.fewer : t.more, n ? t.years(n) : "", t.also[key]));
   };
-  event("sale", t.sale, t.saleAvoid, t.saleGood);
-  event("themed_fest", t.fest, t.festAvoid, t.festGood);
+  event("sale", t.saleAvoid, t.saleGood);
+  event("themed_fest", t.festAvoid, t.festGood);
 
   const demo = effect("demo");
   const fest = effect("demo_last_fest");
   if (fest && !clear(fest)) lines.push(t.noEffect(t.demoFest));
   else if (fest) {
-    let text = t.demoVsSkipped(change(fest, s));
+    let text = t.demoVsAfter(change(fest, s));
     if (demo) {
-      const both = combine(demo, fest);
-      text += `, and ${clear(both) ? t.demoVsNone(change(both, s)) : t.demoAsNone}`;
+      // the joint estimate from the main fit, when the main fit is the headline
+      const joint = m.headline === "with_followers" ? null : (m.demo_with_fest ?? null);
+      const both = joint ?? combine(demo, fest);
+      const note = joint ? "" : t.cautious;
+      text += `, and ${clear(both) ? t.demoVsNone(change(both, s)) : t.demoAsNone}${note}`;
     }
     lines.push(fest.rate_ratio > 1 ? `${t.demoAdvice} ${text}.` : `${text}.`);
-    if (demo && clear(demo)) lines.push(t.demoSkipped(change(demo, s)));
+    if (demo && clear(demo)) lines.push(t.demoAfter(change(demo, s)));
   }
 
   const comp = effect(m.competition_measure);
   if (comp && !clear(comp)) lines.push(t.noEffect(t.competition));
-  else if (comp) {
-    const where = t.perLaunch[m.competition_measure] ?? t.perLaunch.competition;
-    lines.push(t.competitionLine(crowding(m, s), where, change(comp, s, 1)));
-  }
+  else if (comp) lines.push(t.competitionLine(crowding(m, comp, s), t.niche[m.competition_measure] ?? t.niche.competition));
 
-  const holidays = US_HOLIDAYS.map(effect).filter((e) => e && clear(e));
-  for (const e of holidays) lines.push((e.rate_ratio < 1 ? t.holidays : t.holidaysGood)[e.key](change(e, s)));
-  const years = Math.max(...holidays.map((e) => e.windows ?? 0));
-  const note = holidays.length && years > 0 ? t.holidayYears(years) : null;
+  for (const key of US_HOLIDAYS) event(key, t.holidays[key], t.holidaysGood[key], true);
 
-  let china = null;
-  const combined = m.holidays?.with_schinese;
-  if (languages.includes(CHINESE) && combined) {
-    const rows = CN_HOLIDAYS.filter((k) => combined[k]).map((k) => {
-      const e = combined[k];
-      return t.chinaChange(t.chinaLine[k], clear(e) ? change(e, s) : t.noClear);
-    });
-    if (rows.length) china = { heading: t.china, lines: rows };
-  }
-
-  return { ready: true, heading: t.timingFor(s.bar[group]), lines, china, note, caveat: t.caveat };
+  const china = languages.includes(CHINESE) ? chinaLine(m, effect, s) : null;
+  return { ready: true, heading: t.timingFor(s.bar[group]), lines, china, caveat: t.caveat };
 }

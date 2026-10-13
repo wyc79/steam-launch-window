@@ -36,25 +36,28 @@ ends with a report, and the next one starts only after a go-ahead.
 
 **Model findings (paid games, about 67,800 launches):** launching in a seasonal sale goes
 with about 37% fewer 30-day reviews; in a themed fest matching your tags, about 45% fewer;
-a demo in the last Next Fest, about 71% more. Weekly competition is small and mostly general
-crowding. Chinese holidays are shown only as unconfirmed context for games with Simplified
-Chinese. The free model waits for the recount.
+a demo out by the last Next Fest, about 71% more than one out after it. Weekly competition
+is small at most and mostly general crowding. Chinese holidays are shown only as unconfirmed
+context for games with Simplified Chinese. The model was rerun after the free recount: the
+free model was fitted on 2026-10-13 (status ok; its sales and themed fests show no clear
+difference, and its US holiday dips are not confirmed by the chance test).
 
 **Data branch** (`origin/data`): daily upcoming snapshots since 2026-10-11, and
 `history/games.csv`: 83,128 games launched 2022-01-01 to 2026-10-10.
 
-**Raspberry Pi (running since 2026-10-12):** `scripts/server/run_review_jobs.sh` recounts
-all reviews for about 12,400 free launches, then counts reviews by language for a sample of
-1,000 paid launches. Log: `~/review-jobs.log`. About 7 to 8 hours. When it ends, copy back
-`games.csv`, `reviews_by_language.csv` and `language_sample_games.csv` to `_data/history/`
+**Raspberry Pi (2026-10-12 to 13):** `scripts/server/run_review_jobs.sh` recounted
+all reviews for the free launches, then counted reviews by language for 1,000 paid launches.
+Both are on the data branch (2026-10-13; the language sample in commit eff1bc5). Log:
+`~/review-jobs.log`. For a later run, copy back `games.csv`, `reviews_by_language.csv` and
+`language_sample_games.csv` to `_data/history/`
 on the PC (steps in [scripts/server/README.md](../scripts/server/README.md), section 5).
 The PC and the Pi share one public IP: no heavy Steam traffic from the PC while it runs,
 and nothing on either machine may call steamcommunity.com.
 
 **GitHub Actions switches** (repository variables):
 - On: `COLLECT_DAILY`, `COLLECT_GP`, `PUBLISH_DATASET`, `ENDPOINT_CHECK`, `MODEL_RUN`
-  (first run 2026-10-13 wrote `site/model.json`; the free model is not ready yet, 0 of
-  12,232 free launches recounted).
+  (first run 2026-10-13 wrote `site/model.json`; a rerun after the free recount fitted the
+  free model the same day).
 - Off: `COLLECT_HISTORY`, since 2026-10-12, so the weekly history run does not race the
   Pi. Turn it back on after the copy-back.
 - Other: `HF_DATASET_REPO`. Secrets: `STEAM_API_KEY`, `HF_TOKEN`, `HF_DATASET_REPO`,
@@ -99,9 +102,8 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 
 ## Next steps, in order
 
-1. **When the Pi finishes:** copy back the three files, commit them to the data branch,
-   set `COLLECT_HISTORY` back on, rerun the model (the free model can then be fitted), and
-   look at the reviews by language sample.
+1. **Now that the Pi jobs are in:** set `COLLECT_HISTORY` back on and look at the reviews
+   by language sample. The next model run also writes `demo_with_fest` (PR #27).
 2. **Phase 3 steps 4 to 6** (sections 01 and 02 are in review in PR #27): sections
    01 to 03, then the Methods page and the deploy workflow.
 3. **Phase 4: agent and Cloudflare Worker,** free tier only. For Chinese users, the agent

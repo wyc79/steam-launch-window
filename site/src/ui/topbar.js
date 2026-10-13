@@ -259,6 +259,13 @@ export function topbar(s, state) {
   const sep = h("span", { class: "count-sep", "aria-hidden": "true" });
   const few = h("span", { class: "count-few" });
   const count = h("p", { class: "count", "aria-live": "polite" }, h("span", { class: "quiet" }, s.bar.loading));
+  // one raw counts toggle for the history panel and the heatmap (the shared measure)
+  const raw = h("input", {
+    type: "checkbox",
+    onchange: (e) => state.set({ measure: e.target.checked ? "raw" : "relative" }),
+  });
+  state.subscribe((st) => (raw.checked = st.measure === "raw"));
+  const rawToggle = h("label", { class: "raw-toggle", title: s.bar.rawHint }, raw, h("span", {}, s.bar.raw));
 
   const el = h(
     "div",
@@ -270,7 +277,7 @@ export function topbar(s, state) {
       switcher(s, s.bar.mode, "mode", ["and", "or"], state),
       switcher(s, s.bar.price, "group", ["paid", "free"], state),
       langs.el, // last, so its panel can open leftwards from the right edge at every width
-      count,
+      h("div", { class: "count-row" }, count, rawToggle),
     ),
   );
   let failed = false;

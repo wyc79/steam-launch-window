@@ -21,7 +21,7 @@ const PANEL = {
 };
 
 describe("a shown panel", () => {
-  const v = panelView(PANEL, "paid");
+  const v = panelView(PANEL, "paid", undefined, { tags: [1] });
 
   test("leads with the 75th and 90th percentiles, then the median and the launches", () => {
     expect(v.rows.map((r) => [r.name, r.range, r.p75, r.p90, r.median, r.games])).toEqual([
@@ -36,6 +36,7 @@ describe("a shown panel", () => {
       "Busy: other launches like yours that week, against the average week in the 13 weeks before. Quiet is up to 0.62 times that, busy over 1.10.",
     );
     expect(v.intro).toBe("Paid games like yours: 3,950 past launches with a 30-day review count.");
+    expect(panelView(PANEL, "paid").intro).toBe("All paid games: 3,950 past launches with a 30-day review count.");
   });
 
   test("scales the bars by the largest 90th percentile", () => {

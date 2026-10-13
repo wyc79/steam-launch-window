@@ -28,12 +28,13 @@ export function seasonSection(s, body) {
   const narrow = window.matchMedia(NARROW);
 
   const keyLine = h("p", { class: "ol-key" }, t.key);
+  const good = h("p", { class: "ol-good" }, t.good);
   const from = h("p", { class: "ol-from quiet" });
   const note = h("p", { class: "ol-note quiet" });
   const chart = h("div", { class: "ol-scroll" });
   const detail = h("div", { class: "ol-detail", "aria-hidden": "true" });
   const labelId = uid("ol-label");
-  const frame = [h("p", { id: labelId, class: "visually-hidden" }, t.label), keyLine, from, note, chart, detail];
+  const frame = [h("p", { id: labelId, class: "visually-hidden" }, t.label), keyLine, good, from, note, chart, detail];
 
   function showDetail(i) {
     const w = view.weeks[i];
@@ -132,7 +133,7 @@ export function seasonSection(s, body) {
         months,
         h("span", { class: "ol-axis", "aria-hidden": "true" }, "1.0"),
         list,
-        h("div", { class: "ol-band", "aria-hidden": "true" }, laneItems(band, 3, s)),
+        h("div", { class: "ol-band", "aria-hidden": "true" }, laneItems(band, 3, s, { fit: true })),
       ),
     );
     showDetail(picked);

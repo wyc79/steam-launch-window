@@ -68,31 +68,41 @@ past launches"), which turns red when past launches are too few for the history
 section ("Too few for section 01"). The count is for the picked group (paid or
 free), so it agrees with the heatmap. On phones, where the bar does not stick, a
 one-line summary ("3 tags · Paid · 1,204 upcoming") stays on top once the bar has
-scrolled away; tapping it goes back and focuses the tag field.
+scrolled away; tapping it goes back and focuses the tag field. Beside the count, one
+"Raw counts" toggle (decided 2026-10-13, as the Phase 2 plan said) switches both the
+history panel and the heatmap from "compared with a usual week" to plain counts.
 
 **01 What history says.**
 - The history panel for the selection: quiet, normal and busy launch weeks
   (normalized by default), with the 75th and 90th percentile of 30-day reviews
   leading and the median after it.
-- Launch timing, from the model, as short lines with the size and its range:
-  launching in a seasonal sale, in a themed fest that matches your tags, after
-  a demo in the last Next Fest. Weekly competition: "small, mostly general
-  crowding". A size shows only when its range leaves out 1.0; otherwise the line
-  says "no clear effect" or is left out. A group whose status is not "ok" (or no
+- Launch timing, from the model's headline fit, as short lines with the size and
+  its range: launching in a seasonal sale, in a themed fest that matches your tags,
+  and a demo out by the end of the last Next Fest. One rule for advice (decided
+  2026-10-13): a line says "Avoid ..." only when its range leaves out 1.0 and, where
+  the model ran a chance test, that test agrees (p < 0.05). A range that leaves out
+  1.0 without that is an "unconfirmed" line, not advice; otherwise "no clear effect"
+  (or left out, for the US holidays). A group whose status is not "ok" (or no
   `model.json`) gets one line, "Not ready yet", and none of its numbers.
-- Free games (decided 2026-10-13, now that their recount has landed): the same
-  lines from the free model. Sales and themed fests read "no clear effect". The US
-  holiday weeks (Thanksgiving to Cyber Monday, Christmas to New Year) are shown as
-  advice when their range leaves out 1.0, with one short caution that each rests on
-  only 4 years.
-- Chinese holidays only when Simplified Chinese is picked, from the model's effect
-  for games with Simplified Chinese, marked unconfirmed and never as advice.
+- Weekly competition is described, with no percentage, from the model's fit with the
+  placebo: "small at most; much of it is general crowding" when the launch week is no
+  longer clear there, "small; part of it is general crowding" when it is. The line
+  says the model's niche (similar tags, a shared language, same price tier for paid)
+  is not just the picked tags.
+- Free games (now that their recount has landed): the same lines from the free model.
+  Sales and themed fests read "no clear effect". The US holiday dips (Thanksgiving to
+  Cyber Monday, Christmas to New Year) are not confirmed by the chance test, so they
+  show as unconfirmed lines, with the Steam sale those weeks fall in.
+- Chinese holidays only when Simplified Chinese is picked: one context line without
+  numbers, marked unconfirmed and never advice ("no clear pattern" when the model does
+  not support "fewer").
 
 **02 Typical for this time of year.** The seasonal outlook for the next 26
 weeks (the all-games pattern for the picked languages, paid or free): a value
 and its spread per week, with the events that drive it on hover ("after Next
 Fest October"). It stays at 26 weeks: it comes from past years, so dates not
-yet set do not thin it out.
+yet set do not thin it out. China's holidays enter the pattern only when Simplified
+Chinese is picked. One line under the key: "Quiet is not the same as good."
 
 **03 Competition ahead.** The heatmap for the next 13 weeks (decided
 2026-10-13: beyond a quarter, announced dates say little).
@@ -101,19 +111,20 @@ yet set do not thin it out.
 - Each cell shows exact and spread dates as two visible parts (E and S on
   small screens). Normalized by default ("1.0 = as many as a typical week",
   a typical week being the row's average week of real launches over the last 52
-  weeks); a raw counts toggle, off by default, changes only the numbers, not the
-  shades. The shade follows the number as shown. Weeks more than 4 out are faded,
+  weeks); the shared raw counts toggle, off by default, changes only the numbers,
+  not the shades. The shade follows the number as shown. Weeks more than 4 out are faded,
   labelled "dates still being set".
 - Rows with under one launch in a typical week (or none) show plain counts,
   unshaded, and their row head says how few launches the year had: one launch
   more or less would swing their ratio wildly.
 - Year-only dates: a hatched layer behind a toggle, off by default, and a
   "sometime in 2027: N games" line that names the row it counts (the combination).
-- The niche trend (added 2026-10-13): one line per row whose share of upcoming
-  games differs clearly from its share of past launches ("Cozy: 2.0x its share of
-  past launches among upcoming games"), with the caveat "Announced games: not all
-  will launch." Defined in `analysis/heatmap.py` `niche_trend` (test in
-  `docs/methods.md`).
+- The niche trend (added 2026-10-13): one line per row whose share of upcoming games
+  with exact dates differs clearly from its share of last year's launches ("Cozy is
+  2.0x as large a share of upcoming games (exact dates) as of last year's launches."),
+  with the caveat "Announced games: not all will launch." Defined in
+  `analysis/heatmap.py` `niche_trend`; its cutoff (1.45x either way) is calibrated on
+  real launches by `analysis/trend_calibration.py` (see `docs/methods.md`).
 - Events lanes under the dates, in the same week columns, with their own
   "Events" label and a rule before the heatmap rows: Steam sales, Next Fests,
   themed fests whose tags match, and Chinese holidays only when Simplified Chinese
@@ -231,11 +242,13 @@ A `site` workflow builds and deploys to GitHub Pages:
    `heatmap.js` `WEEKS` went from 26 to 13 (golden cases rewritten); the seasonal outlook keeps
    its own 26. Part 2 built: sections 01 and 02 and the niche trend line. `src/ui/history.js`
    draws the history panel (the object `numbers.js` already computed for the count's red;
-   text from `src/panelview.js`) as a table with hand-drawn bars, its raw counts toggle setting
-   the shared measure, and the model's lines (`src/timing.js`: which lines show, the words for
-   a rate ratio and its range). A demo in Next Fest against no demo multiplies two effects;
-   its range treats them as independent, which is wider than the true one (cautious).
-   "Mostly general crowding" and "small" follow the model's placebo check. `src/ui/season.js`
+   text from `src/panelview.js`) as a table with hand-drawn bars, and the model's lines
+   (`src/timing.js`: which lines show, the words for a rate ratio and its range, one
+   rounding rule shared with `docs/methods.md`). A demo out by the last Next Fest against
+   no demo is `model.json` `demo_with_fest` (added to `analysis/model.py`, from the fit's
+   clustered covariance); without it the site multiplies the two effects with a cautious
+   range. The raw counts toggle is in the top bar (`ui/topbar.js`) and sets the shared
+   measure for sections 01 and 03. `src/ui/season.js`
    draws the outlook as a bar from 1.0 per week with the spread across years behind it, the
    events lanes (`src/ui/lanes.js`, shared with Competition ahead) and what each week rests on
    (`src/outlookview.js`, from the parts `season.estimate` already names); the weeks are an

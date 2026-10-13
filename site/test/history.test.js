@@ -44,7 +44,7 @@ let section;
 function draw(patch = {}, model) {
   body = h("div");
   selection = createState({ ...DEFAULT, ...patch });
-  section = historySection(en, body, selection);
+  section = historySection(en, body);
   section.start(createNumbers([], HISTORY, "2026-10-13"));
   if (model !== undefined) section.setModel(model);
   selection.subscribe((st) => section.draw(st));
@@ -62,14 +62,20 @@ describe("the panel", () => {
     expect(body.querySelector(".hs-cuts").textContent).toMatch(/^Busy: other launches like yours that week/);
   });
 
-  test("raw counts set the shared measure, so the top bar's red follows", () => {
-    const box = body.querySelector(".hs-raw input");
-    expect(box.checked).toBe(false);
-    box.checked = true;
-    box.dispatch("change");
-    expect(selection.get().measure).toBe("raw");
+  test("follows the shared measure (the top bar's raw counts toggle)", () => {
+    expect(body.querySelector(".hs-raw")).toBeNull(); // one toggle for the page, not one here
+    selection.set({ measure: "raw" });
     expect(body.querySelector(".hs-cuts").textContent).toMatch(/^Busy: how many other launches like yours that week/);
-    expect(body.querySelector(".hs-raw input").checked).toBe(true);
+  });
+
+  test("with no tags speaks of all games, with tags of games like yours", () => {
+    expect(body.querySelector(".hs-intro").textContent).toMatch(/^All paid games: /);
+    selection.set({ tags: [1] });
+    expect(body.querySelector(".hs-intro").textContent).toMatch(/^Paid games like yours: /);
+  });
+
+  test("the bars' key can be hidden with the bars (phones)", () => {
+    expect(body.querySelector(".hs-read .hs-bars-key").textContent).toBe(` ${en.history.barsKey}`);
   });
 
   test("too few launches: one line that suggests fewer tags or Any of these", () => {
@@ -103,10 +109,10 @@ describe("the model's lines", () => {
     expect(body.querySelector(".hs-timing").textContent).toBe("Not ready yet.");
   });
 
-  test("China's holidays with Simplified Chinese picked", () => {
+  test("China's holidays with Simplified Chinese picked: one line, no numbers, not in the list", () => {
     draw({ languages: ["english", "schinese"] }, MODEL);
-    expect(body.querySelector(".hs-china").textContent).toBe(
-      `${en.history.china}National Day: 52% fewer reviews (6% to 76% fewer).`,
-    );
+    expect(body.querySelector(".hs-china").tagName).toBe("P");
+    expect(body.querySelector(".hs-china").textContent).toBe(en.history.china(false));
+    expect(body.querySelectorAll(".hs-lines li").map((li) => li.textContent).join(" ")).not.toMatch(/China/);
   });
 });

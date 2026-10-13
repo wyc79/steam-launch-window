@@ -122,7 +122,7 @@ describe("the grid", () => {
     section.setEvents([]);
     section.draw({ ...DEFAULT, tags: [1] });
     expect(body.querySelectorAll(".ah-trend p").map((p) => p.textContent)).toEqual([
-      "Horror: 2.0x its share of past launches among upcoming games.",
+      "Horror is 2.0x as large a share of upcoming games (exact dates) as of last year's launches.",
       "Announced games: not all will launch.",
     ]);
   });

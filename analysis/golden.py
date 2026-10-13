@@ -283,7 +283,7 @@ def heatmap_cases() -> Cases:
     c.add("niche trend: no tags", "niche_trend", games="$trend_games", history="$trend_history", today=today)
     c.add("niche trend: shooter, clear", "niche_trend", games="$trend_games", history="$trend_history",
           today=today, selection=[SHOOTER])
-    c.add("niche trend: cozy, spread dates, a smaller share", "niche_trend", games="$trend_games",
+    c.add("niche trend: cozy, a smaller share, month dates left out", "niche_trend", games="$trend_games",
           history="$trend_history", today=today, selection=[COZY])
     c.add("niche trend: pixel, tiny niche, free group", "niche_trend", games="$trend_games",
           history="$trend_history", today=today, selection=[PIXEL])
