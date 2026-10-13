@@ -121,11 +121,12 @@ Two small pipeline additions (step 1, built):
   (about 5 minutes) every day. It downloads the follower files from the public
   dataset for the follower control.
 - **Free model status:** `model.json` marks the free model `ok` once at least 95%
-  of free launches in the sample period are recounted (`reviews_purchase=all` and
-  a 30-day count, field `recounted_share`; launches still waiting for their count
-  stay in the total) and at most 80% have no reviews; until then it stays
-  `unreliable` with its caveat. The site shows "not ready yet" from that status,
-  not from a constant.
+  of the free launches the sample would include, with or without a count, are
+  recounted (`reviews_purchase=all` and a 30-day count, field `recounted_share`)
+  and at most 80% have no reviews. Until the 95% is reached the free model is not
+  fitted: `model.json` holds only its status, `unreliable`, with its caveat. A
+  group whose fit fails gets status `failed` and a short `error`. The site shows
+  "not ready yet" from that status, not from a constant.
 
 ## Deploy
 

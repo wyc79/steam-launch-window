@@ -916,11 +916,24 @@ def run(data_dir: Path, events_path: Path, gp_dir: Path | None, today: date | No
     result = {"sample": info["sample"], "followers": info["followers"], "prelaunch_tags": info["prelaunch_tags"],
               "caveats": CAVEATS}
     for group, s in frames.items():
+        free = group == "free"
+        status = {"outcome": "reviews_30d", **group_status(s, free, info["free_recount"])}
+        if free and not status["recounted"]:
+            # a few rows, nearly all zeros, while the recount runs: not worth a fit, and the fit can crash
+            log.info("free model not fitted: %d of %d free launches recounted",
+                     status["recount"]["recounted"], status["recount"]["launches"])
+            result[group] = {**status, "caveats": [FREE_CAVEAT]}
+            continue
         log.info("fitting the %s model (%d games)", group, len(s))
-        result[group] = {"outcome": "reviews_30d", **run_group(s, group == "free", info["events"], info["tag_names"],
-                                                                permutations, info["free_recount"])}
-        result[group]["genre_names"] = {str(t): info["tag_names"].get(t) for t in s.attrs["genres"]}
-        result[group]["caveats"] = group_caveats(result[group], group == "free")
+        try:
+            g = {"outcome": "reviews_30d", **run_group(s, free, info["events"], info["tag_names"], permutations,
+                                                       info["free_recount"])}
+            g["genre_names"] = {str(t): info["tag_names"].get(t) for t in s.attrs["genres"]}
+            g["caveats"] = group_caveats(g, free)
+        except Exception as e:  # one group's failure must not lose the other's results
+            log.exception("the %s model failed", group)
+            g = {**status, "status": "failed", "error": f"{type(e).__name__}: {e}"[:300]}
+        result[group] = g
     return result
 
 
@@ -929,10 +942,15 @@ def report(result: dict) -> str:
     lines = [f"sample: {result['sample']}", f"followers: {result['followers']}"]
     for group in ("paid", "free"):
         g = result[group]
+        recount = (f" (recounted {g['recount']['recounted']} of {g['recount']['launches']}, "
+                   f"{g['recounted_share']:.1%})" if "recount" in g else "")
+        if "reviews" not in g:  # not fitted, or failed
+            lines.append(f"\n== {group}: not fitted, status {g['status']}{recount}"
+                         + (f": {g['error']}" if "error" in g else ""))
+            lines.extend(f"  caveat: {c}" for c in g.get("caveats", []))
+            continue
         lines.append(f"\n== {group}: {g['reviews']['n']} games, {g['reviews']['weeks']} weeks, "
-                     f"competition measure {g['competition_measure']}, status {g['status']}"
-                     + (f" (recounted {g['recount']['recounted']} of {g['recount']['launches']}, "
-                        f"{g['recounted_share']:.1%})" if "recount" in g else ""))
+                     f"competition measure {g['competition_measure']}, status {g['status']}{recount}")
         for e in g["reviews"]["effects"]:
             chance = (f"  chance p {e['chance_p']} ({e['windows']} windows; alone, all games {e['chance_ratio_alone']})"
                       if "chance_p" in e else "")
@@ -994,7 +1012,9 @@ def main(argv=None) -> int:
     (args.out / "model.json").write_text(json.dumps(result, separators=(",", ":"), ensure_ascii=False),
                                          encoding="utf-8")
     print(report(result))
-    return 0
+    # a failed paid model fails the run, so the workflow does not commit it; a failed free one
+    # alone does not (the free model is not read yet, and the site uses the paid results)
+    return 1 if result["paid"]["status"] == "failed" else 0
 
 
 if __name__ == "__main__":

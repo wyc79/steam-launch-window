@@ -35,8 +35,9 @@ def test_fit_nb_recovers_a_rate_ratio():
     assert np.exp(res.params["x"]) == pytest.approx(0.5, abs=0.1)
 
 
-def make_data(root, n=2500, seed=3):
-    """Launches from 2022-09 to 2026-08 (some before REACH_FULL_FROM and some held out)."""
+def make_data(root, n=2500, seed=3, free_purchase=""):
+    """Launches from 2022-09 to 2026-08 (some before REACH_FULL_FROM and some held out).
+    free_purchase is the free rows' reviews_purchase ("all": recounted)."""
     rng = random.Random(seed)
     rows = []
     start = date(2022, 9, 1)
@@ -53,7 +54,8 @@ def make_data(root, n=2500, seed=3):
                  languages=rng.choice(["english", "english|schinese", "english|japanese|german"]),
                  audio_languages=rng.choice(["", "english"]), publishers=f"P{rng.randrange(200)}",
                  franchises=rng.choice(["", "", "", "F"]), demo_before_launch=rng.choice(["", "1"]),
-                 reviews_30d=int(np.random.default_rng(i).negative_binomial(0.5, 0.05)), reviews_30d_source="api")
+                 reviews_30d=int(np.random.default_rng(i).negative_binomial(0.5, 0.05)), reviews_30d_source="api",
+                 reviews_purchase=free_purchase if free else "")
         rows.append(r)
     rows.sort(key=lambda r: int(r["appid"]))
     storage.write_csv(root / "history" / "games.csv", rows, FIELDS)
@@ -86,7 +88,7 @@ def make_data(root, n=2500, seed=3):
 @pytest.fixture(scope="module")
 def data_dir(tmp_path_factory):
     root = tmp_path_factory.mktemp("data")
-    make_data(root)
+    make_data(root, free_purchase="all")
     return root
 
 
@@ -123,10 +125,10 @@ def test_model_cli_writes_model_json(data_dir, frames, tmp_path, capsys):
     assert "revenue" in result["paid"] and "log_price" in {e["key"] for e in result["paid"]["reviews"]["effects"]}
     assert "log_price" not in {e["key"] for e in result["free"]["reviews"]["effects"]}
     assert "with_followers" in result["paid"]["followers"]
-    # reviews_purchase is empty in this data: the free model is not read yet
+    # every free row is recounted in this data: the free model is fitted and read
     free = result["free"]
-    assert (free["status"], free["recounted_share"], free["recounted"]) == ("unreliable", 0.0, False)
-    assert M.FREE_CAVEAT in free["caveats"] and "recounted_share" not in result["paid"]
+    assert (free["status"], free["recounted_share"], free["recounted"]) == ("ok", 1.0, True)
+    assert M.FREE_CAVEAT not in free["caveats"] and "recounted_share" not in result["paid"]
     assert "== paid" in capsys.readouterr().out
     # small games: launched from REACH_FULL_FROM only (the data starts before it)
     s = frames[0]["paid"]
@@ -311,6 +313,48 @@ def test_free_model_is_not_ready_while_a_recount_runs(tmp_path):
     assert done == len(s) and launches > 3 * done
     status = M.group_status(s, True, info["free_recount"])
     assert status["status"] == "unreliable" and not status["recounted"] and status["recounted_share"] < 0.3
+
+
+def test_partial_recount_skips_the_free_fit_and_still_writes_paid(tmp_path, capsys):
+    # the recount has just started: 95% of free rows are marked "all" with their count blanked,
+    # which leaves a few dozen free rows, nearly all zeros (fitting them crashed the run)
+    make_data(tmp_path)
+    rows = storage.read_csv(tmp_path / "history" / "games.csv")
+    for i, r in enumerate(r for r in rows if r["is_free"] == "1"):
+        r["reviews_purchase"] = "all"
+        if i % 20:
+            r.update(reviews_30d="", reviews_30d_source="")
+    storage.write_csv(tmp_path / "history" / "games.csv", rows, FIELDS)
+    out = tmp_path / "site"
+    assert M.main(["--data-dir", str(tmp_path), "--gp-dir", str(tmp_path / "gp"), "--events",
+                   str(tmp_path / "events.yaml"), "--out", str(out), "--permutations", "5"]) == 0
+    result = json.loads((out / "model.json").read_text(encoding="utf-8"))
+    assert result["paid"]["status"] == "ok" and result["paid"]["reviews"]["effects"]
+    free = result["free"]
+    assert (free["status"], free["recounted"], free["caveats"]) == ("unreliable", False, [M.FREE_CAVEAT])
+    assert free["recount"]["recounted"] < 0.1 * free["recount"]["launches"] and "reviews" not in free
+    printed = capsys.readouterr().out
+    assert f"== free: not fitted, status unreliable (recounted {free['recount']['recounted']} of " in printed
+
+
+@pytest.mark.parametrize("broken", ["paid", "free"])
+def test_a_failed_group_still_writes_the_other(data_dir, tmp_path, monkeypatch, broken):
+    real = M.run_group
+
+    def run_group(s, free, *a, **k):
+        if free == (broken == "free"):
+            raise OverflowError("math range error")
+        return real(s, free, *a, **k)
+
+    monkeypatch.setattr(M, "run_group", run_group)
+    out = tmp_path / "site"
+    code = M.main(["--data-dir", str(data_dir), "--gp-dir", str(data_dir / "gp"), "--events",
+                   str(data_dir / "events.yaml"), "--out", str(out), "--permutations", "2"])
+    assert code == (1 if broken == "paid" else 0)   # only a failed paid model fails the run
+    result = json.loads((out / "model.json").read_text(encoding="utf-8"))
+    other = "free" if broken == "paid" else "paid"
+    assert result[broken]["status"] == "failed" and result[broken]["error"] == "OverflowError: math range error"
+    assert result[other]["status"] == "ok" and result[other]["reviews"]["effects"]
 
 
 def test_history_reads_reviews_purchase(tmp_path):
