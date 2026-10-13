@@ -282,6 +282,51 @@ img { max-width: 100%; }
 .lede { font-size: var(--fs-lede); line-height: 1.4; max-width: 34em; margin-bottom: var(--s3); }
 .caveat { color: var(--ink-2); font-size: var(--fs-small); margin: 0; }
 
+/* ---------- Methods ---------- */
+.methods-main {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--gap);
+  padding-top: var(--s8);
+}
+.methods-main > * { grid-column: 3 / span 8; min-width: 0; }
+.methods h1 {
+  margin-bottom: var(--s6);
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--track-display);
+}
+.methods h2 {
+  margin: var(--s8) 0 var(--s4);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--ink);
+  font-size: var(--fs-h2);
+  scroll-margin-top: var(--s4);
+}
+.methods h3 { margin: var(--s6) 0 var(--s3); font-size: var(--fs-lede); scroll-margin-top: var(--s4); }
+.methods p, .methods ul, .methods ol { max-width: var(--measure); }
+.methods ul, .methods ol { margin: 0 0 var(--s5); padding-left: 1.25rem; }
+.methods li { margin-bottom: var(--s2); padding-left: var(--s1); }
+.methods code { padding: .08em .22em; background: var(--tint); font: .9em/1.4 Consolas, "Courier New", monospace; }
+.method-table { max-width: 100%; margin: var(--s5) 0 var(--s6); overflow-x: auto; border-top: 1px solid var(--ink); }
+.method-table:focus-visible { outline-offset: 2px; }
+.method-table table { width: 100%; min-width: 38rem; border-collapse: collapse; font-size: var(--fs-small); line-height: 1.4; }
+.method-table th, .method-table td { padding: var(--s2) var(--s3); border-bottom: 1px solid var(--rule-soft); vertical-align: top; text-align: left; }
+.method-table th { color: var(--ink-2); font-size: var(--fs-meta); letter-spacing: var(--track-meta); text-transform: uppercase; }
+.method-table .align-center { text-align: center; }
+.method-table .align-right { text-align: right; font-variant-numeric: tabular-nums; }
+.methods-back { margin-top: var(--s7); padding-top: var(--s4); border-top: 1px solid var(--rule-soft); }
+.method-link { display: inline-block; margin-top: var(--s2); font-size: var(--fs-small); white-space: nowrap; }
+@media (max-width: 1023px) {
+  .methods-main > * { grid-column: 2 / span 4; }
+}
+@media (max-width: 639px) {
+  .methods-main { padding-top: var(--s7); }
+  .methods-main > * { grid-column: 1 / -1; }
+  .methods h2 { margin-top: var(--s7); }
+  .method-table { width: calc(100vw - 2 * var(--margin)); }
+}
+
 /* ---------- Top bar ---------- */
 .bar {
   position: sticky;

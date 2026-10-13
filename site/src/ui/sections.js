@@ -8,6 +8,13 @@ import { h } from "./dom.js";
 // page order; the numbers (01, 02, ...) follow it
 export const SECTIONS = ["trends", "history", "ahead", "season"];
 
+const METHOD_ANCHORS = {
+  trends: "trends",
+  history: "what-history-says",
+  ahead: "competition-ahead",
+  season: "typical-for-this-time-of-year",
+};
+
 export function sectionNumber(key) {
   return String(SECTIONS.indexOf(key) + 1).padStart(2, "0");
 }
@@ -19,13 +26,25 @@ export function sections(s) {
     const { title, intro } = s.sections[key];
     const num = sectionNumber(key);
     const titleId = `${key}-title`;
-    intros[key] = h("p", { class: "intro" }, intro);
+    const introText = h("span", { class: "intro-text" }, intro);
+    intros[key] = introText;
+    const introLine = h(
+      "p",
+      { class: "intro" },
+      introText,
+      " ",
+      h(
+        "a",
+        { class: "method-link", href: `${import.meta.env.BASE_URL}methods.html#${METHOD_ANCHORS[key]}` },
+        s.methods.measured,
+      ),
+    );
     bodies[key] = h("div", { class: "section-body", "aria-busy": "true" }, h("p", { class: "quiet" }, s.bar.loading));
     return h(
       "section",
       { id: key, class: "page-section", "data-index": num, "aria-labelledby": titleId },
       h("h2", { id: titleId }, title),
-      intros[key],
+      introLine,
       bodies[key],
     );
   });

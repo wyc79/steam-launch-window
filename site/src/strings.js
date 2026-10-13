@@ -379,8 +379,7 @@ export const en = {
 
   methods: {
     title: "Methods",
-    soon: "This page is being written. Until then, the methods are in the repository:",
-    link: "docs/methods.md",
+    measured: "How this is measured",
     back: "Back to the tool",
   },
 
