@@ -6,21 +6,21 @@ __pycache__/
 # C extensions
 *.so
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
+# Distribution / packaging (anchored to the root, so folders like site/src/lib/ stay tracked)
+/.Python
+/build/
+/develop-eggs/
+/dist/
+/downloads/
+/eggs/
+/.eggs/
+/lib/
+/lib64/
+/parts/
+/sdist/
+/var/
+/wheels/
+/share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -226,10 +226,10 @@ _hf/
 # website data built by analysis.site_data
 site/data/
 
-# website (Vite): dependencies and build output; keep its code out of the Python lib/ rule
+# website (Vite): dependencies, build output, test coverage
 site/node_modules/
 site/dist/
-!site/src/lib/
+site/coverage/
 
 # agent worktrees
 .claude/worktrees/

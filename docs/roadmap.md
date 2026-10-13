@@ -29,7 +29,7 @@ ends with a report, and the next one starts only after a go-ahead.
 - Review counts use `IUserReviewsService/GetAppReviews` (Steam retires `appreviews` on
   **2026-10-22**). Paid games count reviews from Steam purchases. Free games count all
   reviews (PR #20), because almost nobody "buys" a free game on Steam.
-- PR #23 (Phase 3 step 1): the daily job keeps `gp/latest_followers.csv` (newest follower
+- PR #23 (Phase 3 step 1, merged): the daily job keeps `gp/latest_followers.csv` (newest follower
   count per game); a weekly `model` workflow writes `site/model.json` to the data branch;
   the free model is fitted only once 95% of free launches are recounted, and one group's
   failure no longer loses the other's results.
@@ -52,10 +52,11 @@ The PC and the Pi share one public IP: no heavy Steam traffic from the PC while 
 and nothing on either machine may call steamcommunity.com.
 
 **GitHub Actions switches** (repository variables):
-- On: `COLLECT_DAILY`, `COLLECT_GP`, `PUBLISH_DATASET`, `ENDPOINT_CHECK`.
+- On: `COLLECT_DAILY`, `COLLECT_GP`, `PUBLISH_DATASET`, `ENDPOINT_CHECK`, `MODEL_RUN`
+  (first run 2026-10-13 wrote `site/model.json`; the free model is not ready yet, 0 of
+  12,232 free launches recounted).
 - Off: `COLLECT_HISTORY`, since 2026-10-12, so the weekly history run does not race the
   Pi. Turn it back on after the copy-back.
-- New with PR #23: `MODEL_RUN` (not set yet).
 - Other: `HF_DATASET_REPO`. Secrets: `STEAM_API_KEY`, `HF_TOKEN`, `HF_DATASET_REPO`,
   `GP_API_KEY`.
 - GitHub runs schedules in UTC and can start them hours late, so the weekly publish starts
@@ -98,14 +99,12 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 
 ## Next steps, in order
 
-1. **Merge PR #23** (Phase 3 step 1), then set `MODEL_RUN=on` and run the `model`
-   workflow once by hand.
-2. **When the Pi finishes:** copy back the three files, commit them to the data branch,
+1. **When the Pi finishes:** copy back the three files, commit them to the data branch,
    set `COLLECT_HISTORY` back on, rerun the model (the free model can then be fitted), and
    look at the reviews by language sample.
-3. **Phase 3 steps 3 to 6** (step 2, the JavaScript ports, is in review in PR #24): the page shell
-   and top bar, sections 01 to 03, the Methods page, the deploy workflow.
-4. **Phase 4: agent and Cloudflare Worker,** free tier only. For Chinese users, the agent
+2. **Phase 3 steps 3 to 6** (step 2, the JavaScript ports, is in review in PR #24): the
+   page shell and top bar, sections 01 to 03, the Methods page, the deploy workflow.
+3. **Phase 4: agent and Cloudflare Worker,** free tier only. For Chinese users, the agent
    also gets a Tencent Cloud SCF function in a mainland China region (Workers are often
    slow or blocked there; GitHub Pages works). Check the SCF billing page once when
    setting it up. Chinese text for the page comes after the English site.
@@ -118,7 +117,6 @@ Optional later, on the Pi: first-day and first-week review counts for all launch
 | When | What |
 |---|---|
 | now | Drop the token's user-wide write scope; remove the Pi backfill service (`systemctl --user disable --now steam-history-backfill`) |
-| after PR #23 merges | Set `MODEL_RUN=on`, then run the `model` workflow by hand once |
 | when the Pi finishes | Copy back `games.csv`, `reviews_by_language.csv`, `language_sample_games.csv` to `_data/history/` |
 | within days | When Games Popularity cuts the free limits, tell me the new numbers to set `GP_DAILY_BUDGET` (or pay) |
 | any time | Check the "Data rights" wording on the dataset card, with the Games Popularity credit |

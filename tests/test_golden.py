@@ -14,6 +14,8 @@ def built():
 def same(a, b) -> bool:
     """Equal, with floats to 12 digits: x ** 0.5 uses the C library's pow, which can
     differ in the last bit between the machine that wrote the files and CI."""
+    if isinstance(a, bool) or isinstance(b, bool):  # True == 1 in Python, but not in the files
+        return type(a) is type(b) and a == b
     if isinstance(a, float) or isinstance(b, float):
         return isinstance(a, (int, float)) and isinstance(b, (int, float)) and math.isclose(a, b, rel_tol=1e-12)
     if isinstance(a, dict) and isinstance(b, dict):
@@ -35,3 +37,4 @@ def test_same_allows_only_the_last_digits():
     assert same({"a": [1, 0.1 + 0.2]}, {"a": [1, 0.3]})
     assert not same({"a": [1, 0.3]}, {"a": [1, 0.31]})
     assert not same([1], [1, 2]) and not same({"a": 1}, {"b": 1}) and not same(None, 0.0)
+    assert not same(True, 1) and not same(1.0, False) and same(False, False)

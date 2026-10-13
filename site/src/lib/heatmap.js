@@ -37,6 +37,26 @@ export function selected(games, { selection = [], mode = "and", languages = [] }
   return games.filter((g) => matches(g.tags, selection, mode) && speaks(g.langs, languages));
 }
 
+function perGroup(games) {
+  const out = Object.fromEntries(GROUPS.map((g) => [g, 0]));
+  for (const game of games) out[groupOf(game)] += 1;
+  return out;
+}
+
+// The top bar's numbers per group, so they agree with the heatmap for the picked
+// group: [matched, total] for upcoming games and past launches (full and Early
+// Access, as in the panel).
+export function matchCount(games, history, { selection = [], mode = "and", languages = [] } = {}) {
+  const past = history.filter((h) => PANEL_TYPES.includes(h.launch_type));
+  const up = perGroup(selected(games, { selection, mode, languages }));
+  const upAll = perGroup(games);
+  const hist = perGroup(selected(past, { selection, mode, languages }));
+  const histAll = perGroup(past);
+  return Object.fromEntries(
+    GROUPS.map((g) => [g, { upcoming: [up[g], upAll[g]], past: [hist[g], histAll[g]] }]),
+  );
+}
+
 // the part of a vague date's range from `today` on (days), or null if it has run out
 function daysAhead(game, today) {
   const start = Math.max(toDay(game.date), today);
@@ -53,7 +73,7 @@ function emptyCell() {
 }
 
 // Per week and group: exact, spread, year, hype, year_hype, no_hype; `sometime`
-// per year; `typical` (with `history`) per group; `matched` and `total`.
+// per year; `typical` (with `history`) per group; `matched` and `total` per group.
 export function heatmap(games, today, { selection = [], mode = "and", languages = [], history = null } = {}) {
   const now = toDay(today);
   const first = weekStartDay(now);
@@ -117,8 +137,8 @@ export function heatmap(games, today, { selection = [], mode = "and", languages 
     ...grid,
     typical,
     sometime: Object.fromEntries(years.map((y) => [y, sometime[y]])),
-    matched: chosen.length,
-    total: games.length,
+    matched: perGroup(chosen),
+    total: perGroup(games),
   };
 }
 
@@ -147,15 +167,22 @@ export function normalized(h) {
   );
 }
 
-// Python compares strings by code point; this compares UTF-16 units, the same
-// for every name outside the rare characters above U+FFFF.
+// by code point, as Python compares strings (< compares UTF-16 units, which puts
+// characters above U+FFFF, like emoji, before U+E000 to U+FFFF)
 function compareText(a, b) {
-  return a < b ? -1 : a > b ? 1 : 0;
+  const x = [...a];
+  const y = [...b];
+  for (let i = 0; i < Math.min(x.length, y.length); i++) {
+    const d = x[i].codePointAt(0) - y[i].codePointAt(0);
+    if (d) return d;
+  }
+  return x.length - y.length;
 }
 
 // The games behind one heatmap week (`week` is its Monday), as the heatmap counts
-// them, top-10 tag matches first, then the most followers, then by name.
-// `moved` is [kind, old date text, days since the change].
+// them, top-10 tag matches first, then the most followers, then by name, then appid.
+// `hype_src` says where `followers` comes from ("f" a count, "r" an estimate from
+// wishlist rank); `moved` is [kind, old date text, days since the change].
 export function weekGames(games, today, week, { selection = [], mode = "and", languages = [], year = false } = {}) {
   const now = toDay(today);
   const monday = toDay(week);
@@ -179,9 +206,11 @@ export function weekGames(games, today, week, { selection = [], mode = "and", la
     out.push({
       appid: game.appid,
       name: game.name,
+      free: game.free,
       layer,
       share,
       followers: game.followers ?? null,
+      hype_src: game.hype_src ?? null,
       top10: matches(game.tags.slice(0, 10), selection, mode),
       moved: moved ? [moved[0], moved[1], now - toDay(moved[2])] : null,
     });
@@ -257,8 +286,8 @@ export function historyPanel(
       .map((h) => [busy(group, weekOf.get(h)), h.reviews_30d]);
     out[group] = terciles(sample, minGroup);
   }
-  out.matched = chosen.length;
-  out.total = history.filter((h) => PANEL_TYPES.includes(h.launch_type)).length;
+  out.matched = perGroup(chosen);
+  out.total = perGroup(history.filter((h) => PANEL_TYPES.includes(h.launch_type)));
   return out;
 }
 

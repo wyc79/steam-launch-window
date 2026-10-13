@@ -1,6 +1,6 @@
 // The JavaScript ports must give what the Python reference gives on the golden
-// cases (written by `python -m analysis.golden`): integers, strings and flags
-// exactly, other numbers within a tight tolerance.
+// cases (written by `python -m analysis.golden`): strings, flags and nulls exactly,
+// numbers within a tight tolerance, and without changing their inputs.
 
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
@@ -17,6 +17,7 @@ const CALLS = {
   speaks: (a) => hm.speaks(a.langs, a.languages),
   heatmap: (a) => hm.heatmap(a.games, a.today, a),
   heatmap_rows: (a) => hm.heatmapRows(a.games, a.today, a),
+  match_count: (a) => hm.matchCount(a.games, a.history, a),
   normalized: (a) => hm.normalized(hm.heatmap(a.games, a.today, a)),
   week_games: (a) => hm.weekGames(a.games, a.today, a.week, a),
   percentile: (a) => hm.percentile(a.values, a.q),
@@ -34,9 +35,8 @@ const CALLS = {
 function differences(actual, expected, path = "$") {
   if (typeof expected === "number") {
     if (typeof actual !== "number") return [`${path}: ${actual} vs ${expected}`];
-    const ok = Number.isInteger(expected)
-      ? actual === expected
-      : Math.abs(actual - expected) <= TOLERANCE * Math.max(1, Math.abs(expected));
+    // JSON drops Python's int / float difference, so every number gets the tolerance
+    const ok = Math.abs(actual - expected) <= TOLERANCE * Math.max(1, Math.abs(expected));
     return ok ? [] : [`${path}: ${actual} vs ${expected}`];
   }
   if (Array.isArray(expected)) {
@@ -61,14 +61,15 @@ for (const file of ["heatmap", "panel", "season", "data"]) {
   const golden = JSON.parse(readFileSync(new URL(`./golden/${file}.json`, import.meta.url), "utf-8"));
   describe(file, () => {
     test.each(golden.cases.map((c) => [c.name, c]))("%s", (_, c) => {
-      // "$name" stands for an input; each case gets its own copy, so a port that changed its input shows up
-      const args = Object.fromEntries(
-        Object.entries(c.args).map(([k, v]) => [
-          k,
-          typeof v === "string" && v.startsWith("$") ? structuredClone(golden.inputs[v.slice(1)]) : v,
-        ]),
+      // "$name" stands for an input; a private copy, so that one case cannot change another's inputs
+      const args = structuredClone(
+        Object.fromEntries(
+          Object.entries(c.args).map(([k, v]) => [k, typeof v === "string" && v.startsWith("$") ? golden.inputs[v.slice(1)] : v]),
+        ),
       );
+      const before = structuredClone(args);
       expect(differences(CALLS[c.fn](args), c.expected)).toEqual([]);
+      expect(args).toEqual(before); // the ports must not change what they are given
     });
   });
 }

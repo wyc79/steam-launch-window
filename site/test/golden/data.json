@@ -1,8 +1,10 @@
 {"inputs": {
  "meta": {"snapshot_date": "2026-10-12", "tags": [[113, "Free to Play", 1, 0], [1774, "Shooter", 2, 1], [99999, null, 1, 0]], "languages": ["english", "schinese"], "rank_curve": null},
- "table": {"columns": ["appid", "name", "tags", "langs", "free", "moved"], "rows": [[1, "A", [1, 0], [0, 1], true, null], [2, "B", [2], [], false, ["moved", "2026", "2026-10-12"]]]}
+ "table": {"columns": ["appid", "name", "tags", "langs", "free", "moved"], "rows": [[1, "A", [1, 0], [0, 1], true, null], [2, "B", [2], [], false, ["moved", "2026", "2026-10-12"]]]},
+ "history": {"columns": ["appid", "launch_date", "launch_type", "tags", "langs", "free", "price_cents", "reviews_30d"], "rows": [[10, "2026-01-05", "full", [1], [0], false, 999, 12], [11, "2026-01-06", "early_access", [0, 1], [1], true, null, null]]}
 },
 "cases": [
  {"name": "table with meta", "fn": "table_rows", "args": {"table": "$table", "meta": "$meta"}, "expected": [{"appid": 1, "name": "A", "tags": [1774, 113], "langs": ["english", "schinese"], "free": true, "moved": null}, {"appid": 2, "name": "B", "tags": [99999], "langs": [], "free": false, "moved": ["moved", "2026", "2026-10-12"]}]},
- {"name": "table without meta", "fn": "table_rows", "args": {"table": "$table"}, "expected": [{"appid": 1, "name": "A", "tags": [1, 0], "langs": [0, 1], "free": true, "moved": null}, {"appid": 2, "name": "B", "tags": [2], "langs": [], "free": false, "moved": ["moved", "2026", "2026-10-12"]}]}
+ {"name": "table without meta", "fn": "table_rows", "args": {"table": "$table"}, "expected": [{"appid": 1, "name": "A", "tags": [1, 0], "langs": [0, 1], "free": true, "moved": null}, {"appid": 2, "name": "B", "tags": [2], "langs": [], "free": false, "moved": ["moved", "2026", "2026-10-12"]}]},
+ {"name": "history with meta", "fn": "table_rows", "args": {"table": "$history", "meta": "$meta"}, "expected": [{"appid": 10, "launch_date": "2026-01-05", "launch_type": "full", "tags": [1774], "langs": ["english"], "free": false, "price_cents": 999, "reviews_30d": 12}, {"appid": 11, "launch_date": "2026-01-06", "launch_type": "early_access", "tags": [113, 1774], "langs": ["schinese"], "free": true, "price_cents": null, "reviews_30d": null}]}
 ]}

@@ -37,8 +37,10 @@ CALLS = {
     "speaks": lambda a: hm.speaks(a["langs"], a["languages"]),
     "heatmap": lambda a: hm.heatmap(a["games"], _d(a["today"]), a.get("selection", ()), a.get("mode", "and"),
                                     a.get("languages", ()), a.get("history")),
-    "heatmap_rows": lambda a: hm.rows(a["games"], _d(a["today"]), a.get("selection", ()), a.get("mode", "and"),
-                                      a.get("languages", ()), a.get("history")),
+    "heatmap_rows": lambda a: hm.heatmap_rows(a["games"], _d(a["today"]), a.get("selection", ()),
+                                              a.get("mode", "and"), a.get("languages", ()), a.get("history")),
+    "match_count": lambda a: hm.match_count(a["games"], a["history"], a.get("selection", ()), a.get("mode", "and"),
+                                            a.get("languages", ())),
     "normalized": lambda a: hm.normalized(CALLS["heatmap"](a)),
     "week_games": lambda a: hm.week_games(a["games"], _d(a["today"]), _d(a["week"]), a.get("selection", ()),
                                           a.get("mode", "and"), a.get("languages", ()), a.get("year", False)),
@@ -85,10 +87,10 @@ class Cases:
 
 
 def game(appid, name, precision, start=None, end=None, tags=(SHOOTER,), langs=("english",), free=False,
-         followers=None, moved=None):
+         followers=None, moved=None, hype_src=None):
     return {"appid": appid, "name": name, "precision": precision, "date": start,
             "date_end": end or start, "tags": list(tags), "langs": list(langs), "free": free,
-            "followers": followers, "moved": moved}
+            "followers": followers, "hype_src": hype_src or ("f" if followers is not None else None), "moved": moved}
 
 
 def past(day, reviews=10, tags=(SHOOTER,), langs=("english",), free=False, launch_type="full"):
@@ -97,6 +99,8 @@ def past(day, reviews=10, tags=(SHOOTER,), langs=("english",), free=False, launc
 
 
 UPCOMING = [
+    # same name and followers as appid 2: by appid, and listed first so a stable sort alone gets it wrong
+    game(22, "Alpha Run", "day", "2026-10-13", followers=5000),
     game(1, "Zeta Strike", "day", "2026-10-12", tags=(SHOOTER, ROGUELIKE), followers=5000),  # earlier this week
     game(2, "Alpha Run", "day", "2026-10-15", followers=5000),            # same followers: by name
     game(3, "Twin Tongue", "day", "2026-10-16", langs=("english", "schinese")),  # no follower number
@@ -111,15 +115,19 @@ UPCOMING = [
     game(10, "Next Year", "year", "2027-01-01", "2027-12-31", tags=(ROGUELIKE,)),
     game(11, "Two Years", "year", "2028-01-01", "2028-12-31", free=True),
     game(12, "Far Off", "year", "2031-01-01", "2031-12-31", followers=7),
-    game(13, "Ranked Only", "unknown", followers=900),
+    game(13, "Ranked Only", "unknown", followers=900, hype_src="r"),
     game(14, "Summer", "day", "2027-06-01"),                               # past the 26 weeks
     game(15, "Last Week", "day", "2026-10-05"),                            # before this week
     game(16, "New Year Day", "day", "2027-01-01", followers=40),           # ISO week 53 of 2026
     game(17, "December", "month", "2026-12-01", "2026-12-31", tags=(ROGUELIKE, SHOOTER), followers=0),
     game(18, "Cozy Today", "day", "2026-10-14", tags=(COZY,), followers=10),
     game(19, "Spring Free", "quarter", "2027-01-01", "2027-03-31", tags=(ROGUELIKE,), free=True, followers=999),
-    game(20, "Pixel Later", "day", "2026-11-03", tags=(PIXEL, *FILLER, ROGUELIKE), followers=60,
-         moved=["moved", "Oct 28, 2026", "2026-09-20"]),
+    game(20, "Pixel Later", "day", "2026-11-03", tags=(PIXEL, *FILLER, ROGUELIKE), followers=60, hype_src="r",
+         moved=["moved", "Oct 28, 2026", "2026-09-20"]),                # followers estimated from wishlist rank
+    game(21, "Three Years", "year", "2029-01-01", "2029-12-31"),          # one year past LATER_AFTER: "later"
+    # by code point the fullwidth F (U+FF26) comes first; by UTF-16 units the emoji (U+1F600) would
+    game(23, "\U0001F600 Smile", "day", "2026-11-10"),
+    game(24, "Ｆull", "day", "2026-11-11"),
 ]
 
 # past launches around TODAY's 52-week window (2025-10-15 to 2026-10-13) for the typical week
@@ -146,6 +154,7 @@ PANEL = (weekly([(1, 2, 3, 2, 4)[i % 5] for i in range(60)])
          + weekly([(1, 2, 3, 2, 4)[i % 5] for i in range(60)], tags=(COZY,), langs=("schinese",))
          + weekly([1 + i % 2 for i in range(60)], free=True)
          + weekly([1] * 10, reviews=lambda i, j: None)                     # no review count yet
+         + weekly([0] * 20 + [2, 1, 3] * 10, tags=(PIXEL,))                 # first appears in week 20
          + [past("2024-02-05", 3, launch_type="early_access"), past("2024-02-05", 3, launch_type="ea_exit")])
 
 # exact halves at 2 decimals: 13 weeks of 8, then 1, 3 and 5 others against 8 (0.125, 0.375, 0.625)
@@ -256,6 +265,13 @@ def heatmap_cases() -> Cases:
           week="2026-12-28", year=True)
     c.add("week games: schinese", "week_games", games="$games", today=today, week="2026-10-19",
           languages=["schinese"])
+    c.add("week games: names compared by code point", "week_games", games="$games", today=today,
+          week="2026-11-09")
+    c.add("match count: all games", "match_count", games="$games", history="$typical")
+    c.add("match count: shooter, by group", "match_count", games="$games", history="$typical", selection=[SHOOTER])
+    c.add("match count: roguelike or cozy, schinese", "match_count", games="$games", history="$typical",
+          selection=[ROGUELIKE, COZY], mode="or", languages=["schinese"])
+    c.add("match count: no match", "match_count", games="$games", history="$typical", selection=[COZY, PIXEL])
     for tags, sel, mode in (([ROGUELIKE, 492, SHOOTER], [SHOOTER, ROGUELIKE], "and"),
                             ([ROGUELIKE, 492, SHOOTER], [SHOOTER, COZY], "and"),
                             ([ROGUELIKE, 492, SHOOTER], [SHOOTER, COZY], "or"),
@@ -269,6 +285,8 @@ def heatmap_cases() -> Cases:
 def panel_cases() -> Cases:
     c = Cases(panel=PANEL, halves=HALVES, sparse=SPARSE)
     c.add("relative, under one launch a week", "history_panel", history="$sparse", min_group=1)
+    c.add("relative, a tag that starts after the data: baseline from all launches", "history_panel",
+          history="$panel", selection=[PIXEL], min_group=1)
     c.add("raw, shooter", "history_panel", history="$panel", selection=[SHOOTER], measure="raw")
     c.add("relative, shooter", "history_panel", history="$panel", selection=[SHOOTER])
     c.add("relative, all games, small parts", "history_panel", history="$panel", min_group=1)
@@ -339,9 +357,14 @@ def data_cases() -> Cases:
             "languages": ["english", "schinese"], "rank_curve": None}
     table = {"columns": ["appid", "name", "tags", "langs", "free", "moved"],
              "rows": [[1, "A", [1, 0], [0, 1], True, None], [2, "B", [2], [], False, ["moved", "2026", "2026-10-12"]]]}
-    c = Cases(meta=meta, table=table)
+    history = {"columns": ["appid", "launch_date", "launch_type", "tags", "langs", "free", "price_cents",
+                           "reviews_30d"],
+               "rows": [[10, "2026-01-05", "full", [1], [0], False, 999, 12],
+                        [11, "2026-01-06", "early_access", [0, 1], [1], True, None, None]]}
+    c = Cases(meta=meta, table=table, history=history)
     c.add("table with meta", "table_rows", table="$table", meta="$meta")
     c.add("table without meta", "table_rows", table="$table")
+    c.add("history with meta", "table_rows", table="$history", meta="$meta")
     return c
 
 
