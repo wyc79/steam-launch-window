@@ -82,6 +82,7 @@ def load_history(path: Path) -> pd.DataFrame:
             "publishers": _split(r["publishers"]), "franchise": bool(r["franchises"]),
             "reviews_30d": float(r["reviews_30d"]) if r["reviews_30d"] != "" else math.nan,
             "source": r["reviews_30d_source"],
+            "purchase": r.get("reviews_purchase", ""),  # "all" once recounted; files from before PR #20 lack it
         })
     df = pd.DataFrame(rows)
     df["week"] = [d - timedelta(days=d.weekday()) for d in df["launch_date"]]
@@ -113,18 +114,39 @@ def sample(df: pd.DataFrame, today: date) -> tuple[pd.DataFrame, dict]:
     GAP_DAYS before `today`, full and Early Access (not ea_exit), with a review
     count (not `unavailable`). Launches on Jan 1 and 2, 2022 are left out too:
     their week started in 2021, before the data, so its competition is not known."""
-    end = today - timedelta(days=GAP_DAYS)
-    counts = {"history_rows": len(df), "sample_end": end.isoformat()}
-    keep = (df["launch_date"] >= SAMPLE_START) & (df["launch_date"] <= end)
+    counts = {"history_rows": len(df), "sample_end": (today - timedelta(days=GAP_DAYS)).isoformat()}
+    keep = _in_period(df, today)
     counts["in_period"] = int(keep.sum())
-    for name, out in (("ea_exit", df["launch_type"] == "ea_exit"),
-                      ("unavailable_reviews", df["source"] == "unavailable"),
-                      ("no_review_count", df["reviews_30d"].isna()),
-                      ("week_before_data", df["week"] < SAMPLE_START)):
+    for name, out in _left_out(df):
         counts[name] = int((keep & out).sum())
         keep &= ~out
     counts["kept"] = int(keep.sum())
     return df[keep].copy(), counts
+
+
+def _in_period(df: pd.DataFrame, today: date) -> pd.Series:
+    return (df["launch_date"] >= SAMPLE_START) & (df["launch_date"] <= today - timedelta(days=GAP_DAYS))
+
+
+def _left_out(df: pd.DataFrame) -> tuple[tuple[str, pd.Series], ...]:
+    """The sample's rules, in order: (name, launches it leaves out)."""
+    return (("ea_exit", df["launch_type"] == "ea_exit"),
+            ("unavailable_reviews", df["source"] == "unavailable"),
+            ("no_review_count", df["reviews_30d"].isna()),
+            ("week_before_data", df["week"] < SAMPLE_START))
+
+
+def free_recount(df: pd.DataFrame, today: date) -> tuple[int, int]:
+    """Free launches the sample takes, or would take with a review count, and how many
+    are recounted: reviews_purchase "all" and a 30-day count. A recount marks every free
+    row "all" when it starts and blanks the counts it redoes, so a row is done only once
+    its count is back, and rows still waiting stay in the total."""
+    keep = _in_period(df, today) & df["free"]
+    for name, out in _left_out(df):
+        if name != "no_review_count":
+            keep &= ~out
+    done = keep & (df["purchase"] == "all") & df["reviews_30d"].notna()
+    return int(keep.sum()), int(done.sum())
 
 
 def tag_vectors(tags, top: int, index: dict[int, int]) -> sparse.csr_matrix:

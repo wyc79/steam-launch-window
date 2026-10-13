@@ -12,7 +12,8 @@ Writes, as compact JSON:
   events.json    events.yaml with each event's window in UTC
 
 upcoming.json and history.json are {"columns": [...], "rows": [[...], ...]}.
-`followers` is the newest Games Popularity count (hype_src "f") or, for a game
+`followers` is the newest Games Popularity count (hype_src "f"; from
+gp/latest_followers.csv, or every gp/followers/*.csv.gz without it) or, for a game
 with only a wishlist rank, an estimate from a curve fitted on games with both
 (hype_src "r", needs at least 30 such games). `moved` is [kind, old date text,
 date of the change] when the date changed in the last 30 days: kind "moved",
@@ -54,14 +55,19 @@ def _int(raw: str | None) -> int | None:
 
 
 def newest_followers(gp_dir: Path | None) -> dict[int, int]:
-    """Newest follower count per game from gp/followers/*.csv.gz (by Games Popularity's own time)."""
+    """Newest follower count per game (by Games Popularity's own time), from
+    gp/latest_followers.csv, or from every gp/followers/*.csv.gz without it."""
     best: dict[int, tuple[str, int]] = {}
     if gp_dir is None:
         return {}
+    latest = gp_dir / "latest_followers.csv"
+    if latest.exists():
+        return {int(r["appid"]): int(r["followers"]) for r in storage.read_csv(latest) if r["followers"]}
     for f in sorted((gp_dir / "followers").glob("*.csv.gz")):
         for r in storage.read_csv(f):
             appid, at = int(r["appid"]), r["observed_at"]
-            if r["followers"] and (appid not in best or at > best[appid][0]):
+            # on an equal observed_at the later file wins, as in collect_gp's latest_followers.csv
+            if r["followers"] and (appid not in best or at >= best[appid][0]):
                 best[appid] = (at, int(r["followers"]))
     return {appid: v for appid, (_, v) in best.items()}
 
@@ -210,7 +216,8 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--data-dir", type=Path, default=Path("_data"))
     p.add_argument("--gp-dir", type=Path, default=None,
-                   help="Games Popularity folder (followers/*.csv.gz); without it, no follower numbers")
+                   help="Games Popularity folder (latest_followers.csv or followers/*.csv.gz); "
+                        "without it, no follower numbers")
     p.add_argument("--events", type=Path, default=Path("data/events.yaml"))
     p.add_argument("--out", type=Path, default=Path("site/data"))
     args = p.parse_args(argv)

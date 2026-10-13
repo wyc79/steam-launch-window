@@ -78,6 +78,22 @@ def test_sample_filters_and_counts(tmp_path):
     assert counts["sample_end"] == "2026-09-11"
 
 
+def test_free_recount_keeps_rows_waiting_for_their_count(tmp_path):
+    today = date(2026, 10, 12)
+    blank = {"reviews_30d": "", "reviews_30d_source": ""}
+    df = frame(tmp_path, [
+        row(1, free="1", reviews_purchase="all"),                                # done
+        row(2, free="1", reviews_purchase="all", **blank),                       # marked "all", count not back yet
+        row(3, free="1", reviews_purchase="steam"),                              # not started
+        row(4, free="1"),                                                        # a file from before PR #20
+        row(5, free="1", reviews_purchase="all", launch_type="ea_exit"),         # not in the sample
+        row(6, free="1", reviews_purchase="all", reviews_30d="", reviews_30d_source="unavailable"),
+        row(7, free="1", reviews_purchase="all", day=today - timedelta(days=30)),  # window not closed
+        row(8, reviews_purchase="all"),                                          # paid
+    ])
+    assert F.free_recount(df, today) == (4, 1)
+
+
 def test_prelaunch_tags_override_only_before_launch(tmp_path):
     df = frame(tmp_path, [row(1), row(2)])
     apps = tmp_path / "apps.csv"

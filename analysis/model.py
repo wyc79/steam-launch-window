@@ -49,6 +49,7 @@ FOLLOWER_FROM = date(2024, 6, 1)  # follower history starts 2024-03-15
 HEADLINE_COVERAGE = 0.9  # the follower-controlled fit leads once this share of eligible launches have followers
 HEADLINE_WEEKS = 52
 MAX_ZERO_SHARE = 0.8     # a group where more launches than this have no reviews is marked unreliable
+FREE_RECOUNTED = 0.95    # the free model is read once this share of free launches are recounted (free_recount)
 HOUR_BANDS = ((0, "0_5"), (6, "6_9"), (10, "10_12"), (13, "13_17"), (18, "18_23"))
 HOUR_BASE = "10_12"
 COMPETITION = ("competition", "comp_tier", "comp_top5", "comp_top20", "comp_primary", "comp_placebo",
@@ -120,6 +121,7 @@ def build_frames(data_dir: Path, events_path: Path, gp_dir: Path | None = None,
     df["reach"] = F.publisher_reach(df)
     sample, counts = F.sample(df, today)
     info["sample"] = counts
+    info["free_recount"] = F.free_recount(df, today)
     tag_names = {int(r["tagid"]): r["name"] for r in storage.read_csv(data_dir / "tags.csv")}
     info["tag_names"] = tag_names
     info["events"] = event_data.load(events_path)
@@ -518,7 +520,7 @@ def _competition_check(s: pd.DataFrame, free: bool, competition: str, key: str =
 
 
 def run_group(s: pd.DataFrame, free: bool, events: list[dict] | None = None, tag_names: dict | None = None,
-              permutations: int = PERMUTATIONS) -> dict:
+              permutations: int = PERMUTATIONS, recount: tuple[int, int] = (0, 0)) -> dict:
     out: dict = {}
     competition = "competition"
     # the held-out fits pick their genres from the fitting years only
@@ -563,9 +565,25 @@ def run_group(s: pd.DataFrame, free: bool, events: list[dict] | None = None, tag
             if t and "p_value" in t:  # the chance test's own estimate: the event alone, all games pooled
                 e["chance_p"], e["chance_ratio_alone"], e["windows"] = t["p_value"], t["ratio_alone"], t["windows"]
         out["holidays"] = holiday_summary(s, out, events, main)
-    zero = float((s["y"] == 0).mean())
-    out["status"] = "unreliable" if zero > MAX_ZERO_SHARE else "ok"
+    out.update(group_status(s, free, recount))
     out["headline"] = "with_followers" if out["followers"].get("headline") else "reviews"
+    return out
+
+
+def group_status(s: pd.DataFrame, free: bool, recount: tuple[int, int] = (0, 0)) -> dict:
+    """"unreliable" when most launches have no reviews, or, for free games, until at
+    least FREE_RECOUNTED of them are recounted with every purchase type (PR #20).
+    `recount` is (free launches, recounted) from F.free_recount: measured before the
+    launches without a review count leave the sample, since a running recount blanks them."""
+    zero = float((s["y"] == 0).mean()) if len(s) else 0.0
+    out = {"status": "unreliable" if zero > MAX_ZERO_SHARE else "ok", "zero_share": round(zero, 4)}
+    if free:
+        launches, done = recount
+        share = done / launches if launches else 0.0
+        out["recount"] = {"launches": launches, "recounted": done}
+        out["recounted_share"], out["recounted"] = round(share, 4), share >= FREE_RECOUNTED
+        if not out["recounted"]:
+            out["status"] = "unreliable"
     return out
 
 
@@ -828,6 +846,8 @@ CAVEATS = [
 FREE_CAVEAT = ("The review counts are Steam purchases only, so a free game's reviews from players who did not "
                "buy anything are left out: most free launches show 0 reviews in their first 30 days although "
                "they have reviews. Do not read the free model until free games are counted with all purchase types.")
+
+
 def _per_launch(e: dict) -> str:
     """'0.9% fewer' or '1.2% more' for a per-launch rate ratio."""
     r = e["rate_ratio"]
@@ -873,7 +893,10 @@ def placebo_caveat(check: dict) -> str | None:
 
 
 def group_caveats(g: dict, free: bool) -> list[str]:
-    out = [FREE_CAVEAT] if free and g["status"] == "unreliable" else []
+    out = [FREE_CAVEAT] if free and not g.get("recounted") else []
+    if not out and g.get("zero_share", 0) > MAX_ZERO_SHARE:
+        out.append(f"{g['zero_share']:.0%} of these launches have no reviews in their first 30 days, too many for "
+                   "the model to be read.")
     text = placebo_caveat(g["checks"]["placebo"])
     if text:
         out.append(text)
@@ -893,11 +916,24 @@ def run(data_dir: Path, events_path: Path, gp_dir: Path | None, today: date | No
     result = {"sample": info["sample"], "followers": info["followers"], "prelaunch_tags": info["prelaunch_tags"],
               "caveats": CAVEATS}
     for group, s in frames.items():
+        free = group == "free"
+        status = {"outcome": "reviews_30d", **group_status(s, free, info["free_recount"])}
+        if free and not status["recounted"]:
+            # a few rows, nearly all zeros, while the recount runs: not worth a fit, and the fit can crash
+            log.info("free model not fitted: %d of %d free launches recounted",
+                     status["recount"]["recounted"], status["recount"]["launches"])
+            result[group] = {**status, "caveats": [FREE_CAVEAT]}
+            continue
         log.info("fitting the %s model (%d games)", group, len(s))
-        result[group] = {"outcome": "reviews_30d", **run_group(s, group == "free", info["events"], info["tag_names"],
-                                                                permutations)}
-        result[group]["genre_names"] = {str(t): info["tag_names"].get(t) for t in s.attrs["genres"]}
-        result[group]["caveats"] = group_caveats(result[group], group == "free")
+        try:
+            g = {"outcome": "reviews_30d", **run_group(s, free, info["events"], info["tag_names"], permutations,
+                                                       info["free_recount"])}
+            g["genre_names"] = {str(t): info["tag_names"].get(t) for t in s.attrs["genres"]}
+            g["caveats"] = group_caveats(g, free)
+        except Exception as e:  # one group's failure must not lose the other's results
+            log.exception("the %s model failed", group)
+            g = {**status, "status": "failed", "error": f"{type(e).__name__}: {e}"[:300]}
+        result[group] = g
     return result
 
 
@@ -906,8 +942,15 @@ def report(result: dict) -> str:
     lines = [f"sample: {result['sample']}", f"followers: {result['followers']}"]
     for group in ("paid", "free"):
         g = result[group]
+        recount = (f" (recounted {g['recount']['recounted']} of {g['recount']['launches']}, "
+                   f"{g['recounted_share']:.1%})" if "recount" in g else "")
+        if "reviews" not in g:  # not fitted, or failed
+            lines.append(f"\n== {group}: not fitted, status {g['status']}{recount}"
+                         + (f": {g['error']}" if "error" in g else ""))
+            lines.extend(f"  caveat: {c}" for c in g.get("caveats", []))
+            continue
         lines.append(f"\n== {group}: {g['reviews']['n']} games, {g['reviews']['weeks']} weeks, "
-                     f"competition measure {g['competition_measure']}")
+                     f"competition measure {g['competition_measure']}, status {g['status']}{recount}")
         for e in g["reviews"]["effects"]:
             chance = (f"  chance p {e['chance_p']} ({e['windows']} windows; alone, all games {e['chance_ratio_alone']})"
                       if "chance_p" in e else "")
@@ -969,7 +1012,9 @@ def main(argv=None) -> int:
     (args.out / "model.json").write_text(json.dumps(result, separators=(",", ":"), ensure_ascii=False),
                                          encoding="utf-8")
     print(report(result))
-    return 0
+    # a failed paid model fails the run, so the workflow does not commit it; a failed free one
+    # alone does not (the free model is not read yet, and the site uses the paid results)
+    return 1 if result["paid"]["status"] == "failed" else 0
 
 
 if __name__ == "__main__":

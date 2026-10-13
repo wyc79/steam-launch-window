@@ -125,6 +125,19 @@ def test_followers_take_the_newest_point_and_rank_estimates_need_enough_games(da
     assert all(g["followers"] is None for g in up.values())
 
 
+def test_followers_come_from_latest_followers_csv_when_present(data, tmp_path):
+    from pipeline import collect_gp
+
+    _, gp, _ = data
+    scanned = sd.newest_followers(gp)
+    collect_gp.build_latest(gp)  # built by the collector from the same day files
+    assert sd.newest_followers(gp) == scanned == {1: 300}
+    storage.write_csv(gp / "latest_followers.csv", [{"appid": 1, "followers": 310, "observed_at": "x"}],
+                      collect_gp.LATEST_FIELDS)
+    _, _, up, _, _ = built(data, tmp_path)
+    assert up[1]["followers"] == 310   # the day files are not read
+
+
 def test_rank_curve_fits_a_power_law():
     pairs = [(r, round(1e6 * r ** -0.8)) for r in range(1, 61)]
     a, b = sd.rank_curve(pairs)

@@ -41,6 +41,7 @@ commit the results to the `data` branch.
 | `pipeline.collect_upcoming` | daily | snapshot of all ~60,000 coming-soon games (about 2.5 min, 120 requests) |
 | `pipeline.collect_gp` | daily, after the snapshot | follower and player history from Games Popularity, within a daily budget (see below) |
 | `pipeline.collect_history` | weekly | lists games released since 2022, adds review counts for new ones |
+| `analysis.model` | weekly, after the history job | fits the launch model and commits `site/model.json` to the `data` branch, for the website |
 
 The history backfill is a long one-off job (about a day at 1 request per
 second). It runs outside Actions, on an always-on server
@@ -59,6 +60,7 @@ does not start collecting:
 | `COLLECT_HISTORY=on` | the weekly history job |
 | `ENDPOINT_CHECK=on` | the weekly endpoint smoke test (Steam endpoints, plus one Games Popularity request with the `GP_API_KEY` secret) |
 | `PUBLISH_DATASET=on` | the weekly upload to Hugging Face, which starts when the weekly history job ends (also needs the `HF_TOKEN` secret and `HF_DATASET_REPO` variable) |
+| `MODEL_RUN=on` | the weekly model run, which starts when the weekly history job ends (reads the follower files from the public `HF_DATASET_REPO`; no token) |
 
 Each workflow can also be run by hand from the Actions tab.
 
@@ -149,6 +151,7 @@ history/games.csv                     one row per game released since 2022:
                                       launch date and type, price, tags, languages,
                                       demo, reviews in the first day, week and 30 days,
                                       first_listed, last_listed (rows are never dropped)
+site/model.json                       the launch model's output (analysis/model.py), weekly
 ```
 
 Games Popularity data (under `gp/` in the public Hugging Face dataset, synced by the daily job):
@@ -157,6 +160,7 @@ Games Popularity data (under `gp/` in the public Hugging Face dataset, synced by
 followers/YYYY-MM-DD.csv.gz           points fetched that day: appid, followers,
                                       observed_at (their time), fetched_at (ours)
 players/YYYY-MM-DD.csv.gz             the same, with players
+latest_followers.csv                  the newest point per game: appid, followers, observed_at
 state.csv                             per game: last pull and try, status, newest point,
                                       tries in a row without new points, where an
                                       unfinished pull goes on

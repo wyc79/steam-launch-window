@@ -366,8 +366,9 @@ trademarks of their owners. Whether you may reuse the data depends on Valve's
 terms for Steam data and on your local law. The `gp_` follower and player
 histories come from [Games Popularity](https://games-popularity.com) and are
 republished with its owner's permission (2026-10-12); credit them if you use them.
-The `gp/` folder also holds `state.csv` and `runs.csv`, the collector's working
-files (what was fetched when, and with what result).
+The `gp/` folder also holds `latest_followers.csv`, the newest follower count
+per game (appid, followers, observed_at), and `state.csv` and `runs.csv`, the
+collector's working files (what was fetched when, and with what result).
 
 Full methods: [README](https://github.com/wyc79/steam-launch-window#readme) and
 [endpoint notes](https://github.com/wyc79/steam-launch-window/blob/main/docs/endpoints.md).
