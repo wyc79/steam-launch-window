@@ -16,6 +16,10 @@ test("the build-time article has its contents, sources, anchors, and language ta
   expect(methodsHtml).toContain('href="https://huggingface.co/datasets/strikeoo/steam-launch-data"');
   expect(methodsHtml).toContain("With Simplified Chinese");
   expect(methodsHtml).toContain("55.0%");
+  expect(methodsHtml).toContain("10 launches whose week begins before the analysis window");
+  expect(methodsHtml).toContain("72 paid games without a usable price");
+  expect(methodsHtml).toContain("625 launches, including 555 paid and 70 free launches");
+  expect(methodsHtml).not.toContain("currently cover 626 launches");
 });
 
 

@@ -93,8 +93,10 @@ sale vary by genre and price. The site therefore says reviews, not sales.
 
 The model starts with every Steam launch from 2022-01-01 through 2026-09-11,
 31 days before the data date. That is 80,403 launches. It leaves out 541 games
-leaving Early Access and keeps 79,852 first launches: 67,791 paid and 11,989
-free. A game is free when Steam marks it free or Free to Play is among its top
+leaving Early Access and 10 launches whose week begins before the analysis
+window, keeping 79,852 first launches. The paid model fits 67,791 games after
+leaving out 72 paid games without a usable price. The free model fits 11,989
+games. A game is free when Steam marks it free or Free to Play is among its top
 10 tags.
 
 ### The timing model
@@ -227,10 +229,10 @@ general advice.
 - A two-part check first asks whether a launch got any reviews. A stable
   zero-truncated second part could not be fitted, so it is not used.
 - Pre-launch followers would control for hype better. Games Popularity counts
-  currently cover 626 launches, including 555 paid launches from one week in
-  August 2026. Adding followers cuts the paid competition estimate by about
-  80%, and both versions are within noise. This fit stays preliminary until 90%
-  of launches since June 2024 have a follower count.
+  currently cover 625 launches, including 555 paid and 70 free launches from
+  one week in August 2026. Adding followers cuts the paid competition estimate
+  by about 80%, and both versions are within noise. This fit stays preliminary
+  until 90% of launches since June 2024 have a follower count.
 - Fitting on 2022 to 2025 and testing on 16,383 paid launches from 2026 gives a
   rank correlation of 0.485, against 0.384 for a genre, year, and price
   baseline. Same-tier competition fits a little better than plain competition,
