@@ -49,7 +49,9 @@ export function eventSeries(events) {
       (series[e.name.replace(YEAR, "").trim()] ??= []).push(weekStartDay(toDay(e.start)));
     }
   }
-  return Object.fromEntries(Object.entries(series).map(([name, weeks]) => [name, weeks.sort((a, b) => a - b).map(toIso)]));
+  return Object.fromEntries(
+    Object.entries(series).map(([name, weeks]) => [name, weeks.sort((a, b) => a - b).map(toIso)]),
+  );
 }
 
 function part(name, values) {

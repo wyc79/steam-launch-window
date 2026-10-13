@@ -195,7 +195,8 @@ def week_games(games, today: date, week: date, selection=(), mode: str = "and", 
             continue
         moved = game.get("moved")
         out.append({"appid": game["appid"], "name": game["name"], "free": game["free"], "layer": layer,
-                    "share": share, "followers": game.get("followers"), "hype_src": game.get("hype_src"), "top10": matches(game["tags"][:10], selection, mode),
+                    "share": share, "followers": game.get("followers"), "hype_src": game.get("hype_src"),
+                    "top10": matches(game["tags"][:10], selection, mode),
                     "moved": [moved[0], moved[1], (today - date.fromisoformat(moved[2])).days] if moved else None})
     return sorted(out, key=lambda g: (not g["top10"], g["followers"] is None, -(g["followers"] or 0),
                                       g["name"], g["appid"]))

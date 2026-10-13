@@ -62,11 +62,8 @@ for (const file of ["heatmap", "panel", "season", "data"]) {
   describe(file, () => {
     test.each(golden.cases.map((c) => [c.name, c]))("%s", (_, c) => {
       // "$name" stands for an input; a private copy, so that one case cannot change another's inputs
-      const args = structuredClone(
-        Object.fromEntries(
-          Object.entries(c.args).map(([k, v]) => [k, typeof v === "string" && v.startsWith("$") ? golden.inputs[v.slice(1)] : v]),
-        ),
-      );
+      const input = (v) => (typeof v === "string" && v.startsWith("$") ? golden.inputs[v.slice(1)] : v);
+      const args = structuredClone(Object.fromEntries(Object.entries(c.args).map(([k, v]) => [k, input(v)])));
       const before = structuredClone(args);
       expect(differences(CALLS[c.fn](args), c.expected)).toEqual([]);
       expect(args).toEqual(before); // the ports must not change what they are given
