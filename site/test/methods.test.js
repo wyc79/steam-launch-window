@@ -12,6 +12,8 @@ test("the build-time article has its contents, sources, anchors, and language ta
   expect(methodsHtml).toContain('<a href="#trends">Trends</a>');
   expect(methodsHtml).toContain('<h2 id="what-history-says">What history says</h2>');
   expect(methodsHtml).toContain('<h2 id="competition-ahead">Competition ahead</h2>');
+  expect(methodsHtml).toContain('<h3 id="most-anticipated">Most anticipated</h3>');
+  expect(methodsHtml).toContain('<a href="#the-placebo-and-weekly-competition">');
   expect(methodsHtml).toContain('<h2 id="typical-for-this-time-of-year">Typical for this time of year</h2>');
   expect(methodsHtml).toContain('href="https://games-popularity.com/"');
   expect(methodsHtml).toContain('href="https://huggingface.co/datasets/strikeoo/steam-launch-data"');

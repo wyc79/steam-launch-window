@@ -1,8 +1,8 @@
 // Competition ahead: the heatmap (an ARIA grid of plain HTML cells, laid out by
-// CSS: weeks across, or down on phones), the events lanes under the dates, and the
-// week's games. Numbers come from numbers.js, text and steps from heatview.js and
-// weekdetail.js, the events from events.js; this file only draws them and handles
-// input.
+// CSS: weeks across, or down on phones), the events lanes under the dates, the
+// week's games and the most anticipated list. Numbers come from numbers.js, text
+// and steps from heatview.js and weekdetail.js, the events from events.js; this
+// file only draws them and handles input.
 
 import { formatNumber } from "../count.js";
 import { bandEvents } from "../events.js";
@@ -14,14 +14,16 @@ import {
   formatCut,
   formatDate,
   formatValue,
+  rowLabel,
   shownValue,
   step,
   trendLines,
 } from "../heatview.js";
 import { WEEKS } from "../lib/heatmap.js";
 import { tagNames } from "../tags.js";
+import { langsText } from "../trendview.js";
 import { eventEffect } from "../eventeffects.js";
-import { detailItems, findGames, listParts } from "../weekdetail.js";
+import { detailItems, findGames, fullDate, listParts, steamDate, storeUrl } from "../weekdetail.js";
 import { fill, h, uid } from "./dom.js";
 import { laneItems } from "./lanes.js";
 
@@ -37,6 +39,7 @@ export function aheadSection(s, body) {
   const phone = window.matchMedia(PHONE);
   let numbers = null;
   let names = new Map();
+  let snapshot = null; // meta.json's snapshot_date: the day of the Top Wishlisted ranks
   let events; // undefined while loading, null if events.json failed
   let model; // model.json: undefined while loading, null if missing
   let st = null; // the selection last drawn or asked for
@@ -78,6 +81,10 @@ export function aheadSection(s, body) {
   const scroller = h("div", { class: "hm-scroll" });
   const notes = h("div", { class: "ah-notes" });
   const detail = h("div", { class: "ah-detail" });
+  // the most anticipated list: beside the week's games on wide screens, under them on narrow ones
+  const top = h("div", { class: "ah-top" });
+  const topTitleId = uid("ah-top-title"); // names the list for screen readers
+  const lower = h("div", { class: "ah-lower" }, detail, top);
   // the opened week, said once (not the whole list) for screen readers
   const announce = h("p", { class: "visually-hidden", "aria-live": "polite" });
   // the niche trend: lines only when a share differs clearly (heatmap.js trendFrom)
@@ -86,7 +93,7 @@ export function aheadSection(s, body) {
   // screen so the grid's scroll area cannot clip it. The cell's label holds the same
   // text, so screen readers skip the box.
   const tip = h("div", { class: "hm-tip", "aria-hidden": "true", hidden: true });
-  const frame = [controls, status, trend, eventsNote, scroller, notes, detail, announce, tip];
+  const frame = [controls, status, trend, eventsNote, scroller, notes, lower, announce, tip];
 
   // ---------- the grid ----------
   // Desktop rows: 1 the dates; then, with events, the "Events" label, one row per
@@ -462,6 +469,44 @@ export function aheadSection(s, body) {
     if (searching) detail.querySelector(".ah-search")?.focus(); // a redraw keeps the search box in use
   }
 
+  // ---------- the most anticipated list ----------
+  // the selection's games by Top Wishlisted rank, at any date: a rank, never a count
+  function topLine(g) {
+    return h(
+      "li",
+      {},
+      h(
+        "a",
+        { href: storeUrl(g.appid), class: "ah-top-game", target: "_blank", rel: "noopener" },
+        g.name || a.unnamed(g.appid),
+        h("span", { class: "visually-hidden" }, a.top.newTab),
+      ),
+      h("span", { class: "ah-top-meta" }, [steamDate(g, s), a.top.rank(formatNumber(g.wishlist_rank, s))].join(s.bar.sep)),
+    );
+  }
+
+  let topFor = null; // [list, title, for-line] drawn: a redraw for the year layer or events keeps the links and focus
+  function drawTop() {
+    const t = a.top;
+    const list = numbers.anticipated(st)[st.group];
+    // tags decide the title; the for-line names the rest of the selection
+    const title = st.tags.length ? t.titleNiche : t.title;
+    const forText = t.forLine(rowLabel(st.tags, st.mode, names, s), s.bar[st.group], langsText(st.languages, s));
+    if (topFor?.[0] === list && topFor[1] === title && topFor[2] === forText) return;
+    topFor = [list, title, forText];
+    fill(
+      top,
+      h("h3", { id: topTitleId }, title),
+      h("p", { class: "ah-top-for" }, forText),
+      list.games.length > 0
+        ? [
+            h("ol", { class: "ah-top-list", role: "list", "aria-labelledby": topTitleId }, list.games.map(topLine)),
+            h("p", { class: "ah-top-note quiet" }, t.caveat(snapshot && fullDate(snapshot, s))),
+          ]
+        : h("p", { class: "ah-top-none quiet" }, list.total ? t.none : t.noRanks),
+    );
+  }
+
   // ---------- drawing ----------
   function pickBand() {
     if (bandFor?.[0] === rows && bandFor[1] === events) return;
@@ -514,7 +559,10 @@ export function aheadSection(s, body) {
     const nothing = view.empty === a.empty;
     scroller.hidden = nothing;
     detail.hidden = nothing;
+    top.hidden = nothing; // the status line says it: no upcoming games match
     if (!nothing) drawGrid();
+    // drawn even when hidden: page.js counts the list as known, so paid / free draws at once
+    drawTop();
     drawLegend();
     drawNotes();
     markOpenWeek();
@@ -528,6 +576,7 @@ export function aheadSection(s, body) {
     start(shared, meta) {
       numbers = shared;
       names = tagNames(meta.tags);
+      snapshot = meta.snapshot_date;
     },
     // events.json's list, or null if it failed: the heatmap goes without lanes
     setEvents(list) {

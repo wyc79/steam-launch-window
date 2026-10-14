@@ -18,7 +18,7 @@ ends with a report, and the next one starts only after a go-ahead.
 | Audit | 6. Implementation | [PR #13](https://github.com/wyc79/steam-launch-window/pull/13) merged 2026-10-12; fixes from the first Games Popularity run in [PR #14](https://github.com/wyc79/steam-launch-window/pull/14), merged 2026-10-12 |
 | Audit | 7. Deliverables | reported 2026-10-12 in [pipeline-report.md](pipeline-report.md), together with the build Phase 1 report |
 | Build | 2. Analysis | built: site data and reference numbers (PR #18), the model (PR #19), free games count all reviews (PR #20), reviews by language sample (PR #21). The free recount (data commit 8593cd4) and the language sample (eff1bc5) are in, the model was rerun (79cca10), and the language sample is written up in Phase 3 step 5. See [phase2-plan.md](phase2-plan.md) and [methods.md](methods.md) |
-| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 merged in PR #23; step 2 merged in PR #24; step 3 merged in PR #25; step 4 part 1 merged in PR #26; step 4 part 2 merged in PR #27; Trends, now section 01, merged in PR #28; step 5 Methods page built in PR #29; left: step 6 deploy workflow and live-site review |
+| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 merged in PR #23; step 2 merged in PR #24; step 3 merged in PR #25; step 4 part 1 merged in PR #26; step 4 part 2 merged in PR #27; Trends, now section 01, merged in PR #28; step 5 Methods page built in PR #29; the most anticipated list in section 03 built in PR #30; left: step 6 deploy workflow and live-site review |
 | Build | 4. Agent and Worker | not started |
 
 ## Where things stand
@@ -110,7 +110,11 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
    older quarters miss games removed before October 2026. Trends already counts only rows the
    newest listing run still lists (`listed` in `history.json`, from `analysis/site_data.py`),
    so removals after that do not inflate the later quarters.
-4. **Phase 4: agent and Cloudflare Worker,** free tier only. For Chinese users, the agent
+4. **Revisit follower views once follower coverage grows.** The follower fit becomes the
+   headline at 90% coverage of eligible launches; on 2026-10-13 coverage was 1.3% (one week of
+   August 2026 launches). The site shows no follower estimates in the most anticipated list,
+   and the weekly follower totals in `lib/heatmap.js` stay unused until then.
+5. **Phase 4: agent and Cloudflare Worker,** free tier only. For Chinese users, the agent
    also gets a Tencent Cloud SCF function in a mainland China region (Workers are often
    slow or blocked there; GitHub Pages works). Check the SCF billing page once when
    setting it up. Chinese text for the page comes after the English site.

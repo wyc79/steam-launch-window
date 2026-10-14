@@ -7,8 +7,10 @@ import {
   findGames,
   fold,
   followersText,
+  fullDate,
   listParts,
   movedText,
+  steamDate,
   storeUrl,
 } from "../src/weekdetail.js";
 
@@ -46,6 +48,24 @@ test("dates as the store gives them", () => {
   expect(dateText({ precision: "quarter", date: "2027-01-01" })).toBe("Q1 2027");
   expect(dateText({ precision: "year", date: "2027-01-01" })).toBe("2027");
   expect(dateText(undefined)).toBeNull();
+});
+
+test("dates as the store page shows them, year included, for the most anticipated list", () => {
+  expect(steamDate({ precision: "day", date: "2026-10-28" })).toBe("Oct 28, 2026");
+  expect(steamDate({ precision: "month", date: "2026-12-01" })).toBe("December 2026");
+  expect(steamDate({ precision: "quarter", date: "2027-01-01" })).toBe("Q1 2027");
+  expect(steamDate({ precision: "year", date: "2027-01-01" })).toBe("2027");
+  expect(steamDate({ precision: "day", date: "2026-09-30" })).toBe("Sep 30, 2026"); // passed, still as the store has it
+  expect(fullDate("2026-10-13")).toBe("Oct 13, 2026");
+});
+
+test("a game with no date shows the store's own words, else To be announced", () => {
+  expect(steamDate({ precision: "unknown", date: null, date_text: "Coming soon" })).toBe("Coming soon");
+  expect(steamDate({ precision: "unknown", date: null, date_text: "To be announced" })).toBe("To be announced");
+  expect(steamDate({ precision: "unknown", date: null, date_text: null })).toBe("To be announced");
+  expect(steamDate({ precision: "unknown", date: null })).toBe("To be announced");
+  // the week list's dates are untouched: it lists only games with a date
+  expect(dateText({ precision: "unknown", date: null, date_text: "Coming soon" })).toBeNull();
 });
 
 test("store links", () => {

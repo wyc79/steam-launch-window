@@ -16,6 +16,8 @@ checked against. Games are dicts with the column names of those files.
   `today` on; games that launched earlier that week have left the list.
 - Free games (Steam's flag or "Free to Play" in the top 10 tags) are counted
   apart from paid ones.
+- The most anticipated list takes the matching games on Steam's Top Wishlisted
+  list, at any date or none, in the order of their rank there.
 
 The browser's copies are in site/src/lib/ (heatmap.js, season.js), checked
 against this module with the golden files that analysis/golden.py writes.
@@ -38,6 +40,8 @@ LATER_AFTER = 2  # year-only dates more than this many years ahead ("2099") are 
 TREND_MIN_EXACT = 10  # the niche trend needs this many niche games with exact dates
 TREND_RATIO = 1.45  # and a share at least this many times the past one, or at most its inverse (trend_calibration.py)
 TREND_Z = 1.959964  # and a pooled two-proportion z at least this large
+TOP_RANKED = 10  # Competition ahead's most anticipated list: this many games per group
+RANKED_FIELDS = ("appid", "name", "precision", "date", "date_text", "wishlist_rank")
 
 
 def week_start(d: date) -> date:
@@ -256,6 +260,22 @@ def week_games(games, today: date, week: date, selection=(), mode: str = "and", 
                     "moved": [moved[0], moved[1], (today - date.fromisoformat(moved[2])).days] if moved else None})
     return sorted(out, key=lambda g: (not g["top10"], g["followers"] is None, -(g["followers"] or 0),
                                       g["name"], g["appid"]))
+
+
+def most_anticipated(games, selection=(), mode: str = "and", languages=(), limit: int = TOP_RANKED) -> dict:
+    """Per group, the games the selection matches (as the heatmap matches them) that are
+    on Steam's Top Wishlisted list, by their rank there (1 first; then appid): the first
+    `limit` of them, with `total` (all ranked games in the group). Any date or none
+    counts, so undated games are in it too. The order is the observed rank only, never
+    followers estimated from it."""
+    ranked = [g for g in games if g.get("wishlist_rank") is not None]
+    chosen = sorted(selected(ranked, selection, mode, languages), key=lambda g: (g["wishlist_rank"], g["appid"]))
+    out = {}
+    for group in GROUPS:
+        mine = [g for g in chosen if group_of(g) == group]
+        out[group] = {"games": [{k: g.get(k) for k in RANKED_FIELDS} for g in mine[:limit]],
+                      "total": sum(group_of(g) == group for g in ranked)}
+    return out
 
 
 def percentile(values: list[float], q: float) -> float:

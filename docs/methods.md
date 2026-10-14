@@ -281,6 +281,39 @@ The event lanes show seasonal sales, Next Fest, and themed fests that match a
 picked tag. Chinese holidays appear only with Simplified Chinese. A historical
 effect appears in an event's label only when the advice rule permits it.
 
+### Most anticipated
+
+Beside the week's games, the section lists up to 10 upcoming games that match
+the selection, in the order of their rank on Steam's Top Wishlisted list. With
+no tags picked, it is the top 10 of all paid or all free games in the picked
+languages. A line under the title names the selection: tags, paid or free, and
+languages.
+
+The collector reads the whole list each day from Steam's US store search with
+`filter=popularwishlist`. Our rank is a game's place in that list after bundles
+and games listed twice are dropped, so it can differ from Steam's page by a few
+places. On 2026-10-13, Steam had about 60,300 coming-soon games, and 5,251 of
+them (about 9%) had a rank. The site keeps a game with no date only when it
+has a rank, and drops exact dates more than 30 days past (one ranked game that
+day). The list gives a rank only. Steam publishes no wishlist counts, so the
+site shows none.
+
+Matching is the heatmap's own: the same tags with the all or any rule, the
+languages, and paid or free. Unlike the heatmap, the list takes games at any
+date the site keeps: exact, month, quarter, year, or none yet, including those
+beyond the 13 weeks. The order is the rank alone, never followers. Each game
+shows its date as the store shows it and its rank, such as "#212 on Top
+Wishlisted". A game with no date shows the store's own words, such as "Coming
+soon" or "To be announced". When the store gave no words, it shows "To be
+announced".
+
+The list is context. A rank says how a game compares with other unreleased
+games, not how many wishlists it has, and not whether it will launch on its
+date. The model measured how many games launched in the same week, as
+[The placebo and weekly competition](#the-placebo-and-weekly-competition)
+explains. It did not measure anticipated games at any date, and it never used
+Top Wishlisted ranks. So the list carries no warning and no advice.
+
 ### The held-back niche trend
 
 A trend check compares a niche's share of exact-date upcoming games with its

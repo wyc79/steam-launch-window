@@ -7,7 +7,8 @@ Writes, as compact JSON:
                  languages; rows below point into these two lists by index
   upcoming.json  one row per game in the newest snapshot that has a date or a
                  wishlist rank (day dates more than 30 days past are stale pages
-                 and left out)
+                 and left out); `date_text` is the store's text for games with
+                 no date ("Coming soon", "To be announced"), null for the rest
   history.json   one row per past launch, except `ea_exit` (not a first launch);
                  `listed` when the game was in the newest listing run (its
                  `last_listed` is the newest in the file, or empty): Trends counts
@@ -41,7 +42,7 @@ from pipeline import steam, storage
 STALE_DAYS = 30
 MOVED_DAYS = 30
 MIN_FIT = 30
-UPCOMING_COLUMNS = ["appid", "name", "precision", "date", "date_end", "tags", "langs", "free", "ea",
+UPCOMING_COLUMNS = ["appid", "name", "precision", "date", "date_end", "date_text", "tags", "langs", "free", "ea",
                     "wishlist_rank", "followers", "hype_src", "moved"]
 HISTORY_COLUMNS = ["appid", "launch_date", "launch_type", "tags", "langs", "free", "price_cents", "reviews_30d",
                    "listed"]
@@ -135,7 +136,9 @@ def build(data_dir: Path, events_path: Path, out: Path, gp_dir: Path | None = No
         tags = tag_ids(app.get("tags", ""))
         upcoming.append({
             "appid": appid, "name": app.get("name", ""), "precision": precision,
-            "date": r["date"] or None, "date_end": r["date_end"] or None, "tags": tags,
+            "date": r["date"] or None, "date_end": r["date_end"] or None,
+            # the store's words for a game with no date ("Coming soon"); the site rebuilds the rest
+            "date_text": (r["raw"] or None) if precision == "unknown" else None, "tags": tags,
             "langs": [x for x in app.get("languages", "").split("|") if x], "free": is_free(app.get("is_free"), tags),
             "ea": r["early_access"] == "1", "wishlist_rank": _int(r["wishlist_rank"]),
             "followers": followers.get(appid), "hype_src": "f" if appid in followers else None,

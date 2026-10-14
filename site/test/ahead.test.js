@@ -186,6 +186,133 @@ describe("what past launches during an event did", () => {
   });
 });
 
+describe("the most anticipated list", () => {
+  // ranked games at any date: undated, beyond the 13 weeks, and one in the week of Oct 19
+  const RANKED = [
+    game(201, "unknown", null, null, { wishlist_rank: 812, date_text: "Coming soon" }),
+    game(202, "day", "2027-05-04", "2027-05-04", { wishlist_rank: 212 }),
+    game(203, "quarter", "2027-01-01", "2027-03-31", { wishlist_rank: 4000, tags: [2] }),
+    game(204, "month", "2026-12-01", "2026-12-31", { wishlist_rank: 1500, followers: 900, hype_src: "r" }),
+    game(205, "year", "2027-01-01", "2027-12-31", { wishlist_rank: 3, free: true }),
+    { ...GAMES[0], wishlist_rank: 2500, name: "" },
+  ];
+  const names = { ...META, tags: [...META.tags, [2, "Puzzle", 1, 0]] };
+  function setup(patch = {}, games = [...RANKED, ...GAMES.slice(1)], meta = names) {
+    const body = h("div");
+    const section = aheadSection(en, body);
+    section.start(createNumbers(games, HISTORY, TODAY), meta);
+    section.setEvents([]);
+    section.draw({ ...DEFAULT, ...patch });
+    return { body, section };
+  }
+  const drawRanked = (...args) => setup(...args).body;
+  const rows = (body) => body.querySelectorAll(".ah-top-list li");
+
+  test("lists the picked group's matching games by rank, at any date, in an ordered list", () => {
+    const body = drawRanked({ tags: [1] });
+    expect(body.querySelector(".ah-top h3").textContent).toBe("Most anticipated in your niche");
+    expect(body.querySelector(".ah-top-for").textContent).toBe("Horror, Paid, in English");
+    expect(body.querySelector(".ah-top-list").tagName).toBe("OL");
+    expect(rows(body).map((li) => li.querySelector(".ah-top-meta").textContent)).toEqual([
+      "May 4, 2027 · #212 on Top Wishlisted",
+      "Coming soon · #812 on Top Wishlisted", // the store's own words for a game with no date
+      // ranked lower, so after #812 whatever its followers; and the followers are not shown
+      "December 2026 · #1,500 on Top Wishlisted",
+      "Oct 20, 2026 · #2,500 on Top Wishlisted",
+    ]);
+    expect(rows(body)[3].querySelector("a").textContent).toBe("App 1 (opens in a new tab)");
+    expect(body.querySelector(".ah-top").textContent).not.toMatch(/follower/);
+  });
+
+  test("links open the store page in a new tab", () => {
+    const link = rows(drawRanked({ tags: [1] }))[0].querySelector("a");
+    expect(link.getAttribute("href")).toBe("https://store.steampowered.com/app/202/");
+    expect([link.getAttribute("target"), link.getAttribute("rel")]).toEqual(["_blank", "noopener"]);
+  });
+
+  test("no tags: all games of the group, titled for all of Steam, with the snapshot date", () => {
+    const body = drawRanked({ group: "free" });
+    expect(body.querySelector(".ah-top h3").textContent).toBe("Most anticipated on Steam");
+    expect(body.querySelector(".ah-top-for").textContent).toBe("All games, Free, in English");
+    expect(rows(body)).toHaveLength(1);
+    expect(body.querySelector(".ah-top-note").textContent).toBe(
+      "Rank on Steam's Top Wishlisted list on Oct 13, 2026. Not wishlist counts.",
+    );
+  });
+
+  test("the list is named by its title for screen readers", () => {
+    const body = drawRanked();
+    const id = body.querySelector(".ah-top h3").getAttribute("id");
+    expect(id).toMatch(/^ah-top-title-\d+$/);
+    expect(body.querySelector(".ah-top-list").getAttribute("aria-labelledby")).toBe(id);
+    expect(drawRanked().querySelector(".ah-top h3").getAttribute("id")).not.toBe(id); // one per section
+  });
+
+  test("keeps the caveat without a snapshot date", () => {
+    const body = drawRanked({}, undefined, { ...names, snapshot_date: undefined });
+    expect(body.querySelector(".ah-top-note").textContent).toBe("Rank on Steam's Top Wishlisted list. Not wishlist counts.");
+  });
+
+  test("only languages picked: titled for all of Steam, the for-line names the group and the languages", () => {
+    const chinese = game(207, "unknown", null, null, { wishlist_rank: 50, langs: ["schinese"], date_text: "To be announced" });
+    const body = drawRanked({ languages: ["schinese"] }, [...RANKED, ...GAMES, chinese]);
+    expect(body.querySelector(".ah-top h3").textContent).toBe("Most anticipated on Steam");
+    expect(body.querySelector(".ah-top-for").textContent).toBe("All games, Paid, in Simplified Chinese");
+    expect(rows(body).map((li) => li.querySelector("a").textContent)).toEqual(["Game 207 (opens in a new tab)"]);
+  });
+
+  test("a group switch on the same section replaces the list", () => {
+    const { body, section } = setup();
+    const paid = rows(body).map((li) => li.querySelector(".ah-top-meta").textContent);
+    section.draw({ ...DEFAULT, group: "free" });
+    expect(body.querySelector(".ah-top-for").textContent).toBe("All games, Free, in English");
+    const free = rows(body).map((li) => li.querySelector(".ah-top-meta").textContent);
+    expect(free).toEqual(["2027 · #3 on Top Wishlisted"]);
+    expect(paid).not.toContain(free[0]);
+  });
+
+  test("a redraw for events or the model keeps the same links, so focus stays", () => {
+    const { body, section } = setup({ tags: [1] });
+    const links = rows(body).map((li) => li.querySelector("a"));
+    section.setEvents([FEST]);
+    section.setModel(null);
+    section.draw({ ...DEFAULT, tags: [1] });
+    expect(rows(body).every((li, i) => li.querySelector("a") === links[i])).toBe(true);
+  });
+
+  test("is hidden when no upcoming game matches, like the heatmap", () => {
+    const body = drawRanked({ tags: [2], group: "free" }); // the Puzzle game is paid
+    expect(body.querySelector(".ah-top").hidden).toBe(true);
+    expect(body.querySelector(".ah-top").textContent).not.toMatch(/false|null|undefined|NaN/);
+  });
+
+  test("stops at 10", () => {
+    const many = Array.from({ length: 14 }, (_, i) => game(300 + i, "unknown", null, null, { wishlist_rank: 14 - i }));
+    const body = drawRanked({}, [...many, ...GAMES]);
+    expect(rows(body)).toHaveLength(10);
+    expect(rows(body)[0].querySelector(".ah-top-meta").textContent).toBe("To be announced · #1 on Top Wishlisted");
+    expect(rows(body)[9].querySelector(".ah-top-meta").textContent).toBe("To be announced · #10 on Top Wishlisted");
+  });
+
+  test("one line when none of the matching games is ranked, or the snapshot has no ranks", () => {
+    const unranked = game(206, "day", "2026-10-20", "2026-10-20", { tags: [2], free: true });
+    const body = drawRanked({ tags: [2], group: "free" }, [...RANKED, unranked]);
+    expect(body.querySelector(".ah-top").hidden).toBe(false);
+    expect(body.querySelector(".ah-top-list")).toBeNull();
+    expect(body.querySelector(".ah-top-none").textContent).toBe("No matching game is on Top Wishlisted.");
+    expect(body.querySelector(".ah-top-note")).toBeNull();
+    const plain = draw(); // the week tests' games have no ranks at all
+    expect(plain.querySelector(".ah-top-none").textContent).toBe("This snapshot has no Top Wishlisted ranks.");
+    expect(plain.querySelector(".ah-top-note")).toBeNull();
+  });
+
+  test("never shows the words false or null", () => {
+    for (const patch of [{}, { tags: [1] }, { tags: [2] }, { group: "free" }]) {
+      expect(drawRanked(patch).querySelector(".ah-top").textContent).not.toMatch(/false|null|undefined|NaN/);
+    }
+  });
+});
+
 describe("the grid", () => {
   test("puts the events lanes under the dates, with their own label", () => {
     const body = draw();

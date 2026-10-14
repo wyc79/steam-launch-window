@@ -21,6 +21,7 @@ const CALLS = {
   match_count: (a) => hm.matchCount(a.games, a.history, a),
   normalized: (a) => hm.normalized(hm.heatmap(a.games, a.today, a)),
   niche_trend: (a) => hm.nicheTrend(a.games, a.history, a.today, a),
+  most_anticipated: (a) => hm.mostAnticipated(a.games, a),
   week_games: (a) => hm.weekGames(a.games, a.today, a.week, a),
   percentile: (a) => hm.percentile(a.values, a.q),
   round2: (a) => hm.round2(a.x),

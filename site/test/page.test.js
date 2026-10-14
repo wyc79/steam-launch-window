@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import { connect } from "../src/page.js";
 import { createState } from "../src/state.js";
 import { en } from "../src/strings.js";
+import { installDom } from "./fakedom.js";
 
 const GAMES = [{ tags: [1], langs: ["english"], free: false }];
 const HISTORY = [{ tags: [1], langs: ["english"], free: false, launch_type: "full", launch_date: "2024-01-01", reviews_30d: 3 }];
@@ -153,6 +154,7 @@ describe("Competition ahead", () => {
     expect(ahead.calls.at(-1)).toBe("draw paid ");
     expect(calls.at(-1)).toBe("summary All tags · Paid · 1 upcoming");
     shared.heatmap(selection.get()); // what the real section computes when it draws
+    shared.anticipated(selection.get());
     selection.set({ group: "free" }); // both cached: drawn at once
     expect(ahead.calls.at(-1)).toBe("draw free ");
     selection.addTag(1); // new numbers: busy, then drawn after the paint
@@ -186,6 +188,31 @@ describe("Competition ahead", () => {
     flush();
     expect(ahead.calls).toContain("events failed");
     expect(ahead.calls.at(-1)).toBe("draw paid ");
+  });
+
+  test("the real section: after a selection with no match, paid / free still draws at once", async () => {
+    installDom();
+    const { aheadSection } = await import("../src/ui/ahead.js");
+    const body = document.createElement("div");
+    const { files, selection, numbers, flush } = startWith(aheadSection(en, body));
+    const upcoming = (appid, tags, free) => ({
+      appid, name: `Game ${appid}`, tags, langs: ["english"], free, precision: "day", date: "2026-10-20",
+      date_end: "2026-10-20", followers: null, hype_src: null, moved: null, wishlist_rank: appid,
+    });
+    files.meta.resolve({ ...META, tags: [...META.tags, [2, "Puzzle", 1, 0]] });
+    files.upcoming.resolve([upcoming(1, [1], false), upcoming(2, [2], true)]);
+    files.history.resolve(HISTORY);
+    files.events.resolve([]);
+    await numbers;
+    await tick();
+    flush();
+    selection.addTag(2); // no paid game is a Puzzle: the section has nothing to show
+    flush();
+    expect(body.querySelector(".ah-top").hidden).toBe(true);
+    selection.set({ group: "free" }); // all cached: drawn now, never busy
+    expect(body.getAttribute("aria-busy")).toBeNull();
+    expect(body.querySelector(".ah-top").hidden).toBe(false);
+    expect(body.querySelector(".ah-top-list a").textContent).toBe("Game 2 (opens in a new tab)");
   });
 });
 

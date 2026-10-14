@@ -1,5 +1,6 @@
-// The text of one week's game list (Competition ahead, a week opened). The games and
-// their order come from lib/heatmap.js weekGames; this only formats them.
+// The text of one week's game list (Competition ahead, a week opened), and the dates
+// and links of the most anticipated list. The games and their order come from
+// lib/heatmap.js weekGames and mostAnticipated; this only formats them.
 
 import { formatNumber } from "./count.js";
 import { dateFormat } from "./format.js";
@@ -38,6 +39,23 @@ export function dateText(game, s = en) {
   }
   if (game.precision === "quarter") return s.ahead.quarter(Math.ceil(month / 3), year);
   return year;
+}
+
+// the date as the store page shows it, year included: "Oct 28, 2026", "December 2026",
+// "Q1 2027", "2027", or without one the store's own words ("Coming soon"), else
+// "To be announced" (the most anticipated list)
+export function steamDate(game, s = en) {
+  if (!game?.date) return game?.date_text || s.ahead.tba;
+  if (game.precision === "day") return fullDate(game.date, s);
+  if (game.precision === "month") {
+    return dateFormat(s.locale, { month: "long", year: "numeric" }).format(toDay(game.date) * 86400000);
+  }
+  return dateText(game, s);
+}
+
+// "Oct 13, 2026"
+export function fullDate(iso, s = en) {
+  return dateFormat(s.locale, { month: "short", day: "numeric", year: "numeric" }).format(toDay(iso) * 86400000);
 }
 
 // list: weekGames' result; gameOf: appid -> the upcoming game (for its date)

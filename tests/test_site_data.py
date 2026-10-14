@@ -89,6 +89,14 @@ def test_upcoming_keeps_dated_or_ranked_games_and_drops_stale_pages(data, tmp_pa
     assert up[7]["date"] == "2027-01-01" and up[7]["date_end"] == "2027-12-31"
 
 
+def test_the_store_text_is_kept_only_for_games_with_no_date(data, tmp_path):
+    _, _, up, _, out = built(data, tmp_path)
+    assert up[5]["date_text"] == "To be announced"
+    assert {a: g["date_text"] for a, g in up.items() if a != 5} == {1: None, 2: None, 3: None, 7: None}
+    table = json.loads((out / "upcoming.json").read_text(encoding="utf-8"))
+    assert table["columns"] == sd.UPCOMING_COLUMNS
+
+
 def test_tags_heaviest_first_and_free_flag(data, tmp_path):
     _, meta, up, _, _ = built(data, tmp_path)
     assert up[1]["tags"] == [1774, 1716]
