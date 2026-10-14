@@ -78,6 +78,9 @@ export const en = {
     scaleRaw: "Numbers are games. Shades still compare with a typical week.",
     key: "Each week: exact dates on top (E), month and quarter dates spread below (S).",
     keyYear: "Hatched (Y): games dated only by year, spread over the weeks left in that year.",
+    // the legend's two year-only swatches, under and from 1.0
+    yearUnder: (one) => `Y <${one}`,
+    yearFrom: (one) => `Y ${one}+`,
     typicalNote: "A typical week is the row's average week of real launches over the last 52 weeks.",
     countsNote: "Rows marked counts had too few past launches to compare with: they show games, unshaded.",
     caveatNear: "Near weeks run high: some of these dates will slip.",
@@ -313,16 +316,12 @@ export const en = {
     tooFew: (n) => `Too few launches to compare 2022 with recent years (each needs ${n}).`,
     noShare: "Pick a tag to see its share of all launches.",
     empty: "No past launches match. Try fewer tags, Any of these, or more languages.",
-    // one line each under the chart
+    // two lines under the chart: the partial quarter, then the scope and no forecast
     partial: (name, days, length) =>
-      `Hatched: recent quarters; their tags may still change as players vote. ${name} is not over (${days} of ${length} days so far).`,
-    partialStart: (name) => `Hatched: recent quarters; their tags may still change as players vote. ${name} has just started.`,
-    removed:
-      "Counts only games still on Steam today. Games Steam removed earlier are missing, so older quarters look smaller and shares shift a little.",
-    noForecast: "No forecast: dates for upcoming games are too incomplete to extend the line.",
-    tags: "Tags are today's Steam tags, which player votes reshape over time.",
-    which: (num) =>
-      `Full and Early Access launches, with or without 30 days of reviews yet. Section ${num} uses only those with reviews.`,
+      `Hatched: recent quarters, whose tags may still change. ${name} so far: ${days} of ${length} days.`,
+    partialStart: (name) => `Hatched: recent quarters, whose tags may still change. ${name} has just started.`,
+    details:
+      "Only games still on Steam today, full and Early Access, with today's tags. No forecast: upcoming dates are too incomplete.",
   },
 
   // Competition ahead: the niche trend line
@@ -366,7 +365,7 @@ export const en = {
   footer: {
     data: "Data",
     steam: "Steam",
-    steamNote: " (public store pages, daily)",
+    steamNote: " (public store API and store search)",
     gp: "Games Popularity",
     gpNote: " (follower counts)",
     hf: "the dataset on Hugging Face",
@@ -379,8 +378,9 @@ export const en = {
 
   methods: {
     title: "Methods",
-    soon: "This page is being written. Until then, the methods are in the repository:",
-    link: "docs/methods.md",
+    measured: "How this is measured",
+    // read after it by screen readers only, so the four links have different names
+    measuredWhich: (section) => `: ${section}`,
     back: "Back to the tool",
   },
 

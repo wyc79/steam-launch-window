@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
+import { methodsMarkdownPlugin } from "./build/methods-markdown.js";
 import { strings } from "./src/strings.js";
 
 const root = import.meta.dirname;
@@ -23,7 +24,7 @@ const pageText = {
 
 export default defineConfig({
   base: "/steam-launch-window/",
-  plugins: [pageText],
+  plugins: [pageText, methodsMarkdownPlugin(resolve(root, "../docs/methods.md"))],
   build: {
     rolldownOptions: {
       input: { main: resolve(root, "index.html"), methods: resolve(root, "methods.html") },

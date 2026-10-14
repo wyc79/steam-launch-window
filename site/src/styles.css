@@ -183,6 +183,12 @@ a:hover { color: var(--accent-ui); text-decoration-thickness: 2px; }
 button, input, select, textarea { font: inherit; color: inherit; }
 img { max-width: 100%; }
 :focus-visible { outline: 2px solid var(--accent-ui); outline-offset: 3px; }
+/* what focus or a link scrolls to stops below the sticky bar (its height measured
+   in main.js); a phone's bar does not stick. :where keeps this under any class rule */
+main :where(a[href], button, input, select, textarea, summary, [tabindex]) { scroll-margin-top: calc(var(--bar-h, 0px) + var(--s2)); }
+@media (max-height: 560px), (max-width: 639px) {
+  main :where(a[href], button, input, select, textarea, summary, [tabindex]) { scroll-margin-top: var(--s2); }
+}
 ::selection { background: var(--accent-ui); color: var(--paper); }
 [hidden] { display: none !important; }
 
@@ -281,6 +287,53 @@ img { max-width: 100%; }
 }
 .lede { font-size: var(--fs-lede); line-height: 1.4; max-width: 34em; margin-bottom: var(--s3); }
 .caveat { color: var(--ink-2); font-size: var(--fs-small); margin: 0; }
+
+/* ---------- Methods ---------- */
+.methods-main {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--gap);
+  padding-top: var(--s8);
+}
+.methods-main > * { grid-column: 3 / span 8; min-width: 0; }
+.methods h1 {
+  margin-bottom: var(--s6);
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--track-display);
+}
+.methods h2 {
+  margin: var(--s8) 0 var(--s4);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--ink);
+  font-size: var(--fs-h2);
+  scroll-margin-top: var(--s4);
+}
+.methods h3 { margin: var(--s6) 0 var(--s3); font-size: var(--fs-lede); scroll-margin-top: var(--s4); }
+.methods p, .methods ul, .methods ol { max-width: var(--measure); }
+.methods ul, .methods ol { margin: 0 0 var(--s5); padding-left: 1.25rem; }
+.methods li { margin-bottom: var(--s2); padding-left: var(--s1); }
+.methods code { padding: .08em .22em; background: var(--tint); font: .9em/1.4 Consolas, "Courier New", monospace; }
+.method-table { max-width: 100%; margin: var(--s5) 0 var(--s6); overflow-x: auto; border-top: 1px solid var(--ink); }
+.method-table:focus-visible { outline-offset: 2px; }
+.method-table table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); line-height: 1.4; }
+/* a wide table scrolls inside its frame; a three-column one fits a phone */
+.method-table table:has(th:nth-child(4)) { min-width: 38rem; }
+.method-table th, .method-table td { padding: var(--s2) var(--s3); border-bottom: 1px solid var(--rule-soft); vertical-align: top; text-align: left; }
+.method-table th { color: var(--ink-2); font-size: var(--fs-meta); letter-spacing: var(--track-meta); text-transform: uppercase; }
+.method-table .align-center { text-align: center; }
+.method-table .align-right { text-align: right; font-variant-numeric: tabular-nums; }
+.methods-back { margin-top: var(--s7); padding-top: var(--s4); border-top: 1px solid var(--rule-soft); }
+.method-link { display: inline-block; margin-top: var(--s2); font-size: var(--fs-small); white-space: nowrap; }
+@media (max-width: 1023px) {
+  .methods-main > * { grid-column: 2 / span 4; }
+}
+@media (max-width: 639px) {
+  .methods-main { padding-top: var(--s7); }
+  .methods-main > * { grid-column: 1 / -1; }
+  .methods h2 { margin-top: var(--s7); }
+  .method-table { width: calc(100vw - 2 * var(--margin)); }
+}
 
 /* ---------- Top bar ---------- */
 .bar {
@@ -742,7 +795,6 @@ main { display: block; }
   box-shadow: inset 0 0 0 1px var(--rule-soft);
 }
 .hm-part.is-year > span { padding: 0 2px; background: var(--paper); }
-.ah-swatch .is-year { background: repeating-linear-gradient(135deg, var(--heat-5) 0 1.5px, transparent 1.5px 4.5px), var(--paper); }
 
 /* Key, caveats and the week's games, under the heatmap */
 .ah-notes { margin-top: var(--s4); max-width: var(--measure); font-size: var(--fs-small); color: var(--ink-2); }
@@ -1158,8 +1210,30 @@ main { display: block; }
 .tr-notes { margin-top: var(--s4); padding-top: var(--s3); border-top: 1px solid var(--rule-soft); }
 .tr-notes p { margin: 0 0 var(--s1); max-width: 56rem; }
 .tr-notes p:empty { display: none; }
-/* Windows high contrast drops background colours: the bars keep system colours */
+/* Windows high contrast drops background colours: every chart mark keeps a
+   system-colour shape, with hatching for states that need a second pattern. */
 @media (forced-colors: active) {
+  /* the heatmap keeps its split at 1.0 (s4 on, heatview.js CUTS): quieter than a
+     typical week is an outline on Canvas, 1.0 and up is solid; year-only parts
+     are hatched, thin under 1.0 and dense from it */
+  .hm-part { forced-color-adjust: none; background: Canvas; color: CanvasText; box-shadow: inset 0 0 0 1px CanvasText; }
+  .hm-part.s1, .hm-part.s2, .hm-part.s3 { box-shadow: inset 0 0 0 2px CanvasText; }
+  .hm-part.s4, .hm-part.s5, .hm-part.s6, .hm-part.s7 { background: CanvasText; color: Canvas; }
+  .hm-part.is-year { background: repeating-linear-gradient(135deg, CanvasText 0 1px, Canvas 1px 5px); color: CanvasText; box-shadow: inset 0 0 0 1px CanvasText; }
+  .hm-part.is-year.s4, .hm-part.is-year.s5, .hm-part.is-year.s6, .hm-part.is-year.s7 { background: repeating-linear-gradient(135deg, CanvasText 0 3px, Canvas 3px 5px); }
+  .hm-part.is-year > span { padding: 1px 3px; background: Canvas; color: CanvasText; }
+  .hm-block { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 2px CanvasText; }
+  .hm-block.is-themed_fest { background: repeating-linear-gradient(135deg, CanvasText 0 2px, Canvas 2px 5px); }
+  .hm-tag { forced-color-adjust: none; background: CanvasText; color: Canvas; }
+  .hm-tag.is-cn_holiday { background: Canvas; color: CanvasText; }
+  .hs-bar { forced-color-adjust: none; }
+  .hs-bar.is-p90 { background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+  .hs-bar.is-p75 { background: CanvasText; }
+  .hs-tick { forced-color-adjust: none; background: Highlight; }
+  .ol-spread { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
+  .ol-bar { forced-color-adjust: none; background: CanvasText; }
+  .ol-week.is-picked .ol-bar { background: Highlight; }
+  .ol-events span { forced-color-adjust: none; background: CanvasText; color: Canvas; }
   .tr-bar { forced-color-adjust: none; background: CanvasText; }
   .tr-q.is-recent .tr-bar { background: repeating-linear-gradient(135deg, CanvasText 0 2px, Canvas 2px 5px); box-shadow: inset 0 0 0 1px CanvasText; }
   .tr-q.is-picked .tr-bar { background: Highlight; }

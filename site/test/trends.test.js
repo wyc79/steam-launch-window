@@ -33,10 +33,10 @@ HISTORY.push(past("2024-08-11", [1], true));
 
 let body;
 let section;
-function start(st = { ...DEFAULT, tags: [1] }) {
+function start(st = { ...DEFAULT, tags: [1] }, today = "2026-10-13") {
   body = h("div");
   section = trendsSection(en, body);
-  section.start(createNumbers([], HISTORY, "2026-10-13"));
+  section.start(createNumbers([], HISTORY, today));
   section.draw(st);
 }
 const options = () => body.querySelectorAll(".tr-q");
@@ -66,9 +66,21 @@ describe("the quarters", () => {
     expect(options().map((o) => o.classList.contains("is-recent"))).toEqual([...Array(17).fill(false), true, true, true]);
     expect(body.querySelector(".tr-recent-label").textContent).toBe("recent: tags may still change");
     expect(body.querySelector(".tr-recent").getAttribute("style")).toBe("--from:19;--span:3");
-    expect(body.querySelector(".tr-notes").textContent).toContain(en.trends.partial("2026 Q4", "12", "92"));
-    expect(body.querySelector(".tr-notes").textContent).toContain(en.trends.removed);
-    expect(body.querySelector(".tr-notes").textContent).toContain(en.trends.noForecast);
+    const notes = body.querySelector(".tr-notes").querySelectorAll("p");
+    expect(notes).toHaveLength(2);
+    expect(notes[0].textContent).toBe("Hatched: recent quarters, whose tags may still change. 2026 Q4 so far: 12 of 92 days.");
+    expect(notes[1].textContent).toBe(
+      "Only games still on Steam today, full and Early Access, with today's tags. No forecast: upcoming dates are too incomplete.",
+    );
+  });
+
+  test("the first day of a quarter says it has just started", () => {
+    start({ ...DEFAULT, tags: [1] }, "2026-10-01");
+    const notes = body.querySelector(".tr-notes").querySelectorAll("p");
+    expect(notes).toHaveLength(2);
+    expect(notes[0].textContent).toBe(
+      "Hatched: recent quarters, whose tags may still change. 2026 Q4 has just started.",
+    );
   });
 
   test("move with the arrow keys, Home and End", () => {

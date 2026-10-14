@@ -77,15 +77,13 @@ describe("the share view", () => {
       over: false,
       label: "2026 Q4 so far (Oct 1 to Oct 12; recent, tags may still change): 1 of 2 paid launches (50.0%)",
     });
-    expect(v.partial).toBe(
-      "Hatched: recent quarters; their tags may still change as players vote. 2026 Q4 is not over (12 of 92 days so far).",
-    );
+    expect(v.partial).toBe("Hatched: recent quarters, whose tags may still change. 2026 Q4 so far: 12 of 92 days.");
     expect(v.bars.filter((b) => b.partial)).toHaveLength(1);
   });
 
   test("on its first day the quarter under way says so, without 0 days", () => {
     const v = view("share", opts, q(HISTORY, "2026-10-01"));
-    expect(v.partial).toBe("Hatched: recent quarters; their tags may still change as players vote. 2026 Q4 has just started.");
+    expect(v.partial).toBe("Hatched: recent quarters, whose tags may still change. 2026 Q4 has just started.");
     expect(v.bars.at(-1).label).toBe("2026 Q4 (just started): no paid launches");
   });
 
