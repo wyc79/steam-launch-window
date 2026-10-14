@@ -42,6 +42,7 @@ commit the results to the `data` branch.
 | `pipeline.collect_gp` | daily, after the snapshot | follower and player history from Games Popularity, within a daily budget (see below) |
 | `pipeline.collect_history` | weekly | lists games released since 2022, adds review counts for new ones |
 | `analysis.model` | weekly, after the history job | fits the launch model and commits `site/model.json` to the `data` branch, for the website |
+| `site` workflow | after the daily job, the model run and site changes on `main` | builds the website and deploys it to GitHub Pages |
 
 The history backfill is a long one-off job (about a day at 1 request per
 second). It runs outside Actions, on an always-on server
@@ -61,6 +62,7 @@ does not start collecting:
 | `ENDPOINT_CHECK=on` | the weekly endpoint smoke test (Steam endpoints, plus one Games Popularity request with the `GP_API_KEY` secret) |
 | `PUBLISH_DATASET=on` | the weekly upload to Hugging Face, which starts when the weekly history job ends (also needs the `HF_TOKEN` secret and `HF_DATASET_REPO` variable) |
 | `MODEL_RUN=on` | the weekly model run, which starts when the weekly history job ends (reads the follower files from the public `HF_DATASET_REPO`; no token) |
+| `DEPLOY_SITE=on` | the website build and deploy after the daily job, the model run and site changes on `main` (reads `gp/latest_followers.csv` from the public `HF_DATASET_REPO`; needs Settings > Pages > Source set to "GitHub Actions" once) |
 
 Each workflow can also be run by hand from the Actions tab.
 
