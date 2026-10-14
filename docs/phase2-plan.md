@@ -1,7 +1,8 @@
 # Phase 2 plan: analysis
 
-Status: building (2026-10-12). All questions answered (section 7). The site data files, the reference
-numbers and the model (section 3, `analysis/model.py`) are built; the website is next. Updated 2026-10-11 after the pipeline audit: followers now come from Games Popularity, with history back to
+Status: built (2026-10-13). All questions answered (section 7). The site data files, the reference
+numbers and the model (section 3, `analysis/model.py`) are built; the website is Phase 3
+([phase3-plan.md](phase3-plan.md)). Updated 2026-10-11 after the pipeline audit: followers now come from Games Popularity, with history back to
 2024-03-15, which changes sections 2 and 3.
 
 Phase 2 turns the collected data into two things the website shows:

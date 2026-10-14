@@ -6,8 +6,14 @@ Give it your game's Steam tags. It shows which upcoming weeks are crowded or
 quiet in that niche, marks Steam sales and fests, and shows how similar past
 launches did depending on when they launched.
 
-Status: **Phase 1 (data pipeline)**. The analysis, the website and the
-recommendation agent come next. See [docs/roadmap.md](docs/roadmap.md).
+Website: <https://wyc79.github.io/steam-launch-window/> (live after the first
+deploy, once GitHub Pages and the `DEPLOY_SITE` switch are set up; see [Website](#website)).
+
+Status: **Phase 3 (website)**. The data pipeline (Phase 1) and the analysis
+(Phase 2) are done and run on a schedule. Website steps 1 to 5 are merged: the
+page with its four sections, the most anticipated list (PR #30) and the Methods
+page. The deploy workflow is step 6; a review of the live site follows. The
+recommendation agent (Phase 4) comes after. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Why
 
@@ -124,6 +130,32 @@ python -m pipeline.collect_history --since 2026-01-01 --budget-minutes 30
 
 Outputs go to `_data/` (in CI this is the `data` branch). Games Popularity
 data goes to `_gp/`.
+
+## Website
+
+A static site (Vite and plain JavaScript, in `site/`) at
+<https://wyc79.github.io/steam-launch-window/>. The `site` workflow
+(`.github/workflows/site.yml`) rebuilds and deploys it after each daily
+snapshot, after the weekly model run, and when the site changes on `main`.
+
+One-time setup before the first deploy:
+1. Settings > Pages > Build and deployment > Source: "GitHub Actions".
+2. Repository variable `DEPLOY_SITE=on`.
+3. Run the `site` workflow once by hand from the Actions tab.
+
+Build and preview it locally, from a checkout of the `data` branch in `_data/`:
+
+```bash
+cd site
+npm ci
+npm run data                  # data files into public/data (see site/README.md)
+npm run dev                   # http://localhost:5173/steam-launch-window/
+npm run build
+npm run preview -- --port 5050   # serves dist/ at http://localhost:5050/steam-launch-window/
+```
+
+`vite preview` uses port 4173 by default, which Windows sometimes reserves
+(an "access denied" error when it starts). Any free port works with `--port`.
 
 ## Public dataset
 
