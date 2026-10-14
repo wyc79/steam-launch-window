@@ -38,12 +38,19 @@ def test_summarize_languages_uses_pooled_totals_and_per_game_medians():
 
 
 def test_percent_rounds_half_up_like_the_site():
-    # 0.0125 is stored as 0.01249..., which Python's .1% turns into 1.2%
+    # 0.0125 is stored as 0.01250000000000000069; times 100 it is exactly 1.25,
+    # which Python's .1% rounds half to even: 1.2%
     assert f"{0.0125:.1%}" == "1.2%"
     assert percent(0.0125) == "1.3%"
     assert percent(0.0124) == "1.2%"
     assert percent(0.55) == "55.0%"
     assert percent(0) == "0.0%"
+
+
+def test_percent_rounds_up_a_tie_stored_just_below_it():
+    # 201/400 is stored as 0.50249999..., so without EPSILON it would floor to 50.2%
+    assert 201 / 400 * 1000 + 0.5 < 503
+    assert percent(201 / 400) == "50.3%"
 
 
 def test_markdown_table_rounds_a_tie_half_up():

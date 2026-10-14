@@ -37,7 +37,9 @@ LABELS = {
     "other": "Other",
 }
 
-EPSILON = 1e-9  # as site/src/timing.js, so a stored 0.0125 (0.01249...) rounds up
+# as site/src/timing.js: a share stored just under a tie still rounds up, e.g.
+# 201/400 is 0.50249999..., so x * 1000 + 0.5 lands just under 503
+EPSILON = 1e-9
 
 
 def percent(x: float) -> str:

@@ -56,6 +56,11 @@ function headingSlug(text) {
     .replace(/^-|-$/g, "") || "section";
 }
 
+// what a reader sees of inline Markdown: link labels, no emphasis or code marks
+function plainText(text) {
+  return text.replace(/\[([^\]]+)]\([^)]*\)/g, "$1").replace(/[*`]/g, "");
+}
+
 function cells(line) {
   const trimmed = line.trim().replace(/^\|/, "").replace(/\|$/, "");
   return trimmed.split("|").map((cell) => cell.trim());
@@ -85,6 +90,7 @@ export function renderMarkdown(markdown) {
   const lines = markdown.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n");
   const html = [];
   const slugs = new Map();
+  let lastHeading = "";
 
   for (let i = 0; i < lines.length; ) {
     if (!lines[i].trim()) {
@@ -100,6 +106,7 @@ export function renderMarkdown(markdown) {
       slugs.set(base, count);
       const id = count === 1 ? base : `${base}-${count}`;
       html.push(`<h${level} id="${id}">${inline(heading[2])}</h${level}>`);
+      lastHeading = plainText(heading[2]);
       i += 1;
       continue;
     }
@@ -124,8 +131,11 @@ export function renderMarkdown(markdown) {
               .join("")}</tr>`,
         )
         .join("\n");
+      // a frame that scrolls is a named region the keyboard can reach (src/methods.js
+      // drops the tab stop while it fits)
+      const label = [lastHeading, plainText(headings[0])].filter(Boolean).join(": ");
       html.push(
-        `<div class="method-table" tabindex="0">\n<table>\n<thead><tr>${head}</tr></thead>\n<tbody>${body ? `\n${body}\n` : ""}</tbody>\n</table>\n</div>`,
+        `<div class="method-table" role="region" aria-label="${escapeHtml(label)}" tabindex="0">\n<table>\n<thead><tr>${head}</tr></thead>\n<tbody>${body ? `\n${body}\n` : ""}</tbody>\n</table>\n</div>`,
       );
       continue;
     }

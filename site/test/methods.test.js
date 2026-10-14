@@ -1,7 +1,8 @@
 import { expect, test } from "vitest";
 
 import methodsHtml from "virtual:methods-content";
-import { methodsPage } from "../src/methods.js";
+import { methodsPage, syncTableTabStops } from "../src/methods.js";
+import { h } from "../src/ui/dom.js";
 import { en } from "../src/strings.js";
 import { installDom } from "./fakedom.js";
 
@@ -33,4 +34,27 @@ test("the Methods page uses the shared shell and has an article and back link", 
   expect(article.innerHTML).toBe(methodsHtml);
   expect(doc.body.querySelector('.methods-back a').getAttribute("href")).toBe(import.meta.env.BASE_URL);
   expect(en.pageTitle(en.methods.title, en.title)).toContain("Methods");
+});
+
+
+test("every table frame is a named region, and a tab stop only while it scrolls", () => {
+  const frames = methodsHtml.match(/<div class="method-table"[^>]*>/g);
+  expect(frames).toEqual([
+    '<div class="method-table" role="region" aria-label="Paid games: Launch condition" tabindex="0">',
+    '<div class="method-table" role="region" aria-label="Reviews by language: With Simplified Chinese" tabindex="0">',
+    '<div class="method-table" role="region" aria-label="Reviews by language: Without Simplified Chinese" tabindex="0">',
+  ]);
+
+  installDom();
+  const wide = h("div", { class: "method-table", tabindex: "0" });
+  const fits = h("div", { class: "method-table", tabindex: "0" });
+  Object.assign(wide, { scrollWidth: 608, clientWidth: 328 });
+  Object.assign(fits, { scrollWidth: 328, clientWidth: 328 });
+  const root = h("div", {}, wide, fits);
+  syncTableTabStops(root);
+  expect([wide.getAttribute("tabindex"), fits.getAttribute("tabindex")]).toEqual(["0", null]);
+  // wider again (a rotated phone, larger text): the stop comes back
+  fits.scrollWidth = 400;
+  syncTableTabStops(root);
+  expect(fits.getAttribute("tabindex")).toBe("0");
 });

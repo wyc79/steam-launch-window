@@ -15,6 +15,7 @@ import {
   formatDate,
   formatValue,
   shownValue,
+  step,
   trendLines,
 } from "../heatview.js";
 import { WEEKS } from "../lib/heatmap.js";
@@ -288,6 +289,9 @@ export function aheadSection(s, body) {
   function drawLegend() {
     const swatch = (cls, text) =>
       h("span", { class: "ah-swatch" }, h("span", { class: `hm-part ${cls}` }), h("span", {}, text));
+    // year-only parts change their hatch at 1.0 (dense in forced colours), so one swatch each side
+    const busy = step(1);
+    const one = formatCut(1, s);
     fill(
       legend,
       h("span", { class: "ah-legend-text" }, raw() ? a.scaleRaw : a.scaleNormal),
@@ -295,7 +299,10 @@ export function aheadSection(s, body) {
         "span",
         { class: "ah-scale", "aria-hidden": "true" },
         [0, ...CUTS].map((low, i) => swatch(`s${i}`, formatCut(low, s))),
-        local.year && swatch("is-year", a.parts.year),
+        local.year && [
+          swatch(`is-year s${busy - 1}`, a.yearUnder(one)),
+          swatch(`is-year s${busy}`, a.yearFrom(one)),
+        ],
       ),
     );
   }

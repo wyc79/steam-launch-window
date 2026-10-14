@@ -30,11 +30,39 @@ continues with **strong** text and \`p < 0.05\`.`);
 |:---|:---:|---:|
 | A | B | C |`);
 
-    expect(html).toContain('<div class="method-table" tabindex="0">');
+    expect(html).toContain('<div class="method-table" role="region" aria-label="Left" tabindex="0">');
     expect(html).toContain('<th scope="col" class="align-left">Left</th>');
     expect(html).toContain('<th scope="col" class="align-center">Middle</th>');
     expect(html).toContain('<td class="align-right">C</td>');
     expect(html).toContain("<tbody>");
+  });
+
+  test("names each table frame from the heading before it and the table's first header", () => {
+    const html = renderMarkdown(`## Reviews by [language](#x)
+
+Text.
+
+| With **Chinese** | Share |
+|---|---:|
+| English | 55.0% |
+
+| Without \`Chinese\` | Share |
+|---|---:|
+| English | 69.4% |`);
+
+    const labels = [...html.matchAll(/<div class="method-table" role="region" aria-label="([^"]*)" tabindex="0">/g)];
+    expect(labels.map((m) => m[1])).toEqual(["Reviews by language: With Chinese", "Reviews by language: Without Chinese"]);
+  });
+
+  test("escapes a table frame's label", () => {
+    const html = renderMarkdown(`### Tom & "Jerry" <b>
+
+| A < B | C |
+|---|---|
+| 1 | 2 |`);
+
+    expect(html).toContain('aria-label="Tom &amp; &quot;Jerry&quot; &lt;b&gt;: A &lt; B"');
+    expect(html).not.toContain("<b>");
   });
 
   test("renders HTTPS and local-fragment links", () => {

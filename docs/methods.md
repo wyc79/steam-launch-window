@@ -19,8 +19,10 @@ The model numbers below come from the 2026-10-13 run.
 - **Steam:** public `IStoreQueryService/Query`,
   `IStoreBrowseService/GetItems`, `IStoreService/GetTagList`, and
   `IUserReviewsService/GetAppReviews` endpoints provide games, release dates,
-  tags, prices, demos, languages, and reviews. The collector uses the public
-  store page and store search as fallbacks.
+  tags, prices, demos, languages, and reviews. The collector also reads Steam's
+  store search for the Top Wishlisted rank. The rank decides which undated
+  games get a Games Popularity follower lookup, and gives an estimated follower
+  count to a ranked coming-soon game that has none.
 - **[Games Popularity](https://games-popularity.com/):** follower and player
   counts. Games Popularity's owner gave permission to republish these counts on
   2026-10-12. The site credits the source wherever it uses them.
@@ -140,12 +142,13 @@ weeks 1,000 times, and measures how often a fake result is at least as far from
 fake window on a real window of that event. A check on 15 fake sets for two
 events agreed with full refits at a correlation above 0.99.
 
-There are 4 to 19 sale, fest, and holiday windows, plus 69 themed fests. Sales
-(`p = 0.001`) and themed fests (`p = 0.04`) pass. Next Fest, Thanksgiving, and
-Christmas do not. Chinese holidays are the exception: National Day passes
-(`p = 0.007`) and Spring Festival does not (`p = 0.08`), but both overlap other
-events and have only 4 or 5 windows, so neither becomes advice. See
-[Chinese holidays](#chinese-holidays).
+There are 4 to 19 sale, fest, and holiday windows, plus 69 themed fests. For
+paid games, sales (`p = 0.001`) and themed fests (`p = 0.04`) pass. Next Fest,
+Thanksgiving, and Christmas do not. Chinese holidays are the exception: National
+Day passes (`p = 0.007`) and Spring Festival does not (`p = 0.08`), but both
+overlap other events and have only 4 or 5 windows, so neither becomes advice.
+See [Chinese holidays](#chinese-holidays). For free games, no event passes:
+sales give `p = 0.55` and themed fests `p = 0.96`.
 
 ### Paid games
 
@@ -158,13 +161,13 @@ events and have only 4 or 5 windows, so neither becomes advice. See
 | Demo out by the end of the last Next Fest, against a later demo | 71% more, from 36% to 115% more | | 10,394 |
 | During a themed fest for one of its tags | 45% fewer, from 35% to 54% fewer | ratio 0.56; `p = 0.04`, 69 fests | 1,008 |
 | Within 3 days of a big paid release | no clear effect, from 11% fewer to 18% more | | 21,375 |
-| Spring Festival, without Simplified Chinese | 37% fewer, from 14% to 54% fewer | ratio 0.70; `p = 0.08`, 5 holidays pooled | 877 |
-| Spring Festival, with Simplified Chinese | 29% fewer, from 8% to 46% fewer | same pooled test | 531 |
-| National Day, without Simplified Chinese | 56% fewer, from 33% to 71% fewer | ratio 0.51; `p = 0.007`, 4 holidays pooled | 698 |
-| National Day, with Simplified Chinese | 52% fewer, from 6% to 76% fewer | same pooled test | 349 |
+| Spring Festival, without Simplified Chinese | unconfirmed: 37% fewer, from 14% to 54% fewer | ratio 0.70; `p = 0.08`, 5 holidays pooled | 877 |
+| Spring Festival, with Simplified Chinese | unconfirmed: 29% fewer, from 8% to 46% fewer | same pooled test | 531 |
+| National Day, without Simplified Chinese | context only: 56% fewer, from 33% to 71% fewer | ratio 0.51; `p = 0.007`, 4 holidays pooled | 698 |
+| National Day, with Simplified Chinese | context only: 52% fewer, from 6% to 76% fewer | same pooled test | 349 |
 | Thanksgiving through Cyber Monday | no clear effect, from 25% fewer to 154% more | ratio 1.26; `p = 0.42`, 4 holidays | 713 |
 | Christmas through New Year | no clear effect, from 23% fewer to 73% more | ratio 1.11; `p = 0.61`, 4 holidays | 741 |
-| Early Access | 18% more, from 0% to 38% more | | 10,962 |
+| Early Access | 18% more, from 0.2% to 38% more | | 10,962 |
 
 Percentages come from rate ratios in `model.json` and use round-half-up to whole
 percents. The reviews times price revenue proxy gives the same broad picture.
@@ -178,7 +181,7 @@ does not yet carry the covariance-based combined range.
 At the same niche price, a game priced twice as high got 81% more reviews, from
 69% to 94% more. This is not pricing advice. Larger and more polished games can
 both charge more and attract more reviews. Niche prices barely vary: half of
-games sit in a niche whose median price is exactly $4.99, and 90% in one whose
+games sit in a niche whose median price is exactly $4.99, and 94% in one whose
 median is $3.99 to $8.99.
 
 ### Free games
@@ -195,14 +198,14 @@ reviews; 4% have no review in the first 30 days.
   same-niche launch went with 5% fewer reviews, from 3% to 6% fewer. With the
   placebo in the same fit, the launch week still has a clear 4% drop per launch,
   from 2% to 6%.
-- Thanksgiving through Cyber Monday has 52% fewer reviews, from 35% to 64%
-  fewer. Christmas through New Year has 47% fewer, from 25% to 63% fewer. Their
-  chance tests do not confirm them: `p = 0.055` and `p = 0.094`, with 4 years
-  each.
-- For games with Simplified Chinese, National Day has 61% fewer reviews, from
-  40% to 74% fewer, among 36 games. Spring Festival has no clear effect. The
-  pooled chance test confirms neither: National Day is 1.08 with `p = 0.82`;
-  Spring Festival is 1.58 with `p = 0.09`.
+- Thanksgiving through Cyber Monday and Christmas through New Year are
+  unconfirmed. Their ranges show 52% fewer reviews, from 35% to 64% fewer, and
+  47% fewer, from 25% to 63% fewer, but their chance tests give `p = 0.055` and
+  `p = 0.094`, with 4 years each.
+- For games with Simplified Chinese, National Day is unconfirmed: its range
+  shows 61% fewer reviews, from 40% to 74% fewer, among 36 games, but the pooled
+  chance test gives 1.08 with `p = 0.82`. Spring Festival has no clear effect;
+  its pooled test gives 1.58 with `p = 0.09`.
 
 ### The placebo and weekly competition
 
@@ -271,7 +274,8 @@ counts.
 Weeks more than 4 weeks away are faded and marked as dates still being set.
 This is a warning about announcement quality, not a forecast. Selecting a week
 lists the exact and spread-date games behind its count. Matching top-10 tags
-come first, followed by Games Popularity followers, name, and app ID.
+come first, followed by followers, name, and app ID. Followers are a Games
+Popularity count or, failing that, an estimate from the Top Wishlisted rank.
 
 The event lanes show seasonal sales, Next Fest, and themed fests that match a
 picked tag. Chinese holidays appear only with Simplified Chinese. A historical

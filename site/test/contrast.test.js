@@ -157,6 +157,15 @@ test("in forced colours the heatmap and its legend keep the split at 1.0", () =>
   expect([...quiet, ...busy].every((bg) => bg.startsWith("repeating-linear-gradient("))).toBe(true);
   expect(year(0)).not.toBe(year(7));
   expect(forcedStyle(["hm-part", "is-year", "s7"]).color).toBe("CanvasText");
+  // the legend's two year swatches (test/ahead.test.js) get the two hatches
+  expect(year(busyFrom - 1)).toBe([...quiet][0]);
+  expect(year(busyFrom)).toBe([...busy][0]);
+});
+
+test("outside forced colours a year swatch is hatched in its step's shade, like a year-only part", () => {
+  const plain = css.slice(0, css.indexOf("@media (forced-colors: active)"));
+  expect(plain).toMatch(/\.hm-part\.is-year \{[^}]*repeating-linear-gradient\(135deg, var\(--fill\)[^}]*\}/);
+  expect(plain).not.toMatch(/\.ah-swatch \.is-year/); // no fixed shade that would hide the step
 });
 
 test("the rules were found", () => {

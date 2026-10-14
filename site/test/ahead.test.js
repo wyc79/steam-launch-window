@@ -201,6 +201,19 @@ describe("the grid", () => {
     expect(swatches).toEqual(Array.from({ length: 8 }, (_, i) => `hm-part s${i}`));
   });
 
+  test("with the year-only layer, the legend has a year swatch on each side of 1.0", () => {
+    const body = draw();
+    const input = body.querySelector(".ah-toggle input");
+    input.checked = true;
+    input.dispatch("change");
+    const swatches = body.querySelectorAll(".ah-swatch");
+    expect(swatches.slice(-2).map((el) => el.querySelector(".hm-part").className)).toEqual([
+      "hm-part is-year s3",
+      "hm-part is-year s4",
+    ]);
+    expect(swatches.slice(-2).map((el) => el.textContent)).toEqual(["Y <1.0", "Y 1.0+"]);
+  });
+
   test("names the typical week in the row head", () => {
     const body = draw();
     expect(body.querySelector(".hm-row-note").textContent).toBe("about 1.0 launches in a typical week");

@@ -78,6 +78,9 @@ export const en = {
     scaleRaw: "Numbers are games. Shades still compare with a typical week.",
     key: "Each week: exact dates on top (E), month and quarter dates spread below (S).",
     keyYear: "Hatched (Y): games dated only by year, spread over the weeks left in that year.",
+    // the legend's two year-only swatches, under and from 1.0
+    yearUnder: (one) => `Y <${one}`,
+    yearFrom: (one) => `Y ${one}+`,
     typicalNote: "A typical week is the row's average week of real launches over the last 52 weeks.",
     countsNote: "Rows marked counts had too few past launches to compare with: they show games, unshaded.",
     caveatNear: "Near weeks run high: some of these dates will slip.",
@@ -362,7 +365,7 @@ export const en = {
   footer: {
     data: "Data",
     steam: "Steam",
-    steamNote: " (public store pages, daily)",
+    steamNote: " (public store API and store search)",
     gp: "Games Popularity",
     gpNote: " (follower counts)",
     hf: "the dataset on Hugging Face",
