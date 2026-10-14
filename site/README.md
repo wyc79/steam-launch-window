@@ -14,7 +14,7 @@ npm run build     # into dist/; npm run preview serves it
 port with `npm run preview -- --port 5050`.
 
 The live site is <https://wyc79.github.io/steam-launch-window/>, deployed by the `site`
-workflow (`.github/workflows/site.yml`) once `DEPLOY_SITE=on` and Pages uses GitHub Actions.
+workflow (`.github/workflows/site.yml`).
 
 `npm run data` runs `python -m analysis.site_data` from the repository root on a checkout
 of the data branch (`../_data` by default) and copies the branch's `site/model.json`. It

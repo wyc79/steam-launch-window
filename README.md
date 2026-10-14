@@ -6,13 +6,14 @@ Give it your game's Steam tags. It shows which upcoming weeks are crowded or
 quiet in that niche, marks Steam sales and fests, and shows how similar past
 launches did depending on when they launched.
 
-Website: <https://wyc79.github.io/steam-launch-window/> (live after the first
-deploy, once GitHub Pages and the `DEPLOY_SITE` switch are set up; see [Website](#website)).
+Website: <https://wyc79.github.io/steam-launch-window/> (live since 2026-10-14;
+see [Website](#website)).
 
 Status: **Phase 3 (website)**. The data pipeline (Phase 1) and the analysis
 (Phase 2) are done and run on a schedule. Website steps 1 to 5 are merged: the
 page with its four sections, the most anticipated list (PR #30) and the Methods
-page. The deploy workflow is step 6; a review of the live site follows. The
+page. Step 6, the deploy workflow (PR #31), went live on 2026-10-14; a review of
+the live site follows. The
 recommendation agent (Phase 4) comes after. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Why
@@ -138,7 +139,7 @@ A static site (Vite and plain JavaScript, in `site/`) at
 (`.github/workflows/site.yml`) rebuilds and deploys it after each daily
 snapshot, after the weekly model run, and when the site changes on `main`.
 
-One-time setup before the first deploy:
+One-time setup (done on 2026-10-14):
 1. Settings > Pages > Build and deployment > Source: "GitHub Actions".
 2. Repository variable `DEPLOY_SITE=on`.
 3. Run the `site` workflow once by hand from the Actions tab.

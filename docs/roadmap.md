@@ -18,7 +18,7 @@ ends with a report, and the next one starts only after a go-ahead.
 | Audit | 6. Implementation | [PR #13](https://github.com/wyc79/steam-launch-window/pull/13) merged 2026-10-12; fixes from the first Games Popularity run in [PR #14](https://github.com/wyc79/steam-launch-window/pull/14), merged 2026-10-12 |
 | Audit | 7. Deliverables | reported 2026-10-12 in [pipeline-report.md](pipeline-report.md), together with the build Phase 1 report |
 | Build | 2. Analysis | built: site data and reference numbers (PR #18), the model (PR #19), free games count all reviews (PR #20), reviews by language sample (PR #21). The free recount (data commit 8593cd4) and the language sample (eff1bc5) are in, the model was rerun (79cca10), and the language sample is written up in Phase 3 step 5. See [phase2-plan.md](phase2-plan.md) and [methods.md](methods.md) |
-| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 merged in PR #23; step 2 merged in PR #24; step 3 merged in PR #25; step 4 part 1 merged in PR #26; step 4 part 2 merged in PR #27; Trends, now section 01, merged in PR #28; step 5 Methods page built in PR #29; the most anticipated list in section 03 built in PR #30; step 6 deploy workflow built in PR #31; left: turn on Pages and `DEPLOY_SITE`, then the live-site review |
+| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 merged in PR #23; step 2 merged in PR #24; step 3 merged in PR #25; step 4 part 1 merged in PR #26; step 4 part 2 merged in PR #27; Trends, now section 01, merged in PR #28; step 5 Methods page built in PR #29; the most anticipated list in section 03 built in PR #30; step 6 deploy workflow built in PR #31, live since 2026-10-14; left: the live-site review |
 | Build | 4. Agent and Worker | not started |
 
 ## Where things stand
@@ -55,12 +55,11 @@ The PC and the Pi share one public IP: no heavy Steam traffic from the PC while 
 and nothing on either machine may call steamcommunity.com.
 
 **GitHub Actions switches** (repository variables):
-- On: `COLLECT_DAILY`, `COLLECT_GP`, `PUBLISH_DATASET`, `ENDPOINT_CHECK`, `MODEL_RUN`
+- On: `COLLECT_DAILY`, `COLLECT_GP`, `PUBLISH_DATASET`, `ENDPOINT_CHECK`, `MODEL_RUN`,
+  `DEPLOY_SITE` (since 2026-10-14, with Pages set to GitHub Actions)
   (first run 2026-10-13 wrote `site/model.json`; a rerun after the free recount fitted the
   free model the same day).
 - `COLLECT_HISTORY` is on again since 2026-10-13 (it was off while the Pi ran).
-- Off: `DEPLOY_SITE` (the `site` workflow, PR #31). Before turning it on, set Settings >
-  Pages > Source to "GitHub Actions".
 - Other: `HF_DATASET_REPO`. Secrets: `STEAM_API_KEY`, `HF_TOKEN`, `HF_DATASET_REPO`,
   `GP_API_KEY`.
 - GitHub runs schedules in UTC and can start them hours late, so the weekly publish starts
@@ -103,9 +102,8 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 
 ## Next steps, in order
 
-1. **Phase 3 step 6:** the deploy workflow is built (PR #31). Set Settings > Pages > Source to
-   "GitHub Actions", set `DEPLOY_SITE=on`, run the `site` workflow once by hand, then review
-   the live site. The next model run also writes `demo_with_fest` (PR #27).
+1. **Phase 3 step 6:** the site is live (PR #31, first deploy 2026-10-14). Review the live
+   site. The next model run also writes `demo_with_fest` (PR #27).
 2. **Around 2027-01-10:** calibrate the niche trend line on daily snapshots against launches
    (13 weeks of snapshots by then), then decide whether to show it.
 3. **After a few months of weekly history runs:** measure how many games Steam removes per
@@ -129,7 +127,6 @@ Optional later, on the Pi: first-day and first-week review counts for all launch
 
 | When | What |
 |---|---|
-| now | Settings > Pages > Source: "GitHub Actions", then the variable `DEPLOY_SITE=on` (turns on the site deploy) |
 | now | Drop the token's user-wide write scope; remove the Pi backfill service (`systemctl --user disable --now steam-history-backfill`) |
 | within days | When Games Popularity cuts the free limits, tell me the new numbers to set `GP_DAILY_BUDGET` (or pay) |
 | any time | Check the "Data rights" wording on the dataset card, with the Games Popularity credit |

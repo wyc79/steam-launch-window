@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year for all games, section links, event effects in the lanes and the searchable week list) built (PR #27); section 01 Trends built (PR #28); step 5 Methods page built (PR #29); the most anticipated list in Competition ahead built (PR #30); step 6 deploy workflow built (PR #31).
+Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year for all games, section links, event effects in the lanes and the searchable week list) built (PR #27); section 01 Trends built (PR #28); step 5 Methods page built (PR #29); the most anticipated list in Competition ahead built (PR #30); step 6 deploy workflow built (PR #31), live since 2026-10-14.
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -351,6 +351,7 @@ A `site` workflow builds and deploys to GitHub Pages:
    another branch only builds. The build fails when `site/model.json` is missing on the data
    branch (the page would quietly drop the model lines); a missing `gp/latest_followers.csv`
    only warns. It does not join the data-branch queue, since it only reads the branch. One-time
-   setup: Settings > Pages > Source "GitHub Actions", then the variable `DEPLOY_SITE=on`. PR #31.
+   setup: Settings > Pages > Source "GitHub Actions", then the variable `DEPLOY_SITE=on` (done
+   2026-10-14, first deploy the same day). PR #31.
 
 Each step ends in a PR reviewed by a fresh agent before merging.
