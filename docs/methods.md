@@ -163,8 +163,8 @@ sales give `p = 0.55` and themed fests `p = 0.96`.
 | Within 3 days of a big paid release | no clear effect, from 11% fewer to 18% more | | 21,375 |
 | Spring Festival, without Simplified Chinese | unconfirmed: 37% fewer, from 14% to 54% fewer | ratio 0.70; `p = 0.08`, 5 holidays pooled | 877 |
 | Spring Festival, with Simplified Chinese | unconfirmed: 29% fewer, from 8% to 46% fewer | same pooled test | 531 |
-| National Day, without Simplified Chinese | context only: 56% fewer, from 33% to 71% fewer | ratio 0.51; `p = 0.007`, 4 holidays pooled | 698 |
-| National Day, with Simplified Chinese | context only: 52% fewer, from 6% to 76% fewer | same pooled test | 349 |
+| National Day, without Simplified Chinese | unconfirmed: 56% fewer, from 33% to 71% fewer | ratio 0.51; `p = 0.007`, 4 holidays pooled | 698 |
+| National Day, with Simplified Chinese | unconfirmed: 52% fewer, from 6% to 76% fewer | same pooled test | 349 |
 | Thanksgiving through Cyber Monday | no clear effect, from 25% fewer to 154% more | ratio 1.26; `p = 0.42`, 4 holidays | 713 |
 | Christmas through New Year | no clear effect, from 23% fewer to 73% more | ratio 1.11; `p = 0.61`, 4 holidays | 741 |
 | Early Access | 18% more, from 0.2% to 38% more | | 10,962 |
