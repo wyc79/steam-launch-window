@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year for all games, section links, event effects in the lanes and the searchable week list) built (PR #27); section 01 Trends built (PR #28); step 5 Methods page built (PR #29); the most anticipated list in Competition ahead built.
+Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year for all games, section links, event effects in the lanes and the searchable week list) built (PR #27); section 01 Trends built (PR #28); step 5 Methods page built (PR #29); the most anticipated list in Competition ahead built (PR #30).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -334,7 +334,7 @@ A `site` workflow builds and deploys to GitHub Pages:
    `most_anticipated`, ported to `heatmap.js` `mostAnticipated` with golden cases; `numbers.js`
    caches it per tags, mode and languages (only the ranked games, after the paint). It sits
    beside the week's games (under them below 1024px), with one caveat line: a rank, not
-   wishlist counts. `followers` and `hype_src` are not in its fields.
+   wishlist counts. `followers` and `hype_src` are not in its fields. PR #30.
 5. Methods page. Built: `docs/methods.md` is rendered at build time by a tested,
    dependency-free Markdown converter; every main section links to its stable Methods
    anchor; the reviews-by-language analysis and table are included; all chart marks keep
