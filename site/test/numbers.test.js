@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { heatmapRows, matchCount, nicheTrend, weekGames } from "../src/lib/heatmap.js";
+import { heatmapRows, matchCount, mostAnticipated, nicheTrend, weekGames } from "../src/lib/heatmap.js";
 import { outlook } from "../src/lib/season.js";
 import { quarterly } from "../src/lib/trends.js";
 import { createNumbers, heatmapKey, numbersKey, tagCounts } from "../src/numbers.js";
@@ -188,6 +188,28 @@ describe("the outlook", () => {
     }
     expect(shared.hasOutlook(pick({ languages: [] }), EVENTS)).toBe(false);
     expect(shared.hasOutlook(pick({}), [])).toBe(false); // other events: computed again
+  });
+});
+
+describe("the most anticipated list", () => {
+  const ranked = GAMES.map((g, i) => ({ ...g, appid: i + 1, wishlist_rank: [30, null, 5, 2][i] }));
+
+  test("is mostAnticipated for the selection, the unranked games left out first", () => {
+    const shared = createNumbers(ranked, HISTORY, "2026-10-13");
+    for (const st of [pick({}), pick({ tags: [1] }), pick({ tags: [1, 2], mode: "or", languages: [] })]) {
+      expect(shared.hasAnticipated(st)).toBe(false);
+      expect(shared.anticipated(st)).toEqual(mostAnticipated(ranked, { selection: st.tags, mode: st.mode, languages: st.languages }));
+      expect(shared.hasAnticipated(st)).toBe(true);
+    }
+  });
+
+  test("is cached per tags, mode and languages: the group, the measure and the pick order reuse it", () => {
+    const shared = createNumbers(ranked, HISTORY, "2026-10-13");
+    const first = shared.anticipated(pick({ tags: [1, 2] }));
+    for (const patch of [{ group: "free" }, { measure: "raw" }, { tags: [2, 1] }]) {
+      expect(shared.anticipated(pick({ tags: [1, 2], ...patch }))).toBe(first);
+    }
+    expect(shared.hasAnticipated(pick({ tags: [1] }))).toBe(false);
   });
 });
 

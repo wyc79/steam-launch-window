@@ -45,6 +45,8 @@ CALLS = {
     "normalized": lambda a: hm.normalized(CALLS["heatmap"](a)),
     "niche_trend": lambda a: hm.niche_trend(a["games"], a["history"], _d(a["today"]), a.get("selection", ()),
                                             a.get("mode", "and"), a.get("languages", ())),
+    "most_anticipated": lambda a: hm.most_anticipated(a["games"], a.get("selection", ()), a.get("mode", "and"),
+                                                      a.get("languages", ()), a.get("limit", hm.TOP_RANKED)),
     "week_games": lambda a: hm.week_games(a["games"], _d(a["today"]), _d(a["week"]), a.get("selection", ()),
                                           a.get("mode", "and"), a.get("languages", ()), a.get("year", False)),
     "percentile": lambda a: hm.percentile(a["values"], a["q"]),
@@ -144,6 +146,26 @@ TYPICAL = (
        past("2026-05-05", tags=(ROGUELIKE,)), past("2026-05-05", tags=(ROGUELIKE,), free=True),
        past("2026-06-01", langs=("schinese",))]
 )
+
+
+def _ranked(appid, name, rank, precision, start=None, end=None, **kw):
+    return {**game(appid, name, precision, start, end, **kw), "wishlist_rank": rank}
+
+
+# for the most anticipated list: Top Wishlisted ranks at every kind of date, and games without one
+RANKED = [
+    _ranked(1, "Undated Giant", 1, "unknown", followers=250000, hype_src="r"),
+    _ranked(2, "Far Shooter", 7, "day", "2027-08-20", tags=(SHOOTER, ROGUELIKE)),
+    _ranked(3, "Cozy Year", 3, "year", "2028-01-01", "2028-12-31", tags=(COZY,), followers=900),
+    _ranked(4, "Month Rogue", 12, "month", "2026-12-01", "2026-12-31", tags=(ROGUELIKE,)),
+    _ranked(5, "Free Quarter", 2, "quarter", "2027-01-01", "2027-03-31", free=True),
+    _ranked(6, "Chinese Only", 4, "day", "2026-11-03", langs=("schinese",)),
+    _ranked(7, "Not Ranked", None, "day", "2026-10-20", followers=999999, hype_src="f"),
+    _ranked(8, "Low Tag Cozy", 30, "day", "2026-10-28", tags=(*FILLER, COZY), followers=10),
+    _ranked(9, "Past Day", 9, "day", "2026-09-30"),  # its date passed, still coming soon
+    _ranked(11, "Same Rank B", 20, "day", "2027-02-01"),  # ranks are unique in the data; ties go by appid
+    _ranked(10, "Same Rank A", 20, "day", "2027-02-02"),
+]
 
 
 def _trend_games():
@@ -257,7 +279,8 @@ def _days(week: date) -> set[tuple[int, int]]:
 
 
 def heatmap_cases() -> Cases:
-    c = Cases(games=UPCOMING, typical=TYPICAL, trend_games=_trend_games(), trend_history=_trend_history())
+    c = Cases(games=UPCOMING, typical=TYPICAL, trend_games=_trend_games(), trend_history=_trend_history(),
+              ranked=RANKED)
     today = "2026-10-14"  # a Wednesday: week 0 is partial for vague dates
     c.add("all games, no history", "heatmap", games="$games", today=today)
     c.add("shooter with the typical week", "heatmap", games="$games", today=today, selection=[SHOOTER],
@@ -314,6 +337,16 @@ def heatmap_cases() -> Cases:
           languages=["schinese"])
     c.add("week games: names compared by code point", "week_games", games="$games", today=today,
           week="2026-11-09")
+    c.add("most anticipated: no tags", "most_anticipated", games="$ranked")
+    c.add("most anticipated: no tags, top 3", "most_anticipated", games="$ranked", limit=3)
+    c.add("most anticipated: shooter", "most_anticipated", games="$ranked", selection=[SHOOTER])
+    c.add("most anticipated: cozy or roguelike", "most_anticipated", games="$ranked", selection=[COZY, ROGUELIKE],
+          mode="or")
+    c.add("most anticipated: shooter and roguelike", "most_anticipated", games="$ranked",
+          selection=[SHOOTER, ROGUELIKE])
+    c.add("most anticipated: schinese", "most_anticipated", games="$ranked", languages=["schinese"])
+    c.add("most anticipated: no match", "most_anticipated", games="$ranked", selection=[PIXEL])
+    c.add("most anticipated: no ranks", "most_anticipated", games="$games", selection=[SHOOTER])
     c.add("match count: all games", "match_count", games="$games", history="$typical")
     c.add("match count: shooter, by group", "match_count", games="$games", history="$typical", selection=[SHOOTER])
     c.add("match count: roguelike or cozy, schinese", "match_count", games="$games", history="$typical",

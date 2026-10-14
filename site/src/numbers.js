@@ -1,11 +1,20 @@
 // The selection's numbers, computed once and shared: the top bar's count and its
 // red and the history panel (What history says) read the same cached objects, as do
 // the heatmap and its trend line (Competition ahead), the outlook (Typical for
-// this time of year) and the quarterly launches (Trends). Each result holds both
-// groups, so paid / free costs nothing.
+// this time of year), the quarterly launches (Trends) and the most anticipated list
+// (Competition ahead). Each result holds both groups, so paid / free costs nothing.
 
 import { CHINESE, kindOf } from "./events.js";
-import { groupOf, heatmap, historyPanel, matchCount, speaks, trendFrom, weekGames } from "./lib/heatmap.js";
+import {
+  groupOf,
+  heatmap,
+  historyPanel,
+  matchCount,
+  mostAnticipated,
+  speaks,
+  trendFrom,
+  weekGames,
+} from "./lib/heatmap.js";
 import { outlook } from "./lib/season.js";
 import { quarterly } from "./lib/trends.js";
 import { query } from "./state.js";
@@ -26,8 +35,8 @@ export function outlookKey(st) {
   return JSON.stringify(sorted(st.languages));
 }
 
-// what the quarterly launches depend on: tags, mode and languages (not the group,
-// the measure, or the order of picking)
+// what the quarterly launches and the most anticipated list depend on: tags, mode
+// and languages (not the group, the measure, or the order of picking)
 export function trendsKey(st) {
   return JSON.stringify([sorted(st.tags), st.mode, sorted(st.languages)]);
 }
@@ -78,6 +87,8 @@ export function createNumbers(games, history, today) {
   const trends = new Map();
   const outlooks = new Map();
   const quarters = new Map();
+  const tops = new Map();
+  let ranked = null; // the games with a Top Wishlisted rank, about a quarter of them
   let outlookFrom = null; // the events.json list the cached outlooks were made from
   let byId = null;
   // one heatmap row, kept on its own: picking a second tag reuses the first tag's row
@@ -123,6 +134,14 @@ export function createNumbers(games, history, today) {
     // its languages (both groups), for Trends
     hasTrends: (st) => quarters.has(trendsKey(st)),
     trends: (st) => remember(quarters, trendsKey(st), () => quarterly(history, today, query(st))),
+    // the most anticipated list (both groups) for the selection: mostAnticipated(...)
+    // on the ranked games only, which gives the same result with a quarter of the work
+    hasAnticipated: (st) => tops.has(trendsKey(st)),
+    anticipated: (st) =>
+      remember(tops, trendsKey(st), () => {
+        ranked ??= games.filter((g) => g.wishlist_rank != null);
+        return mostAnticipated(ranked, query(st));
+      }),
     // one row's games in one week, for the picked group, in weekGames' order; on
     // demand, not cached (one pass over the upcoming games)
     weekGames: (st, tags, week, year) =>

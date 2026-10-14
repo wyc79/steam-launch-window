@@ -75,7 +75,7 @@ export function connect({
     // already known (paid / free, or back to an earlier pick): drawn now
     const known = (st) =>
       numbers.has(st) &&
-      (!ahead || numbers.hasHeatmap(st)) &&
+      (!ahead || (numbers.hasHeatmap(st) && numbers.hasAnticipated(st))) &&
       (!season || !season.pending(st)) &&
       (!trends || numbers.hasTrends(st));
     selection.subscribe((st) => {

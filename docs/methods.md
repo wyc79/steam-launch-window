@@ -281,6 +281,30 @@ The event lanes show seasonal sales, Next Fest, and themed fests that match a
 picked tag. Chinese holidays appear only with Simplified Chinese. A historical
 effect appears in an event's label only when the advice rule permits it.
 
+### Most anticipated
+
+Beside the week's games, the section lists up to 10 upcoming games that match
+the selection, in the order of their rank on Steam's Top Wishlisted list. With
+no tags picked, it is the top 10 of all paid or all free games. The collector
+reads the whole list each day from Steam's store search with
+`filter=popularwishlist`. On 2026-10-13, 5,250 of about 20,500 upcoming
+games had a rank there. The list gives a rank only. Steam publishes no wishlist
+counts, so the site shows none.
+
+Matching is the heatmap's own: the same tags with the all or any rule, the
+languages, and paid or free. Unlike the heatmap, the list takes games at any
+date: exact, month, quarter, year, or none yet ("To be announced"), including
+those beyond the 13 weeks. The order is the rank alone, never followers. Each
+game shows its date as the store shows it and its rank, such as "#212 on Top
+Wishlisted".
+
+The list is context. A rank says how a game compares with other unreleased
+games, not how many wishlists it has, and not whether it will launch on its
+date. The paid model found weekly competition small at most and mostly general
+crowding, as
+[The placebo and weekly competition](#the-placebo-and-weekly-competition)
+explains. So the list carries no warning and no advice.
+
 ### The held-back niche trend
 
 A trend check compares a niche's share of exact-date upcoming games with its

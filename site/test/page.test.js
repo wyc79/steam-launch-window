@@ -153,6 +153,7 @@ describe("Competition ahead", () => {
     expect(ahead.calls.at(-1)).toBe("draw paid ");
     expect(calls.at(-1)).toBe("summary All tags · Paid · 1 upcoming");
     shared.heatmap(selection.get()); // what the real section computes when it draws
+    shared.anticipated(selection.get());
     selection.set({ group: "free" }); // both cached: drawn at once
     expect(ahead.calls.at(-1)).toBe("draw free ");
     selection.addTag(1); // new numbers: busy, then drawn after the paint

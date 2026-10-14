@@ -110,7 +110,11 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
    older quarters miss games removed before October 2026. Trends already counts only rows the
    newest listing run still lists (`listed` in `history.json`, from `analysis/site_data.py`),
    so removals after that do not inflate the later quarters.
-4. **Phase 4: agent and Cloudflare Worker,** free tier only. For Chinese users, the agent
+4. **Revisit follower views once follower coverage grows.** The follower fit becomes the
+   headline at 90% coverage of eligible launches; on 2026-10-13 coverage was 1.3% (one week of
+   August 2026 launches). The site shows no follower estimates in the most anticipated list,
+   and the weekly follower totals in `lib/heatmap.js` stay unused until then.
+5. **Phase 4: agent and Cloudflare Worker,** free tier only. For Chinese users, the agent
    also gets a Tencent Cloud SCF function in a mainland China region (Workers are often
    slow or blocked there; GitHub Pages works). Check the SCF billing page once when
    setting it up. Chinese text for the page comes after the English site.

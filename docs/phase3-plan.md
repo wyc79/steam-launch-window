@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year for all games, section links, event effects in the lanes and the searchable week list) built (PR #27); section 01 Trends built (PR #28); step 5 Methods page built (PR #29).
+Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year for all games, section links, event effects in the lanes and the searchable week list) built (PR #27); section 01 Trends built (PR #28); step 5 Methods page built (PR #29); the most anticipated list in Competition ahead built.
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -190,6 +190,13 @@ older quarters have lost, and the chart would show a rise that is not there.
   3 days ago" marker and the follower count when known (marked when it is an estimate
   from wishlist rank). Order inside each part: games whose top 10 tags match first,
   then the most followers (unknown last), then name, then appid.
+- Most anticipated (built): beside the week's games, the top 10 matching games of the picked
+  group by Steam's Top Wishlisted rank, at any date or none ("To be announced"), each with its
+  store link (new tab), its date as the store shows it and "#212 on Top Wishlisted". No tags:
+  "Most anticipated on Steam"; with tags: "in your niche". One caveat line: "Rank among Steam's
+  most wishlisted upcoming games on <snapshot date>. Not wishlist counts." No threat, no advice,
+  no follower counts or estimates. Nothing ranked matches: "No matching game is on Top
+  Wishlisted." Methods anchor: `#most-anticipated`.
 
 **04 Typical for this time of year, for all games.** The seasonal outlook for the next 26
 weeks (the all-games pattern for the picked languages, paid or free; the intro, "How busy
@@ -322,6 +329,12 @@ A `site` workflow builds and deploys to GitHub Pages:
    languages (about 11 to 20 ms on the real history, after the paint); `src/trendview.js` makes
    the text and the scale, `src/ui/trends.js` draws it. `analysis/site_data.py` adds the
    `listed` flag to `history.json` (Trends counts only listed games).
+   Most anticipated (section 03) built: up to 10 games that match the selection (the heatmap's
+   own matching, at any date or none), by Top Wishlisted rank, never by followers; `heatmap.py`
+   `most_anticipated`, ported to `heatmap.js` `mostAnticipated` with golden cases; `numbers.js`
+   caches it per tags, mode and languages (only the ranked games, after the paint). It sits
+   beside the week's games (under them below 1024px), with one caveat line: a rank, not
+   wishlist counts. `followers` and `hype_src` are not in its fields.
 5. Methods page. Built: `docs/methods.md` is rendered at build time by a tested,
    dependency-free Markdown converter; every main section links to its stable Methods
    anchor; the reviews-by-language analysis and table are included; all chart marks keep

@@ -273,6 +273,20 @@ def test_week_games_in_or_mode_carry_group_and_hype_source():
     assert listed[1]["hype_src"] is None
 
 
+def test_most_anticipated_orders_by_rank_at_any_date_and_ignores_followers():
+    games = [dict(game("unknown", followers=90000), appid=1, name="Undated", wishlist_rank=40, hype_src="r"),
+             dict(game("day", "2027-06-01"), appid=2, name="Far", wishlist_rank=3),
+             dict(game("year", "2028-01-01", "2028-12-31", tags=(COZY,)), appid=3, name="Cozy", wishlist_rank=1),
+             dict(game("day", "2026-10-14", followers=500000), appid=4, name="Unranked", wishlist_rank=None),
+             dict(game("quarter", "2027-01-01", "2027-03-31", free=True), appid=5, name="Free", wishlist_rank=2)]
+    top = hm.most_anticipated(games, [SHOOTER])
+    assert [g["appid"] for g in top["paid"]["games"]] == [2, 1]  # rank 3 before rank 40, whatever the followers
+    assert (top["paid"]["matched"], top["paid"]["total"]) == (2, 3)
+    assert [g["appid"] for g in top["free"]["games"]] == [5]
+    assert [g["appid"] for g in hm.most_anticipated(games, limit=1)["paid"]["games"]] == [3]
+    assert hm.most_anticipated(games, [COZY, SHOOTER])["paid"] == {"games": [], "matched": 0, "total": 3}
+
+
 def test_unknown_mode_or_measure_is_an_error():
     with pytest.raises(ValueError):
         hm.matches([1], [1], "xor")

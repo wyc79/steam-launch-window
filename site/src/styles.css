@@ -854,6 +854,18 @@ main { display: block; }
 .ah-list .ah-part:first-child { margin-top: var(--s3); }
 .ah-none { margin: var(--s3) 0; }
 
+/* the week's games and the most anticipated list: side by side on wide screens */
+.ah-lower { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: var(--s7); align-items: start; }
+@media (min-width: 1024px) { .ah-lower { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
+.ah-top { margin-top: var(--s6); padding-top: var(--s4); border-top: 1px solid var(--rule-soft); }
+.ah-top h3 { font-size: 1.25rem; margin-bottom: var(--s1); }
+.ah-top-none { margin: 0; }
+.ah-top-list { margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--rule-soft); }
+.ah-top-list li { padding: var(--s2) 0; border-top: 1px solid var(--rule-soft); font-size: var(--fs-small); }
+.ah-top-game { overflow-wrap: anywhere; }
+.ah-top-meta { display: block; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ah-top-note { margin: var(--s2) 0 0; }
+
 /* Tablets and small laptops: narrower weeks; the heatmap scrolls in its own area if it must */
 @media (max-width: 1023px) {
   .hm-scroll { overflow-x: auto; }
