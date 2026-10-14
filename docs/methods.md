@@ -19,8 +19,8 @@ The model numbers below come from the 2026-10-13 run.
 - **Steam:** public `IStoreQueryService/Query`,
   `IStoreBrowseService/GetItems`, `IStoreService/GetTagList`, and
   `IUserReviewsService/GetAppReviews` endpoints provide games, release dates,
-  tags, prices, demos, languages, and reviews. The site uses the public store
-  page and store search as fallbacks.
+  tags, prices, demos, languages, and reviews. The collector uses the public
+  store page and store search as fallbacks.
 - **[Games Popularity](https://games-popularity.com/):** follower and player
   counts. Games Popularity's owner gave permission to republish these counts on
   2026-10-12. The site credits the source wherever it uses them.
@@ -36,8 +36,9 @@ the browser.
 The Trends chart counts the selected games in each quarter from 2022 Q1 to the
 current quarter. A selection includes full and Early Access launches. It does
 not include a game leaving Early Access, because that is not its first launch.
-Tags, all or any matching, languages, and paid or free work the same way as in
-the other sections.
+Unlike [What history says](#what-history-says), Trends also counts launches that
+do not have 30 days of reviews yet. Tags, all or any matching, languages, and
+paid or free work the same way as in the other sections.
 
 The three views use the same quarterly counts:
 
@@ -140,8 +141,11 @@ fake window on a real window of that event. A check on 15 fake sets for two
 events agreed with full refits at a correlation above 0.99.
 
 There are 4 to 19 sale, fest, and holiday windows, plus 69 themed fests. Sales
-(`p = 0.001`), National Day (`p = 0.007`), and themed fests (`p = 0.04`) pass.
-Spring Festival (`p = 0.08`), Next Fest, Thanksgiving, and Christmas do not.
+(`p = 0.001`) and themed fests (`p = 0.04`) pass. Next Fest, Thanksgiving, and
+Christmas do not. Chinese holidays are the exception: National Day passes
+(`p = 0.007`) and Spring Festival does not (`p = 0.08`), but both overlap other
+events and have only 4 or 5 windows, so neither becomes advice. See
+[Chinese holidays](#chinese-holidays).
 
 ### Paid games
 
@@ -149,8 +153,8 @@ Spring Festival (`p = 0.08`), Next Fest, Thanksgiving, and Christmas do not.
 |---|---|---|---:|
 | 10 more launches in the same niche and price tier that week | 9% fewer, from 6% to 11% fewer | | 67,791, median 15 competitors |
 | During a seasonal sale | 37% fewer, from 24% to 47% fewer | ratio 0.75; `p = 0.001`, 19 sales | 5,310 |
-| In the 7 days before a sale | 15% fewer, from 32% fewer to 6% more | | 5,337 |
-| During Next Fest | 19% more, from 19% fewer to 75% more | ratio 1.13; `p = 0.34`, 14 fests | 3,047 |
+| In the 7 days before a sale | no clear effect, from 32% fewer to 6% more | | 5,337 |
+| During Next Fest | no clear effect, from 19% fewer to 75% more | ratio 1.13; `p = 0.34`, 14 fests | 3,047 |
 | Demo out by the end of the last Next Fest, against a later demo | 71% more, from 36% to 115% more | | 10,394 |
 | During a themed fest for one of its tags | 45% fewer, from 35% to 54% fewer | ratio 0.56; `p = 0.04`, 69 fests | 1,008 |
 | Within 3 days of a big paid release | no clear effect, from 11% fewer to 18% more | | 21,375 |
@@ -173,8 +177,9 @@ does not yet carry the covariance-based combined range.
 
 At the same niche price, a game priced twice as high got 81% more reviews, from
 69% to 94% more. This is not pricing advice. Larger and more polished games can
-both charge more and attract more reviews. Half of games have a niche median
-price of $4.99; 90% fall between $3.99 and $8.99.
+both charge more and attract more reviews. Niche prices barely vary: half of
+games sit in a niche whose median price is exactly $4.99, and 90% in one whose
+median is $3.99 to $8.99.
 
 ### Free games
 
@@ -185,8 +190,10 @@ reviews; 4% have no review in the first 30 days.
 - A demo out by the last Next Fest went with 95% more reviews, from 9% to 247%
   more, than a later demo. A later demo went with 62% fewer reviews, from 37% to
   77% fewer, than no demo.
-- Each extra same-niche launch went with 5% fewer reviews, from 3% to 6% fewer.
-  With the placebo in the same fit, the launch week still has a clear 4% drop,
+- Free competition is counted per single launch, not per 10 as for paid games,
+  because a typical free game has only 4 same-niche competitors. Each extra
+  same-niche launch went with 5% fewer reviews, from 3% to 6% fewer. With the
+  placebo in the same fit, the launch week still has a clear 4% drop per launch,
   from 2% to 6%.
 - Thanksgiving through Cyber Monday has 52% fewer reviews, from 35% to 64%
   fewer. Christmas through New Year has 47% fewer, from 25% to 63% fewer. Their
@@ -223,9 +230,10 @@ general advice.
 
 ### Other trust checks
 
-- Tag niches built from the top 5 or top 20 tags, plain competition without
-  price tiers, the same primary tag, and small games only all find 0.7% to 1.5%
-  fewer reviews per additional same-niche launch.
+- For paid games, tag niches built from the top 5 or top 20 tags, plain
+  competition without price tiers, the same primary tag, and small games only
+  all find 7% to 14% fewer reviews per 10 more same-niche launches, against 9%
+  in the main fit.
 - A two-part check first asks whether a launch got any reviews. A stable
   zero-truncated second part could not be fitted, so it is not used.
 - Pre-launch followers would control for hype better. Games Popularity counts
@@ -307,29 +315,50 @@ A quiet seasonal week is not necessarily a good launch week.
 
 The language sample contains 1,000 paid launches since 2023 with at least 10
 reviews from Steam purchases in their first 30 days. Half support Simplified
-Chinese and half do not. For each game, Steam was asked for all reviews and for
-10 language groups: English, Simplified Chinese, Traditional Chinese, Russian,
-Japanese, Korean, Brazilian Portuguese, German, French, and Spanish from Spain.
+Chinese and half do not. For each game, Steam was asked for its first-30-day
+reviews from Steam purchases in all languages together and in each of 10
+languages: English, Simplified Chinese, Traditional Chinese, Russian, Japanese,
+Korean, Brazilian Portuguese, German, French, and Spanish from Spain.
 
-The pooled share divides all reviews in a language by all reviews in the group.
-The median first finds each game's language share, then takes the middle game.
-Other is all reviews minus the 10 named language counts.
+The pooled share divides a group's reviews in one language by its reviews in
+all languages. The median first finds each game's language share, then takes
+the middle game. Other is reviews in languages outside the 10 counted: the
+all-language count minus the 10 language counts. The tables come from
+`python -m analysis.languages`.
 
-| Group | Language | Pooled share | Median per game |
-|---|---|---:|---:|
-| With Simplified Chinese | English | 55.0% | 39.4% |
-| With Simplified Chinese | Simplified Chinese | 15.8% | 10.7% |
-| With Simplified Chinese | Russian | 8.4% | 2.0% |
-| With Simplified Chinese | Other | 5.8% | 1.7% |
-| Without Simplified Chinese | English | 69.4% | 78.5% |
-| Without Simplified Chinese | Simplified Chinese | 5.7% | 0.0% |
-| Without Simplified Chinese | Russian | 5.9% | 0.0% |
-| Without Simplified Chinese | Other | 5.3% | 0.9% |
+| With Simplified Chinese | Pooled share | Median per game |
+|---|---:|---:|
+| English | 55.0% | 39.4% |
+| Simplified Chinese | 15.8% | 10.7% |
+| Traditional Chinese | 1.4% | 0.6% |
+| Russian | 8.4% | 2.0% |
+| Japanese | 1.8% | 0.8% |
+| Korean | 1.7% | 0.4% |
+| Portuguese (Brazil) | 2.3% | 0.0% |
+| German | 3.5% | 0.0% |
+| French | 2.2% | 0.0% |
+| Spanish (Spain) | 2.2% | 0.0% |
+| Other | 5.8% | 1.7% |
+
+| Without Simplified Chinese | Pooled share | Median per game |
+|---|---:|---:|
+| English | 69.4% | 78.5% |
+| Simplified Chinese | 5.7% | 0.0% |
+| Traditional Chinese | 0.7% | 0.0% |
+| Russian | 5.9% | 0.0% |
+| Japanese | 2.1% | 0.0% |
+| Korean | 0.9% | 0.0% |
+| Portuguese (Brazil) | 1.9% | 0.0% |
+| German | 3.7% | 0.0% |
+| French | 2.3% | 0.0% |
+| Spanish (Spain) | 2.1% | 0.0% |
+| Other | 5.3% | 0.9% |
 
 - This compares games that chose to add Chinese with games that did not, so it
   shows who reviews, not what adding Chinese would gain.
 - Pooled shares are pulled by a few big games, so the median is the better guide
-  for a small game.
+  for a small game. Every game here had at least 10 purchase reviews in its first
+  30 days, so the smallest games are not in the sample.
 - Latin American Spanish and European Portuguese were not counted. Steam's
   review API calls Korean `koreana`.
 

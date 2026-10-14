@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import math
 from collections.abc import Iterable
 from pathlib import Path
 from statistics import median
@@ -35,6 +36,13 @@ LABELS = {
     "spanish": "Spanish (Spain)",
     "other": "Other",
 }
+
+EPSILON = 1e-9  # as site/src/timing.js, so a stored 0.0125 (0.01249...) rounds up
+
+
+def percent(x: float) -> str:
+    """A share with one decimal, rounded half up like the site's percentOf."""
+    return f"{math.floor(x * 1000 + 0.5 + EPSILON) / 10:.1f}%"
 
 
 def load_language_files(data_dir: str | Path) -> tuple[list[dict[str, str]], set[int]]:
@@ -113,18 +121,16 @@ def summarize_languages(
 
 
 def markdown_table(summary: dict[bool, dict[str, dict[str, float]]]) -> str:
-    lines = [
-        "| Group | Language | Pooled share | Median per game |",
-        "|---|---|---:|---:|",
-    ]
+    """One narrow table per group, so each fits a phone screen."""
+    tables = []
     for supported in (True, False):
         group = "With Simplified Chinese" if supported else "Without Simplified Chinese"
+        lines = [f"| {group} | Pooled share | Median per game |", "|---|---:|---:|"]
         for language in (*LANGUAGES, "other"):
             value = summary[supported][language]
-            lines.append(
-                f'| {group} | {LABELS[language]} | {value["pooled"]:.1%} | {value["median"]:.1%} |'
-            )
-    return "\n".join(lines)
+            lines.append(f"| {LABELS[language]} | {percent(value['pooled'])} | {percent(value['median'])} |")
+        tables.append("\n".join(lines))
+    return "\n\n".join(tables)
 
 
 def main(argv: list[str] | None = None) -> int:

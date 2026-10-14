@@ -2,7 +2,7 @@ import csv
 
 import pytest
 
-from analysis.languages import load_language_files, summarize_languages
+from analysis.languages import load_language_files, markdown_table, percent, summarize_languages
 
 
 def row(appid, chinese, language, reviews):
@@ -35,6 +35,27 @@ def test_summarize_languages_uses_pooled_totals_and_per_game_medians():
     assert got[False]["english"] == pytest.approx({"pooled": 0.8, "median": 0.8})
     assert got[False]["schinese"] == pytest.approx({"pooled": 0.1, "median": 0.1})
     assert got[False]["other"] == pytest.approx({"pooled": 0.1, "median": 0.1})
+
+
+def test_percent_rounds_half_up_like_the_site():
+    # 0.0125 is stored as 0.01249..., which Python's .1% turns into 1.2%
+    assert f"{0.0125:.1%}" == "1.2%"
+    assert percent(0.0125) == "1.3%"
+    assert percent(0.0124) == "1.2%"
+    assert percent(0.55) == "55.0%"
+    assert percent(0) == "0.0%"
+
+
+def test_markdown_table_rounds_a_tie_half_up():
+    rows = [row(1, True, "all", 2000), row(1, True, "english", 25), row(2, False, "all", 10)]
+
+    table = markdown_table(summarize_languages(rows, {1, 2}))
+
+    with_chinese, without_chinese = table.split("\n\n")
+    assert with_chinese.splitlines()[0] == "| With Simplified Chinese | Pooled share | Median per game |"
+    assert "| English | 1.3% | 1.3% |" in with_chinese.splitlines()
+    assert without_chinese.splitlines()[0] == "| Without Simplified Chinese | Pooled share | Median per game |"
+    assert len(without_chinese.splitlines()) == 2 + 11
 
 
 @pytest.mark.parametrize(
