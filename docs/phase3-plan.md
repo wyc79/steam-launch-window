@@ -1,6 +1,6 @@
 # Phase 3 plan: website
 
-Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year for all games, section links, event effects in the lanes and the searchable week list) built (PR #27); section 01 Trends built (PR #28); step 5 built on `site-methods`.
+Status: decided (2026-10-13); steps 1 to 3 built (PR #23, PR #24, PR #25); step 4 part 1 (Competition ahead) built (PR #26); step 4 part 2 (What history says, Typical for this time of year for all games, section links, event effects in the lanes and the searchable week list) built (PR #27); section 01 Trends built (PR #28); step 5 Methods page built (PR #29).
 
 A static site at `wyc79.github.io/steam-launch-window` that helps an indie
 developer pick a launch week. It shows the numbers defined in Phase 2
@@ -325,7 +325,8 @@ A `site` workflow builds and deploys to GitHub Pages:
 5. Methods page. Built: `docs/methods.md` is rendered at build time by a tested,
    dependency-free Markdown converter; every main section links to its stable Methods
    anchor; the reviews-by-language analysis and table are included; all chart marks keep
-   system-colour shapes in Windows High Contrast; Trends caveats are two lines.
+   system-colour shapes in Windows High Contrast, and the heatmap keeps its split at 1.0
+   there; Trends caveats are two lines. PR #29.
 6. The deploy workflow, then a review of the live site.
 
 Each step ends in a PR reviewed by a fresh agent before merging.

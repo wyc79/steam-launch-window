@@ -18,7 +18,7 @@ ends with a report, and the next one starts only after a go-ahead.
 | Audit | 6. Implementation | [PR #13](https://github.com/wyc79/steam-launch-window/pull/13) merged 2026-10-12; fixes from the first Games Popularity run in [PR #14](https://github.com/wyc79/steam-launch-window/pull/14), merged 2026-10-12 |
 | Audit | 7. Deliverables | reported 2026-10-12 in [pipeline-report.md](pipeline-report.md), together with the build Phase 1 report |
 | Build | 2. Analysis | built: site data and reference numbers (PR #18), the model (PR #19), free games count all reviews (PR #20), reviews by language sample (PR #21). The free recount (data commit 8593cd4) and the language sample (eff1bc5) are in, the model was rerun (79cca10), and the language sample is written up in Phase 3 step 5. See [phase2-plan.md](phase2-plan.md) and [methods.md](methods.md) |
-| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 merged in PR #23; step 2 merged in PR #24; step 3 merged in PR #25; step 4 part 1 merged in PR #26; step 4 part 2 merged in PR #27; Trends, now section 01, merged in PR #28; step 5 Methods page built on `site-methods`; left: step 6 deploy workflow and live-site review |
+| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 merged in PR #23; step 2 merged in PR #24; step 3 merged in PR #25; step 4 part 1 merged in PR #26; step 4 part 2 merged in PR #27; Trends, now section 01, merged in PR #28; step 5 Methods page built in PR #29; left: step 6 deploy workflow and live-site review |
 | Build | 4. Agent and Worker | not started |
 
 ## Where things stand
