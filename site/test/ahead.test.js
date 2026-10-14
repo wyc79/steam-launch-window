@@ -195,6 +195,12 @@ describe("the grid", () => {
     expect(body.querySelector(".hm-block-name").getAttribute("title")).toBe("Steam Scream V Fest 2026, Oct 26 to Nov 2");
   });
 
+  test("the legend has a swatch for each shade step, with the cells' classes", () => {
+    const body = draw();
+    const swatches = body.querySelectorAll(".ah-swatch .hm-part").map((el) => el.className);
+    expect(swatches).toEqual(Array.from({ length: 8 }, (_, i) => `hm-part s${i}`));
+  });
+
   test("names the typical week in the row head", () => {
     const body = draw();
     expect(body.querySelector(".hm-row-note").textContent).toBe("about 1.0 launches in a typical week");

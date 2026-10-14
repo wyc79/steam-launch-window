@@ -4,6 +4,7 @@
 
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
+import { step } from "../src/heatview.js";
 
 const css = readFileSync(new URL("../src/styles.css", import.meta.url), "utf8");
 
@@ -94,9 +95,9 @@ test("the trend bars keep system colours in forced colours (Windows high contras
 
 test("every background-only chart mark keeps a system-colour shape in forced colours", () => {
   const forced = css.slice(css.indexOf("@media (forced-colors: active)"));
-  expect(forced).toMatch(/\.hm-part \{ forced-color-adjust: none; background: CanvasText; color: Canvas;[^}]*\}/);
+  expect(forced).toMatch(/\.hm-part \{ forced-color-adjust: none; background: Canvas; color: CanvasText;[^}]*\}/);
   expect(forced).toMatch(/\.hm-part\.is-year \{[^}]*repeating-linear-gradient\([^}]*CanvasText[^}]*Canvas[^}]*\}/);
-  expect(forced).toMatch(/\.hm-part\.is-year > span \{ background: Canvas; color: CanvasText; \}/);
+  expect(forced).toMatch(/\.hm-part\.is-year > span \{[^}]*background: Canvas; color: CanvasText; \}/);
   expect(forced).toMatch(/\.hm-block \{ forced-color-adjust: none; background: Canvas;[^}]*CanvasText[^}]*\}/);
   expect(forced).toMatch(/\.hm-tag \{ forced-color-adjust: none; background: CanvasText; color: Canvas; \}/);
   expect(forced).toMatch(/\.hs-bar \{ forced-color-adjust: none; \}/);
@@ -107,6 +108,55 @@ test("every background-only chart mark keeps a system-colour shape in forced col
   expect(forced).toMatch(/\.ol-bar \{ forced-color-adjust: none; background: CanvasText; \}/);
   expect(forced).toMatch(/\.ol-week\.is-picked \.ol-bar \{ background: Highlight; \}/);
   expect(forced).toMatch(/\.ol-events span \{ forced-color-adjust: none; background: CanvasText; color: Canvas; \}/);
+});
+
+// the rules inside the forced-colours block, as [selectors, declarations] in order
+function forcedRules() {
+  const start = css.indexOf("{", css.indexOf("@media (forced-colors: active)")) + 1;
+  let end = start;
+  for (let depth = 1; depth; end++) depth += css[end] === "{" ? 1 : css[end] === "}" ? -1 : 0;
+  const body = css.slice(start, end - 1).replace(/\/\*[\s\S]*?\*\//g, "");
+  return [...body.matchAll(/([^{}]+)\{([^}]*)\}/g)].map((m) => [
+    m[1].split(",").map((sel) => sel.trim()),
+    Object.fromEntries([...m[2].matchAll(/([\w-]+):\s*([^;]+);/g)].map((d) => [d[1], d[2].trim()])),
+  ]);
+}
+
+// what an element with these classes gets in forced colours, from the rules made
+// only of classes (".hm-part.s4"): more classes win, then the later rule
+function forcedStyle(classes) {
+  const hits = forcedRules().flatMap(([selectors, decls], order) =>
+    selectors
+      .filter((sel) => /^(\.[\w-]+)+$/.test(sel))
+      .map((sel) => sel.slice(1).split("."))
+      .filter((need) => need.every((c) => classes.includes(c)))
+      .map((need) => [need.length, order, decls]),
+  );
+  hits.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  return Object.assign({}, ...hits.map((hit) => hit[2]));
+}
+
+test("in forced colours the heatmap and its legend keep the split at 1.0", () => {
+  const busyFrom = step(1);
+  expect(step(0.99)).toBe(busyFrom - 1);
+  for (let i = 0; i < 8; i++) {
+    // a cell part and its legend swatch have the same classes (test/ahead.test.js)
+    const part = forcedStyle(["hm-part", "is-exact", `s${i}`]);
+    const busy = i >= busyFrom;
+    expect(part["forced-color-adjust"], `s${i}`).toBe("none");
+    expect(part.background, `s${i}`).toBe(busy ? "CanvasText" : "Canvas");
+    expect(part.color, `s${i}`).toBe(busy ? "Canvas" : "CanvasText"); // the number reads on its own cell
+  }
+  // under 1.0, an outline heavier than an empty week's
+  expect(forcedStyle(["hm-part", "s1"])["box-shadow"]).not.toBe(forcedStyle(["hm-part", "s0"])["box-shadow"]);
+  // year-only parts: hatched on both sides of 1.0, one hatch per side, the number on Canvas
+  const year = (i) => forcedStyle(["hm-part", "is-year", `s${i}`]).background;
+  const quiet = new Set([0, 1, 2, 3].map(year));
+  const busy = new Set([4, 5, 6, 7].map(year));
+  expect([quiet.size, busy.size]).toEqual([1, 1]);
+  expect([...quiet, ...busy].every((bg) => bg.startsWith("repeating-linear-gradient("))).toBe(true);
+  expect(year(0)).not.toBe(year(7));
+  expect(forcedStyle(["hm-part", "is-year", "s7"]).color).toBe("CanvasText");
 });
 
 test("the rules were found", () => {

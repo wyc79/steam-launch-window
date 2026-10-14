@@ -25,7 +25,8 @@ test("each section links to its stable Methods anchor", () => {
 
   for (const [index, key] of SECTIONS.entries()) {
     const link = parts.els[index].querySelector("a.method-link");
-    expect(link.textContent).toBe("How this is measured");
+    expect(link.textContent).toBe(`How this is measured: ${en.sections[key].title}`);
+    expect(link.querySelector(".visually-hidden").textContent).toBe(`: ${en.sections[key].title}`);
     expect(link.getAttribute("href")).toBe(`${import.meta.env.BASE_URL}methods.html${anchors[key]}`);
   }
 });

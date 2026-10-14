@@ -37,6 +37,7 @@ export function sections(s) {
         "a",
         { class: "method-link", href: `${import.meta.env.BASE_URL}methods.html#${METHOD_ANCHORS[key]}` },
         s.methods.measured,
+        h("span", { class: "visually-hidden" }, s.methods.measuredWhich(title)),
       ),
     );
     bodies[key] = h("div", { class: "section-body", "aria-busy": "true" }, h("p", { class: "quiet" }, s.bar.loading));

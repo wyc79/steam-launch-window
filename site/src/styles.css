@@ -183,6 +183,12 @@ a:hover { color: var(--accent-ui); text-decoration-thickness: 2px; }
 button, input, select, textarea { font: inherit; color: inherit; }
 img { max-width: 100%; }
 :focus-visible { outline: 2px solid var(--accent-ui); outline-offset: 3px; }
+/* what focus or a link scrolls to stops below the sticky bar (its height measured
+   in main.js); a phone's bar does not stick. :where keeps this under any class rule */
+main :where(a[href], button, input, select, textarea, summary, [tabindex]) { scroll-margin-top: calc(var(--bar-h, 0px) + var(--s2)); }
+@media (max-height: 560px), (max-width: 639px) {
+  main :where(a[href], button, input, select, textarea, summary, [tabindex]) { scroll-margin-top: var(--s2); }
+}
 ::selection { background: var(--accent-ui); color: var(--paper); }
 [hidden] { display: none !important; }
 
@@ -310,7 +316,9 @@ img { max-width: 100%; }
 .methods code { padding: .08em .22em; background: var(--tint); font: .9em/1.4 Consolas, "Courier New", monospace; }
 .method-table { max-width: 100%; margin: var(--s5) 0 var(--s6); overflow-x: auto; border-top: 1px solid var(--ink); }
 .method-table:focus-visible { outline-offset: 2px; }
-.method-table table { width: 100%; min-width: 38rem; border-collapse: collapse; font-size: var(--fs-small); line-height: 1.4; }
+.method-table table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); line-height: 1.4; }
+/* a wide table scrolls inside its frame; a three-column one fits a phone */
+.method-table table:has(th:nth-child(4)) { min-width: 38rem; }
 .method-table th, .method-table td { padding: var(--s2) var(--s3); border-bottom: 1px solid var(--rule-soft); vertical-align: top; text-align: left; }
 .method-table th { color: var(--ink-2); font-size: var(--fs-meta); letter-spacing: var(--track-meta); text-transform: uppercase; }
 .method-table .align-center { text-align: center; }
@@ -1206,10 +1214,15 @@ main { display: block; }
 /* Windows high contrast drops background colours: every chart mark keeps a
    system-colour shape, with hatching for states that need a second pattern. */
 @media (forced-colors: active) {
-  .hm-part { forced-color-adjust: none; background: CanvasText; color: Canvas; box-shadow: inset 0 0 0 1px CanvasText; }
-  .hm-part.s0 { background: Canvas; color: CanvasText; }
-  .hm-part.is-year { background: repeating-linear-gradient(135deg, CanvasText 0 2px, Canvas 2px 5px); color: CanvasText; box-shadow: inset 0 0 0 1px CanvasText; }
-  .hm-part.is-year > span { background: Canvas; color: CanvasText; }
+  /* the heatmap keeps its split at 1.0 (s4 on, heatview.js CUTS): quieter than a
+     typical week is an outline on Canvas, 1.0 and up is solid; year-only parts
+     are hatched, thin under 1.0 and dense from it */
+  .hm-part { forced-color-adjust: none; background: Canvas; color: CanvasText; box-shadow: inset 0 0 0 1px CanvasText; }
+  .hm-part.s1, .hm-part.s2, .hm-part.s3 { box-shadow: inset 0 0 0 2px CanvasText; }
+  .hm-part.s4, .hm-part.s5, .hm-part.s6, .hm-part.s7 { background: CanvasText; color: Canvas; }
+  .hm-part.is-year { background: repeating-linear-gradient(135deg, CanvasText 0 1px, Canvas 1px 5px); color: CanvasText; box-shadow: inset 0 0 0 1px CanvasText; }
+  .hm-part.is-year.s4, .hm-part.is-year.s5, .hm-part.is-year.s6, .hm-part.is-year.s7 { background: repeating-linear-gradient(135deg, CanvasText 0 3px, Canvas 3px 5px); }
+  .hm-part.is-year > span { padding: 1px 3px; background: Canvas; color: CanvasText; }
   .hm-block { forced-color-adjust: none; background: Canvas; box-shadow: inset 0 0 0 2px CanvasText; }
   .hm-block.is-themed_fest { background: repeating-linear-gradient(135deg, CanvasText 0 2px, Canvas 2px 5px); }
   .hm-tag { forced-color-adjust: none; background: CanvasText; color: Canvas; }

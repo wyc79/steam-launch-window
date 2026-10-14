@@ -376,6 +376,8 @@ export const en = {
   methods: {
     title: "Methods",
     measured: "How this is measured",
+    // read after it by screen readers only, so the four links have different names
+    measuredWhich: (section) => `: ${section}`,
     back: "Back to the tool",
   },
 
