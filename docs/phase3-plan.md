@@ -191,12 +191,14 @@ older quarters have lost, and the chart would show a rise that is not there.
   from wishlist rank). Order inside each part: games whose top 10 tags match first,
   then the most followers (unknown last), then name, then appid.
 - Most anticipated (built): beside the week's games, the top 10 matching games of the picked
-  group by Steam's Top Wishlisted rank, at any date or none ("To be announced"), each with its
-  store link (new tab), its date as the store shows it and "#212 on Top Wishlisted". No tags:
-  "Most anticipated on Steam"; with tags: "in your niche". One caveat line: "Rank among Steam's
-  most wishlisted upcoming games on <snapshot date>. Not wishlist counts." No threat, no advice,
-  no follower counts or estimates. Nothing ranked matches: "No matching game is on Top
-  Wishlisted." Methods anchor: `#most-anticipated`.
+  group by Steam's Top Wishlisted rank, at any date or none, each with its store link (new
+  tab), its date as the store shows it and "#212 on Top Wishlisted". A game with no date shows
+  the store's own words ("Coming soon", "To be announced"; "To be announced" when the store
+  gave none). No tags: "Most anticipated on Steam"; with tags: "in your niche". A for-line
+  under the title names the rest, as the week list does: "All games, Paid, in Simplified
+  Chinese". One caveat line: "Rank on Steam's Top Wishlisted list on <snapshot date>. Not
+  wishlist counts." No threat, no advice, no follower counts or estimates. Nothing ranked
+  matches: "No matching game is on Top Wishlisted." Methods anchor: `#most-anticipated`.
 
 **04 Typical for this time of year, for all games.** The seasonal outlook for the next 26
 weeks (the all-games pattern for the picked languages, paid or free; the intro, "How busy
@@ -334,7 +336,9 @@ A `site` workflow builds and deploys to GitHub Pages:
    `most_anticipated`, ported to `heatmap.js` `mostAnticipated` with golden cases; `numbers.js`
    caches it per tags, mode and languages (only the ranked games, after the paint). It sits
    beside the week's games (under them below 1024px), with one caveat line: a rank, not
-   wishlist counts. `followers` and `hype_src` are not in its fields. PR #30.
+   wishlist counts. `followers` and `hype_src` are not in its fields. `analysis/site_data.py`
+   adds `date_text` to `upcoming.json`: the store's text, only for games with no date
+   (about 140 KB more, 7 KB gzipped). PR #30.
 5. Methods page. Built: `docs/methods.md` is rendered at build time by a tested,
    dependency-free Markdown converter; every main section links to its stable Methods
    anchor; the reviews-by-language analysis and table are included; all chart marks keep

@@ -42,9 +42,10 @@ export function dateText(game, s = en) {
 }
 
 // the date as the store page shows it, year included: "Oct 28, 2026", "December 2026",
-// "Q1 2027", "2027", or "To be announced" without one (the most anticipated list)
+// "Q1 2027", "2027", or without one the store's own words ("Coming soon"), else
+// "To be announced" (the most anticipated list)
 export function steamDate(game, s = en) {
-  if (!game?.date) return s.ahead.tba;
+  if (!game?.date) return game?.date_text || s.ahead.tba;
   if (game.precision === "day") return fullDate(game.date, s);
   if (game.precision === "month") {
     return dateFormat(s.locale, { month: "long", year: "numeric" }).format(toDay(game.date) * 86400000);

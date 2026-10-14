@@ -41,7 +41,7 @@ TREND_MIN_EXACT = 10  # the niche trend needs this many niche games with exact d
 TREND_RATIO = 1.45  # and a share at least this many times the past one, or at most its inverse (trend_calibration.py)
 TREND_Z = 1.959964  # and a pooled two-proportion z at least this large
 TOP_RANKED = 10  # Competition ahead's most anticipated list: this many games per group
-RANKED_FIELDS = ("appid", "name", "precision", "date", "wishlist_rank")
+RANKED_FIELDS = ("appid", "name", "precision", "date", "date_text", "wishlist_rank")
 
 
 def week_start(d: date) -> date:
@@ -265,16 +265,16 @@ def week_games(games, today: date, week: date, selection=(), mode: str = "and", 
 def most_anticipated(games, selection=(), mode: str = "and", languages=(), limit: int = TOP_RANKED) -> dict:
     """Per group, the games the selection matches (as the heatmap matches them) that are
     on Steam's Top Wishlisted list, by their rank there (1 first; then appid): the first
-    `limit` of them, with `matched` (all such games) and `total` (all ranked games in the
-    group). Any date or none counts, so undated games are in it too. The order is the
-    observed rank only, never followers estimated from it."""
+    `limit` of them, with `total` (all ranked games in the group). Any date or none
+    counts, so undated games are in it too. The order is the observed rank only, never
+    followers estimated from it."""
     ranked = [g for g in games if g.get("wishlist_rank") is not None]
     chosen = sorted(selected(ranked, selection, mode, languages), key=lambda g: (g["wishlist_rank"], g["appid"]))
     out = {}
     for group in GROUPS:
         mine = [g for g in chosen if group_of(g) == group]
         out[group] = {"games": [{k: g.get(k) for k in RANKED_FIELDS} for g in mine[:limit]],
-                      "matched": len(mine), "total": sum(group_of(g) == group for g in ranked)}
+                      "total": sum(group_of(g) == group for g in ranked)}
     return out
 
 

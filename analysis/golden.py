@@ -148,13 +148,13 @@ TYPICAL = (
 )
 
 
-def _ranked(appid, name, rank, precision, start=None, end=None, **kw):
-    return {**game(appid, name, precision, start, end, **kw), "wishlist_rank": rank}
+def _ranked(appid, name, rank, precision, start=None, end=None, date_text=None, **kw):
+    return {**game(appid, name, precision, start, end, **kw), "date_text": date_text, "wishlist_rank": rank}
 
 
 # for the most anticipated list: Top Wishlisted ranks at every kind of date, and games without one
 RANKED = [
-    _ranked(1, "Undated Giant", 1, "unknown", followers=250000, hype_src="r"),
+    _ranked(1, "Undated Giant", 1, "unknown", date_text="Coming soon", followers=250000, hype_src="r"),
     _ranked(2, "Far Shooter", 7, "day", "2027-08-20", tags=(SHOOTER, ROGUELIKE)),
     _ranked(3, "Cozy Year", 3, "year", "2028-01-01", "2028-12-31", tags=(COZY,), followers=900),
     _ranked(4, "Month Rogue", 12, "month", "2026-12-01", "2026-12-31", tags=(ROGUELIKE,)),
@@ -165,6 +165,10 @@ RANKED = [
     _ranked(9, "Past Day", 9, "day", "2026-09-30"),  # its date passed, still coming soon
     _ranked(11, "Same Rank B", 20, "day", "2027-02-01"),  # ranks are unique in the data; ties go by appid
     _ranked(10, "Same Rank A", 20, "day", "2027-02-02"),
+    _ranked(12, "No Text", 25, "unknown"),  # undated, and the store gave no text
+    # site_data sets `free` from the Free to Play tag when Steam's flag is not set; the list reads only `free`
+    _ranked(13, "Tagged Free", 6, "unknown", date_text="To be announced", tags=(F2P, SHOOTER), free=True,
+            langs=("english", "schinese")),
 ]
 
 
@@ -345,6 +349,9 @@ def heatmap_cases() -> Cases:
     c.add("most anticipated: shooter and roguelike", "most_anticipated", games="$ranked",
           selection=[SHOOTER, ROGUELIKE])
     c.add("most anticipated: schinese", "most_anticipated", games="$ranked", languages=["schinese"])
+    c.add("most anticipated: no tags, english or schinese", "most_anticipated", games="$ranked",
+          languages=["english", "schinese"])
+    c.add("most anticipated: free to play tag", "most_anticipated", games="$ranked", selection=[F2P])
     c.add("most anticipated: no match", "most_anticipated", games="$ranked", selection=[PIXEL])
     c.add("most anticipated: no ranks", "most_anticipated", games="$games", selection=[SHOOTER])
     c.add("match count: all games", "match_count", games="$games", history="$typical")

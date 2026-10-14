@@ -19,7 +19,7 @@ export const TREND_MIN_EXACT = 10; // the niche trend needs this many niche game
 export const TREND_RATIO = 1.45; // and a share at least this many times the past one, or at most its inverse (trend_calibration.py)
 export const TREND_Z = 1.959964; // and a pooled two-proportion z at least this large
 export const TOP_RANKED = 10; // Competition ahead's most anticipated list: this many games per group
-const RANKED_FIELDS = ["appid", "name", "precision", "date", "wishlist_rank"];
+const RANKED_FIELDS = ["appid", "name", "precision", "date", "date_text", "wishlist_rank"];
 export const MODES = ["and", "or"];
 export const MEASURES = ["relative", "raw"];
 
@@ -283,9 +283,9 @@ export function weekGames(games, today, week, { selection = [], mode = "and", la
 
 // Per group, the games the selection matches (as the heatmap matches them) that are
 // on Steam's Top Wishlisted list, by their rank there (1 first; then appid): the
-// first `limit`, with `matched` (all such games) and `total` (all ranked games in the
-// group). Any date or none counts. The order is the observed rank only, never
-// followers estimated from it. See heatmap.py most_anticipated.
+// first `limit`, with `total` (all ranked games in the group). Any date or none
+// counts. The order is the observed rank only, never followers estimated from it.
+// See heatmap.py most_anticipated.
 export function mostAnticipated(games, { selection = [], mode = "and", languages = [], limit = TOP_RANKED } = {}) {
   const ranked = games.filter((g) => g.wishlist_rank != null);
   const chosen = selected(ranked, { selection, mode, languages }).sort(
@@ -296,7 +296,7 @@ export function mostAnticipated(games, { selection = [], mode = "and", languages
     GROUPS.map((group) => {
       const mine = chosen.filter((g) => groupOf(g) === group);
       const pick = (g) => Object.fromEntries(RANKED_FIELDS.map((k) => [k, g[k] ?? null]));
-      return [group, { games: mine.slice(0, limit).map(pick), matched: mine.length, total: total[group] }];
+      return [group, { games: mine.slice(0, limit).map(pick), total: total[group] }];
     }),
   );
 }

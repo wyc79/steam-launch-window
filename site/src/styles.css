@@ -859,6 +859,7 @@ main { display: block; }
 @media (min-width: 1024px) { .ah-lower { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
 .ah-top { margin-top: var(--s6); padding-top: var(--s4); border-top: 1px solid var(--rule-soft); }
 .ah-top h3 { font-size: 1.25rem; margin-bottom: var(--s1); }
+.ah-top-for { margin: 0 0 var(--s2); font-size: var(--fs-small); font-weight: 700; }
 .ah-top-none { margin: 0; }
 .ah-top-list { margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--rule-soft); }
 .ah-top-list li { padding: var(--s2) 0; border-top: 1px solid var(--rule-soft); font-size: var(--fs-small); }

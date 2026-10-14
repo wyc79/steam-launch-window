@@ -142,7 +142,7 @@ export const en = {
     },
     announce: (row, week, count) => `${row}, ${week}. ${count}`,
     quarter: (q, year) => `Q${q} ${year}`,
-    tba: "To be announced", // no date yet, as the store says
+    tba: "To be announced", // no date yet and no text from the store
     followers: (n) => `${n} followers`,
     followersEstimate: (n) => `about ${n} followers, estimated from wishlist rank`,
     moved: (old, ago) => `moved here from ${old}, ${ago}`,
@@ -158,10 +158,15 @@ export const en = {
     top: {
       title: "Most anticipated on Steam",
       titleNiche: "Most anticipated in your niche",
+      // what the list is for: "All games, Paid, in Simplified Chinese" (row as the week list names it)
+      forLine: (row, group, langs) => `${row}, ${group}, ${langs}`,
       rank: (n) => `#${n} on Top Wishlisted`,
       none: "No matching game is on Top Wishlisted.",
       noRanks: "This snapshot has no Top Wishlisted ranks.",
-      caveat: (date) => `Rank among Steam's most wishlisted upcoming games on ${date}. Not wishlist counts.`,
+      caveat: (date) =>
+        date
+          ? `Rank on Steam's Top Wishlisted list on ${date}. Not wishlist counts.`
+          : "Rank on Steam's Top Wishlisted list. Not wishlist counts.",
       newTab: " (opens in a new tab)",
     },
     // what past launches during a lane's event did, in its tooltip and label (eventeffects.js)
