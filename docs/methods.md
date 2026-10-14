@@ -293,16 +293,18 @@ The collector reads the whole list each day from Steam's US store search with
 `filter=popularwishlist`. Our rank is a game's place in that list after bundles
 and games listed twice are dropped, so it can differ from Steam's page by a few
 places. On 2026-10-13, Steam had about 60,300 coming-soon games, and 5,251 of
-them (about 9%) had a rank. The site keeps a game with no date only when it has a rank. The
-list gives a rank only. Steam publishes no wishlist counts, so the site shows
-none.
+them (about 9%) had a rank. The site keeps a game with no date only when it
+has a rank, and drops exact dates more than 30 days past (one ranked game that
+day). The list gives a rank only. Steam publishes no wishlist counts, so the
+site shows none.
 
 Matching is the heatmap's own: the same tags with the all or any rule, the
 languages, and paid or free. Unlike the heatmap, the list takes games at any
-date: exact, month, quarter, year, or none yet, including those beyond the 13
-weeks. The order is the rank alone, never followers. Each game shows its date
-as the store shows it and its rank, such as "#212 on Top Wishlisted". A game
-with no date shows the store's own words, such as "Coming soon" or "To be
+date the site keeps: exact, month, quarter, year, or none yet, including those
+beyond the 13 weeks. The order is the rank alone, never followers. Each game
+shows its date as the store shows it and its rank, such as "#212 on Top
+Wishlisted". A game with no date shows the store's own words, such as "Coming
+soon" or "To be announced". When the store gave no words, it shows "To be
 announced".
 
 The list is context. A rank says how a game compares with other unreleased
