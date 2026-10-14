@@ -24,7 +24,7 @@ import { tagNames } from "../tags.js";
 import { langsText } from "../trendview.js";
 import { eventEffect } from "../eventeffects.js";
 import { detailItems, findGames, fullDate, listParts, steamDate, storeUrl } from "../weekdetail.js";
-import { fill, h, uid } from "./dom.js";
+import { fill, h, offsite, uid } from "./dom.js";
 import { laneItems } from "./lanes.js";
 
 const PHONE = "(max-width: 639px)";
@@ -364,7 +364,7 @@ export function aheadSection(s, body) {
     return h(
       "li",
       {},
-      h("a", { href: g.url, class: "ah-game" }, g.name),
+      offsite({ href: g.url, class: "ah-game" }, s.newTab, g.name),
       h("span", { class: "ah-game-meta" }, [g.date, g.followers].filter(Boolean).join(s.bar.sep)),
       g.moved && h("span", { class: "ah-moved" }, g.moved),
     );
@@ -475,12 +475,7 @@ export function aheadSection(s, body) {
     return h(
       "li",
       {},
-      h(
-        "a",
-        { href: storeUrl(g.appid), class: "ah-top-game", target: "_blank", rel: "noopener" },
-        g.name || a.unnamed(g.appid),
-        h("span", { class: "visually-hidden" }, a.top.newTab),
-      ),
+      offsite({ href: storeUrl(g.appid), class: "ah-top-game" }, s.newTab, g.name || a.unnamed(g.appid)),
       h("span", { class: "ah-top-meta" }, [steamDate(g, s), a.top.rank(formatNumber(g.wishlist_rank, s))].join(s.bar.sep)),
     );
   }

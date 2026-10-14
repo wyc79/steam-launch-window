@@ -10,6 +10,8 @@ export const en = {
 
   title: "Steam Launch Window",
   pageTitle: (page, site) => `${page} · ${site}`, // a page other than the tool
+  // after a link off this site, which opens in a new tab: read out, not shown
+  newTab: " (opens in a new tab)",
   description:
     "Pick a Steam launch week: how crowded the coming weeks are for your tags, and how similar games did when they launched.",
 
@@ -167,7 +169,6 @@ export const en = {
         date
           ? `Rank on Steam's Top Wishlisted list on ${date}. Not wishlist counts.`
           : "Rank on Steam's Top Wishlisted list. Not wishlist counts.",
-      newTab: " (opens in a new tab)",
     },
     // what past launches during a lane's event did, in its tooltip and label (eventeffects.js)
     effectKey:

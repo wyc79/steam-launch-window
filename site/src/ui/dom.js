@@ -24,6 +24,12 @@ export function fill(el, ...kids) {
   return el;
 }
 
+// A link off this site: it opens in a new tab and says so, out of sight
+// (`newTab` is the strings' newTab)
+export function offsite(props, newTab, ...kids) {
+  return h("a", { ...props, target: "_blank", rel: "noopener" }, ...kids, h("span", { class: "visually-hidden" }, newTab));
+}
+
 let ids = 0;
 export function uid(prefix) {
   ids += 1;

@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { en } from "../src/strings.js";
-import { SECTIONS, sectionNumber, sections } from "../src/ui/sections.js";
+import { REPO } from "../src/ui/masthead.js";
+import { SECTIONS, footer, sectionNumber, sections } from "../src/ui/sections.js";
 import { installDom } from "./fakedom.js";
 
 test("the trends first, then history and the model, the heatmap and the season, numbered in that order", () => {
@@ -29,4 +30,20 @@ test("each section links to its stable Methods anchor", () => {
     expect(link.querySelector(".visually-hidden").textContent).toBe(`: ${en.sections[key].title}`);
     expect(link.getAttribute("href")).toBe(`${import.meta.env.BASE_URL}methods.html${anchors[key]}`);
   }
+});
+
+test("the footer's links off this site open in a new tab and say so; the Methods link stays", () => {
+  installDom();
+  const links = footer(en).el.querySelectorAll("a");
+  expect(links.map((a) => [a.getAttribute("href"), a.getAttribute("target"), a.getAttribute("rel")])).toEqual([
+    ["https://store.steampowered.com/", "_blank", "noopener"],
+    ["https://games-popularity.com/", "_blank", "noopener"],
+    ["https://huggingface.co/datasets/strikeoo/steam-launch-data", "_blank", "noopener"],
+    [`${import.meta.env.BASE_URL}methods.html`, null, null],
+    [REPO, "_blank", "noopener"],
+  ]);
+  for (const a of links.filter((a) => a.getAttribute("target"))) {
+    expect(a.querySelector(".visually-hidden").textContent).toBe(en.newTab);
+  }
+  expect(links[3].querySelector(".visually-hidden")).toBeNull();
 });

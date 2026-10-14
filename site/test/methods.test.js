@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import methodsHtml from "virtual:methods-content";
 import { methodsPage, syncTableTabStops } from "../src/methods.js";
 import { h } from "../src/ui/dom.js";
+import { HOME, REPO, masthead } from "../src/ui/masthead.js";
 import { en } from "../src/strings.js";
 import { installDom } from "./fakedom.js";
 
@@ -15,7 +16,7 @@ test("the build-time article has its contents, sources, anchors, and language ta
   expect(methodsHtml).toContain('<h3 id="most-anticipated">Most anticipated</h3>');
   expect(methodsHtml).toContain('<a href="#the-placebo-and-weekly-competition">');
   expect(methodsHtml).toContain('<h2 id="typical-for-this-time-of-year">Typical for this time of year</h2>');
-  expect(methodsHtml).toContain('href="https://games-popularity.com/"');
+  expect(methodsHtml).toContain('href="https://games-popularity.com/" target="_blank" rel="noopener"');
   expect(methodsHtml).toContain('href="https://huggingface.co/datasets/strikeoo/steam-launch-data"');
   expect(methodsHtml).toContain("With Simplified Chinese");
   expect(methodsHtml).toContain("55.0%");
@@ -36,6 +37,23 @@ test("the Methods page uses the shared shell and has an article and back link", 
   expect(article.innerHTML).toBe(methodsHtml);
   expect(doc.body.querySelector('.methods-back a').getAttribute("href")).toBe(import.meta.env.BASE_URL);
   expect(en.pageTitle(en.methods.title, en.title)).toContain("Methods");
+});
+
+test("the masthead opens GitHub in a new tab; the links home and within this site stay", () => {
+  const doc = installDom();
+  doc.documentElement = doc.createElement("html");
+  doc.body.append(masthead(en, "methods"));
+
+  const links = doc.body.querySelectorAll("a");
+  expect(links.map((a) => [a.getAttribute("href"), a.getAttribute("target"), a.getAttribute("rel")])).toEqual([
+    [HOME, null, null],
+    [import.meta.env.BASE_URL, null, null],
+    [HOME, null, null],
+    [`${import.meta.env.BASE_URL}methods.html`, null, null],
+    [REPO, "_blank", "noopener"],
+  ]);
+  expect(links[4].textContent).toBe(`${en.mast.source}${en.newTab}`);
+  expect(links[4].querySelector(".visually-hidden").textContent).toBe(en.newTab);
 });
 
 
