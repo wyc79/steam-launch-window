@@ -3,13 +3,16 @@ name: site
 # Builds the website (site/) and deploys it to GitHub Pages at
 # wyc79.github.io/steam-launch-window. It runs:
 #   - after each collect daily run on main that succeeded (a failed run may have
-#     left a partial snapshot; the next good run or push rebuilds);
+#     left a partial snapshot; the next good run or push rebuilds). A failed
+#     Games Popularity or wishlist step also fails that run, so it skips the
+#     rebuild too, even when the snapshot itself is complete;
 #   - after each weekly model run on main that succeeded (to show the new
 #     model.json; a failed model run left the old one, which the daily build reuses);
 #   - on pushes to main that change the site or what goes into it: site/,
-#     docs/methods.md (the Methods page), data/events.yaml, analysis/site_data.py
-#     and the pipeline modules it reads with, or this file.
-# The catch-up daily run also triggers it, so the site may rebuild twice a day.
+#     docs/methods.md (the Methods page), data/events.yaml, analysis/site_data.py,
+#     the pipeline modules they use, or this file.
+# The catch-up daily run also triggers it, so the site rebuilds about twice a
+# day, plus once after the weekly model run.
 #
 # Steps: check out main and the data branch, download gp/latest_followers.csv
 # from the public Hugging Face dataset (anonymous read; the daily job keeps it),
@@ -50,6 +53,8 @@ on:
       - "analysis/site_data.py"
       - "pipeline/dateparse.py"
       - "pipeline/events.py"
+      - "pipeline/hf_sync.py"
+      - "pipeline/http.py"
       - "pipeline/steam.py"
       - "pipeline/storage.py"
       - "pyproject.toml"
@@ -57,9 +62,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: read  # the deploy job alone gets pages and id-token below
 
 concurrency:
   group: pages-${{ github.ref }}
@@ -111,6 +114,7 @@ jobs:
         run: |
           for f in meta upcoming history events model; do
             test -s "site/public/data/$f.json" || { echo "::error::site/public/data/$f.json is missing or empty"; exit 1; }
+            python -m json.tool "site/public/data/$f.json" > /dev/null || { echo "::error::site/public/data/$f.json is not valid JSON"; exit 1; }
           done
 
       - name: Build
@@ -126,6 +130,9 @@ jobs:
     needs: build
     if: github.ref == 'refs/heads/main'  # a test run from a feature branch only builds
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
