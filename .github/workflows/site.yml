@@ -1,0 +1,141 @@
+name: site
+
+# Builds the website (site/) and deploys it to GitHub Pages at
+# wyc79.github.io/steam-launch-window. It runs:
+#   - after each collect daily run on main that succeeded (a failed run may have
+#     left a partial snapshot; the next good run or push rebuilds). A failed
+#     Games Popularity or wishlist step also fails that run, so it skips the
+#     rebuild too, even when the snapshot itself is complete;
+#   - after each weekly model run on main that succeeded (to show the new
+#     model.json; a failed model run left the old one, which the daily build reuses);
+#   - on pushes to main that change the site or what goes into it: site/,
+#     docs/methods.md (the Methods page), data/events.yaml, analysis/site_data.py,
+#     the pipeline modules they use, or this file.
+# The catch-up daily run also triggers it, so the site rebuilds about twice a
+# day, plus once after the weekly model run.
+#
+# Steps: check out main and the data branch, download gp/latest_followers.csv
+# from the public Hugging Face dataset (anonymous read; the daily job keeps it),
+# build the data files with analysis.site_data, copy the data branch's
+# site/model.json, vite build, deploy site/dist.
+#
+# model.json must be on the data branch: the build fails without it. The page
+# would quietly drop every model line, and since MODEL_RUN is on, a missing file
+# means something broke. The free model's "not ready yet" comes from the status
+# inside model.json, not from a missing file. A missing latest_followers.csv
+# only warns: the page shows no follower numbers yet.
+#
+# Off by default. Needs:
+#   variable DEPLOY_SITE=on      to let pushes and the other workflows deploy
+#   variable HF_DATASET_REPO     the public dataset with gp/latest_followers.csv
+#   Settings > Pages > Source: GitHub Actions (once)
+# A manual run (Run workflow button) always runs it. Run from another branch, it
+# builds that branch's site but does not deploy (the deploy job is main only).
+#
+# Concurrency: one deploy at a time per branch. A running deploy is never
+# cancelled; a newer waiting run replaces an older waiting one, which is fine
+# because each run builds from the newest main and data branch. It does not join
+# the data-branch queue: it only reads the data branch (a checkout is one commit,
+# so a write in progress cannot give it half a change), and the workflow_run
+# triggers already start it after the writer has finished.
+
+on:
+  workflow_run:
+    workflows: ["collect daily", "model"]
+    types: [completed]
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "docs/methods.md"
+      - "data/events.yaml"
+      - "analysis/site_data.py"
+      - "pipeline/dateparse.py"
+      - "pipeline/events.py"
+      - "pipeline/hf_sync.py"
+      - "pipeline/http.py"
+      - "pipeline/steam.py"
+      - "pipeline/storage.py"
+      - "pyproject.toml"
+      - ".github/workflows/site.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read  # the deploy job alone gets pages and id-token below
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (vars.DEPLOY_SITE == 'on' &&
+       (github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: data
+          path: _data
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install ".[hf]"
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: site/.nvmrc
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Newest follower counts
+        env:
+          HF_DATASET_REPO: ${{ vars.HF_DATASET_REPO }}
+        run: |
+          # --allow-none: without the file the site builds with no follower numbers (other errors still fail)
+          python -m pipeline.hf_sync fetch --repo "$HF_DATASET_REPO" --dest "$RUNNER_TEMP/hf" \
+            --glob "gp/latest_followers.csv" --allow-none
+          if [ ! -f "$RUNNER_TEMP/hf/gp/latest_followers.csv" ]; then
+            echo "::warning::gp/latest_followers.csv is not in $HF_DATASET_REPO: building without follower numbers"
+          fi
+      - name: Data files
+        run: python -m analysis.site_data --data-dir _data --gp-dir "$RUNNER_TEMP/hf/gp" --out site/public/data
+      - name: Model results
+        run: |
+          test -f _data/site/model.json || {
+            echo "::error::site/model.json is not on the data branch; run the model workflow first"; exit 1; }
+          cp _data/site/model.json site/public/data/model.json
+      - name: Check the data files
+        run: |
+          for f in meta upcoming history events model; do
+            test -s "site/public/data/$f.json" || { echo "::error::site/public/data/$f.json is missing or empty"; exit 1; }
+            python -m json.tool "site/public/data/$f.json" > /dev/null || { echo "::error::site/public/data/$f.json is not valid JSON"; exit 1; }
+          done
+
+      - name: Build
+        working-directory: site
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/dist
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main'  # a test run from a feature branch only builds
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
