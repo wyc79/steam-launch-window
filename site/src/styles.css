@@ -833,6 +833,17 @@ main { display: block; }
   font-size: var(--fs-small);
 }
 .ah-game-meta { color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; }
+/* "Demo available", right after the name */
+.ah-demo {
+  display: inline-block;
+  margin-left: .5em;
+  padding: 0 .4em;
+  border: 1px solid var(--rule-soft);
+  border-radius: 3px;
+  color: var(--ink-2);
+  font-size: var(--fs-meta);
+  white-space: nowrap;
+}
 /* where the picked tags sit in the game's tags, and a date change: full width, under the name */
 .ah-tagpos, .ah-moved { grid-column: 1 / -1; color: var(--ink-2); font-size: var(--fs-meta); overflow-wrap: anywhere; }
 .ah-tagpos { font-variant-numeric: tabular-nums; }
