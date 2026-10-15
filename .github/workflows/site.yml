@@ -9,8 +9,8 @@ name: site
 #   - after each weekly model run on main that succeeded (to show the new
 #     model.json; a failed model run left the old one, which the daily build reuses);
 #   - on pushes to main that change the site or what goes into it: site/,
-#     docs/methods.md (the Methods page), data/events.yaml, analysis/site_data.py,
-#     the pipeline modules they use, or this file.
+#     docs/methods.md and docs/methods.zh.md (the Methods page), data/events.yaml,
+#     analysis/site_data.py, the pipeline modules they use, or this file.
 # The catch-up daily run also triggers it, so the site rebuilds about twice a
 # day, plus once after the weekly model run.
 #
@@ -49,6 +49,7 @@ on:
     paths:
       - "site/**"
       - "docs/methods.md"
+      - "docs/methods.zh.md"
       - "data/events.yaml"
       - "analysis/site_data.py"
       - "pipeline/dateparse.py"

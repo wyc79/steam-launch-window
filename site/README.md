@@ -22,5 +22,7 @@ uses `$PYTHON` if set, else the repository's `.venv` when there is one, else `py
 `--data-dir <folder>`, and `--gp-dir <folder>` for follower counts (a copy of `gp/` from
 the Hugging Face dataset). It reads local files only. `public/data` is gitignored.
 
-Text lives in `src/strings.js`; the reference numbers in `src/lib/` (ports of
-`analysis/heatmap.py`, `analysis/season.py` and `analysis/trends.py`).
+English text lives in `src/strings.js`, Chinese in `src/strings.zh.js` (event names in
+`src/eventnames.zh.js`); the reference numbers in `src/lib/` (ports of
+`analysis/heatmap.py`, `analysis/season.py` and `analysis/trends.py`). The Methods page is
+built from `docs/methods.md` and `docs/methods.zh.md`, which say the same things.

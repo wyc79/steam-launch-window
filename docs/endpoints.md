@@ -381,7 +381,7 @@ Checked 2026-10-11 with about 40 requests without a key and about 140 with one.
 | Early Access (upcoming) | `GetItems` `release.is_early_access` |
 | Price | `GetItems` `best_purchase_option` (current price) |
 | Developer, publisher | `GetItems` `basic_info` |
-| Demo | `GetItems` `related_items.demo_appid` |
+| Demo | `GetItems` `related_items.demo_appid`; its release date from `GetItems` on the demo's own app ID (`release.steam_release_date`) |
 | Wishlist rank | store search `filter=popularwishlist`, full crawl daily |
 | Followers | Games Popularity follower history (section 10); `memberslistxml?p=99999` for manual checks |
 | Players after launch | Games Popularity player history |

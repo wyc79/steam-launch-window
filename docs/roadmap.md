@@ -1,6 +1,6 @@
 # Roadmap and status
 
-Last updated: 2026-10-14.
+Last updated: 2026-10-15.
 
 Two plans have run in parallel:
 - **The build plan** (Phases 0 to 4): endpoints, data pipeline, analysis, website, agent.
@@ -18,7 +18,7 @@ ends with a report, and the next one starts only after a go-ahead.
 | Audit | 6. Implementation | [PR #13](https://github.com/wyc79/steam-launch-window/pull/13) merged 2026-10-12; fixes from the first Games Popularity run in [PR #14](https://github.com/wyc79/steam-launch-window/pull/14), merged 2026-10-12 |
 | Audit | 7. Deliverables | reported 2026-10-12 in [pipeline-report.md](pipeline-report.md), together with the build Phase 1 report |
 | Build | 2. Analysis | built: site data and reference numbers (PR #18), the model (PR #19), free games count all reviews (PR #20), reviews by language sample (PR #21). The free recount (data commit 8593cd4) and the language sample (eff1bc5) are in, the model was rerun (79cca10), and the language sample is written up in Phase 3 step 5. See [phase2-plan.md](phase2-plan.md) and [methods.md](methods.md) |
-| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 merged in PR #23; step 2 merged in PR #24; step 3 merged in PR #25; step 4 part 1 merged in PR #26; step 4 part 2 merged in PR #27; Trends, now section 01, merged in PR #28; step 5 Methods page built in PR #29; the most anticipated list in section 03 built in PR #30; step 6 deploy workflow built in PR #31, live since 2026-10-14; left: the live-site review |
+| Build | 3. Website | plan decided 2026-10-13 in [phase3-plan.md](phase3-plan.md) (PR #22); step 1 merged in PR #23; step 2 merged in PR #24; step 3 merged in PR #25; step 4 part 1 merged in PR #26; step 4 part 2 merged in PR #27; Trends, now section 01, merged in PR #28; step 5 Methods page built in PR #29; the most anticipated list in Competition ahead built in PR #30; step 6 deploy workflow built in PR #31, live since 2026-10-14 (docs in PR #32). Since then, merged: links off the site open in a new tab (PR #33); the week list and Most anticipated say where each picked tag sits, such as "tag 6 of 20" (PR #34); a Chinese site with a language switch and a Chinese Methods page (PR #35); Chinese event names (PR #36); History moved after Competition ahead, so the order is 01 Trends, 02 Competition ahead, 03 What history says, 04 Typical for this time of year (PR #37). In review: a "Demo available" mark in the week list (PR #38). Left: the rest of the live-site review |
 | Build | 4. Agent and Worker | not started |
 
 ## Where things stand
@@ -33,6 +33,12 @@ ends with a report, and the next one starts only after a go-ahead.
   count per game); a weekly `model` workflow writes `site/model.json` to the data branch;
   the free model is fitted only once 95% of free launches are recounted, and one group's
   failure no longer loses the other's results.
+- The site (Phase 3) is live in English and Chinese. The Chinese page uses Steam's own
+  Chinese tag names: the daily job saves them as `name_schinese` in `tags.csv` (PR #35).
+- PR #38 (open, in review): the daily job also looks up each linked demo's release date
+  (`demo_release_ts` in `upcoming/apps.csv`, `demos_ok` in `upcoming/runs.csv`). The 21:47
+  catch-up redoes the snapshot when `ranking_ok` or `demos_ok` is not 1. The week list marks
+  games whose demo is out.
 
 **Model findings (paid games, about 67,800 launches):** launching in a seasonal sale goes
 with about 37% fewer 30-day reviews; in a themed fest matching your tags, about 45% fewer;
@@ -102,8 +108,10 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 
 ## Next steps, in order
 
-1. **Phase 3 step 6:** the site is live (PR #31, first deploy 2026-10-14). Review the live
-   site. The next model run also writes `demo_with_fest` (PR #27).
+1. **Phase 3 step 6:** the site is live (PR #31, first deploy 2026-10-14); PRs #33 to #37
+   followed. Review and merge PR #38 (the demo mark). The first daily run after the merge
+   fills `demo_release_ts`; until then the live site shows no demo marks. Finish the
+   live-site review. The next model run also writes `demo_with_fest` (PR #27).
 2. **Around 2027-01-10:** calibrate the niche trend line on daily snapshots against launches
    (13 weeks of snapshots by then), then decide whether to show it.
 3. **After a few months of weekly history runs:** measure how many games Steam removes per
@@ -118,7 +126,7 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
 5. **Phase 4: agent and Cloudflare Worker,** free tier only. For Chinese users, the agent
    also gets a Tencent Cloud SCF function in a mainland China region (Workers are often
    slow or blocked there; GitHub Pages works). Check the SCF billing page once when
-   setting it up. Chinese text for the page comes after the English site.
+   setting it up. The page and Methods are already in Chinese (PRs #35 and #36).
 6. **Later, decide whether to match only the top 10 tags everywhere.** It fits the model
    and drops weak matches, but changes every count. Today a tag matches anywhere in a
    game's up to 20 tags; the week list puts top 10 matches first and shows each picked
