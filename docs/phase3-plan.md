@@ -193,10 +193,11 @@ older quarters have lost, and the chart would show a rise that is not there.
   3 days ago" marker and the follower count when known (marked when it is an estimate
   from wishlist rank). Order inside each part: games whose top 10 tags match first,
   then the most followers (unknown last), then name, then appid. With tags picked, each
-  game also says where each picked tag sits among its up to 20 tags (Steam's order; store
-  pages show only the first few): "Beat 'em up: tag 6 of 20", or with several tags each
-  one the game has, "Tags: Beat 'em up 6, Roguelike 12 of 20" (`tag_pos` and `tag_count`
-  from `week_games`). Real text on its own line, under the date.
+  game also says where each picked tag sits among its up to 20 tags (by Steam's tag
+  weight, strongest first, ties by tag id; store pages show only the first few tags at
+  first): "Beat 'em up: tag 6 of 20", or with several tags each one the game has, by
+  place, joined with " · ": "Beat 'em up: tag 6 of 20 · Roguelike: tag 12 of 20"
+  (`tag_pos` and `tag_count` from `week_games`). Real text on its own line, under the date.
 - Most anticipated (built): beside the week's games, the top 10 matching games of the picked
   group by Steam's Top Wishlisted rank, at any date or none, each with its store link (new
   tab), its date as the store shows it and "#212 on Top Wishlisted". A game with no date shows

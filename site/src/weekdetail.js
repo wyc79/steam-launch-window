@@ -59,11 +59,12 @@ export function fullDate(iso, s = en) {
 }
 
 // tagPos: weekGames' or mostAnticipated's [tagid, place] list, count: the game's number
-// of tags, names: tag id -> name. Null when no tags are picked.
+// of tags, names: tag id -> name. "Beat 'em up: tag 6 of 20 · Roguelike: tag 12 of 20";
+// null when no tags are picked.
 export function tagPosText(tagPos, count, names, s = en) {
   if (!tagPos?.length) return null;
-  const places = tagPos.map(([t, n]) => [names.get(t) ?? String(t), formatNumber(n, s)]);
-  return s.ahead.tagPos(places, formatNumber(count, s));
+  const of = formatNumber(count, s);
+  return tagPos.map(([t, n]) => s.ahead.tagPos(names.get(t) ?? String(t), formatNumber(n, s), of)).join(s.bar.sep);
 }
 
 // list: weekGames' result; gameOf: appid -> the upcoming game (for its date);

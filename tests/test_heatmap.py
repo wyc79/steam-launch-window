@@ -294,7 +294,8 @@ def test_most_anticipated_orders_by_rank_at_any_date_and_ignores_followers():
 
 def test_tag_pos_gives_each_picked_tags_place():
     tags = [492, 19, 21, 4182, 597, ROGUELIKE, 1742, 3871, 1625, 4166, 1664, SHOOTER]
-    assert hm.tag_pos(tags, [SHOOTER, ROGUELIKE]) == [[SHOOTER, 12], [ROGUELIKE, 6]]  # in the selection's order
+    assert hm.tag_pos(tags, [SHOOTER, ROGUELIKE]) == [[ROGUELIKE, 6], [SHOOTER, 12]]  # by place
+    assert hm.tag_pos(tags, [ROGUELIKE, SHOOTER]) == [[ROGUELIKE, 6], [SHOOTER, 12]]  # whatever the pick order
     assert hm.tag_pos(tags, [COZY, SHOOTER]) == [[SHOOTER, 12]]  # only the tags the game has (or mode)
     assert hm.tag_pos(tags, []) == []
 
@@ -309,6 +310,20 @@ def test_week_games_and_most_anticipated_carry_tag_places():
     assert [g["tag_pos"] for g in hm.week_games(games, TODAY, date(2026, 10, 12))] == [[], []]  # no tags picked
     top = hm.most_anticipated(games, [COZY])["paid"]["games"]
     assert [(g["appid"], g["tag_pos"], g["tag_count"]) for g in top] == [(1, [[COZY, 12]], 12), (2, [[COZY, 1]], 1)]
+
+
+def test_tag_places_do_not_depend_on_the_pick_order():
+    low = [492, 19, 21, 4182, 597, 1742, 3871, 1625, 4166, 1664, SHOOTER, COZY]
+    games = [dict(game("day", "2026-10-14", tags=low), appid=1, name="Low", moved=None, wishlist_rank=5),
+             dict(game("day", "2026-10-15", tags=(COZY, SHOOTER)), appid=2, name="Both", moved=None, wishlist_rank=9),
+             dict(game("day", "2026-10-15", tags=(COZY,)), appid=3, name="Cozy", moved=None, wishlist_rank=7)]
+    week = date(2026, 10, 12)
+    for mode in ("and", "or"):
+        a = hm.week_games(games, TODAY, week, [SHOOTER, COZY], mode)
+        assert a == hm.week_games(games, TODAY, week, [COZY, SHOOTER], mode)
+        assert hm.most_anticipated(games, [SHOOTER, COZY], mode) == hm.most_anticipated(games, [COZY, SHOOTER], mode)
+    assert [g["tag_pos"] for g in hm.week_games(games, TODAY, week, [SHOOTER, COZY], "and")] == [
+        [[COZY, 1], [SHOOTER, 2]], [[SHOOTER, 11], [COZY, 12]]]
 
 
 def test_unknown_mode_or_measure_is_an_error():

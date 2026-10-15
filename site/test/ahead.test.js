@@ -219,11 +219,21 @@ describe("tag places in the week list", () => {
   }
   const lines = (body) => body.querySelectorAll(".ah-list li").map((li) => li.querySelector(".ah-tagpos")?.textContent ?? null);
 
-  test("or mode: only the picked tags each game has, in the selection's order", () => {
+  test("or mode: only the picked tags each game has, by place", () => {
     expect(lines(openWeek({ tags: [1, 2], mode: "or" }))).toEqual([
-      "Tags: Horror 12, Beat 'em up 6 of 12",
+      "Beat 'em up: tag 6 of 12 · Horror: tag 12 of 12",
       "Beat 'em up: tag 1 of 1",
     ]);
+  });
+
+  test("and mode: every picked tag, for the games that have them all", () => {
+    expect(lines(openWeek({ tags: [1, 2], mode: "and" }))).toEqual(["Beat 'em up: tag 6 of 12 · Horror: tag 12 of 12"]);
+  });
+
+  test("the same lines whatever order the tags were picked in", () => {
+    for (const mode of ["or", "and"]) {
+      expect(lines(openWeek({ tags: [2, 1], mode }))).toEqual(lines(openWeek({ tags: [1, 2], mode })));
+    }
   });
 
   test("no tags picked: no tag places", () => {
@@ -357,7 +367,7 @@ describe("the most anticipated list", () => {
     const first = rows(body)[0];
     expect(first.children.map((c) => c.className)).toEqual(["ah-top-game", "ah-top-meta", "ah-top-meta ah-top-tags"]);
     expect(rows(body).map((li) => li.querySelector(".ah-top-tags").textContent)).toEqual([
-      "Tags: Horror 12, Puzzle 1 of 12",
+      "Puzzle: tag 1 of 12 · Horror: tag 12 of 12",
       "Horror: tag 1 of 1",
       "Horror: tag 1 of 1",
       "Horror: tag 1 of 1",
@@ -365,6 +375,19 @@ describe("the most anticipated list", () => {
       "Puzzle: tag 1 of 1",
     ]);
     expect(drawRanked().querySelector(".ah-top-tags")).toBeNull();
+  });
+
+  test("tag places do not depend on the order the tags were picked in, also after a re-pick", () => {
+    const deep = game(208, "unknown", null, null, { wishlist_rank: 100, tags: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1] });
+    const tagLines = (body) => rows(body).map((li) => li.querySelector(".ah-top-tags").textContent);
+    for (const mode of ["or", "and"]) {
+      const { body, section } = setup({ tags: [1, 2], mode }, [...RANKED, deep, ...GAMES.slice(1)]);
+      const first = tagLines(body);
+      expect(first[0]).toBe("Puzzle: tag 1 of 12 · Horror: tag 12 of 12");
+      section.draw({ ...DEFAULT, tags: [2, 1], mode }); // the same numbers, so the cached list
+      expect(tagLines(body)).toEqual(first);
+      expect(tagLines(drawRanked({ tags: [2, 1], mode }, [...RANKED, deep, ...GAMES.slice(1)]))).toEqual(first);
+    }
   });
 
   test("never shows the words false or null", () => {

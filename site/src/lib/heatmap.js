@@ -33,10 +33,11 @@ export function matches(tags, selection, mode = "and") {
   return mode === "and" ? selection.every((t) => tags.includes(t)) : selection.some((t) => tags.includes(t));
 }
 
-// where each picked tag sits in the game's tags (Steam's order, 1 first): [tagid, place]
-// for the picked tags the game has, in the selection's order
+// where each picked tag sits in the game's tags (by Steam's tag weight, strongest first,
+// ties by tag id; 1 first): [tagid, place] for the picked tags the game has, by place,
+// so the pick order does not matter
 export function tagPos(tags, selection) {
-  return selection.filter((t) => tags.includes(t)).map((t) => [t, tags.indexOf(t) + 1]);
+  return tags.flatMap((t, i) => (selection.includes(t) ? [[t, i + 1]] : []));
 }
 
 // true if the game supports at least one of the user's languages (none chosen: all games)

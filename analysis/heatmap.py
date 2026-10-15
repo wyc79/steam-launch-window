@@ -62,12 +62,13 @@ def matches(tags, selection, mode: str = "and") -> bool:
 
 
 def tag_pos(tags, selection) -> list[list[int]]:
-    """Where each picked tag sits in the game's tags (Steam's order, by weight; 1 is
-    the first): [tagid, place] for the picked tags the game has, in the selection's
-    order. Store pages show only the first few tags, so a tag at place 12 of 20 is
-    easy to miss there. The week list and the most anticipated list show it."""
-    tags = list(tags)
-    return [[t, tags.index(t) + 1] for t in selection if t in tags]
+    """Where each picked tag sits in the game's tags (by Steam's tag weight, strongest
+    first, ties by tag id; 1 is the first): [tagid, place] for the picked tags the
+    game has, by place, so the pick order does not matter. Store pages show only the
+    first few tags, so a tag at place 12 of 20 is easy to miss there. The week list
+    and the most anticipated list show it."""
+    picked = set(selection)
+    return [[t, i + 1] for i, t in enumerate(tags) if t in picked]
 
 
 def speaks(langs, languages) -> bool:

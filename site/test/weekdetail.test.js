@@ -17,16 +17,16 @@ import {
 
 describe("where the picked tags sit", () => {
   const names = new Map([
-    [19, "Beat 'em up"],
+    [4158, "Beat 'em up"],
     [492, "Roguelike"],
   ]);
 
   test("one tag: its place of the game's tags", () => {
-    expect(tagPosText([[19, 6]], 20, names)).toBe("Beat 'em up: tag 6 of 20");
+    expect(tagPosText([[4158, 6]], 20, names)).toBe("Beat 'em up: tag 6 of 20");
   });
 
-  test("several tags: each with its place, in the selection's order", () => {
-    expect(tagPosText([[19, 6], [492, 12]], 20, names)).toBe("Tags: Beat 'em up 6, Roguelike 12 of 20");
+  test("several tags: each one in the one-tag form, joined with the bar's separator", () => {
+    expect(tagPosText([[4158, 6], [492, 12]], 20, names)).toBe("Beat 'em up: tag 6 of 20 · Roguelike: tag 12 of 20");
   });
 
   test("an unnamed tag shows its id; nothing when no tags are picked", () => {
