@@ -144,6 +144,7 @@ export const zh = {
     dateSet: (ago) => `刚刚确定日期，${ago}`,
     ago: (days) => (days <= 0 ? "今天" : days === 1 ? "1 天前" : `${days} 天前`),
     unnamed: (appid) => `应用 ${appid}`,
+    demo: "已有试玩版",
     tagPos: (name, place, count) => `${name}：第${place}/${count}个标签`,
     search: "在本周游戏中搜索",
     searchCount: (shown, total) => `显示 ${shown}/${total} 款游戏`,

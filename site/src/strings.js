@@ -168,6 +168,7 @@ export const en = {
     dateSet: (ago) => `date just set, ${ago}`,
     ago: (days) => (days <= 0 ? "today" : days === 1 ? "1 day ago" : `${days} days ago`),
     unnamed: (appid) => `App ${appid}`,
+    demo: "Demo available", // a demo was out on the snapshot day
     // where a picked tag sits in the game's tags (by Steam's tag weight; store pages show
     // only the first few): "Beat 'em up: tag 6 of 20". Several tags are joined with bar.sep.
     tagPos: (name, place, count) => `${name}: tag ${place} of ${count}`,

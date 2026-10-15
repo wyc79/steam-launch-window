@@ -22,7 +22,8 @@ gp/latest_followers.csv, or every gp/followers/*.csv.gz without it) or, for a ga
 with only a wishlist rank, an estimate from a curve fitted on games with both
 (hype_src "r", needs at least 30 such games). `moved` is [kind, old date text,
 date of the change] when the date changed in the last 30 days: kind "moved",
-or "date_set" when the game had no date before.
+or "date_set" when the game had no date before. `demo` is true when one of the
+game's demos was out by the end of the snapshot day (UTC).
 
 Reads only local files: no requests. Rebuilding the same data gives the same
 files (no build time is written).
@@ -44,7 +45,7 @@ STALE_DAYS = 30
 MOVED_DAYS = 30
 MIN_FIT = 30
 UPCOMING_COLUMNS = ["appid", "name", "precision", "date", "date_end", "date_text", "tags", "langs", "free", "ea",
-                    "wishlist_rank", "followers", "hype_src", "moved"]
+                    "wishlist_rank", "followers", "hype_src", "moved", "demo"]
 HISTORY_COLUMNS = ["appid", "launch_date", "launch_type", "tags", "langs", "free", "price_cents", "reviews_30d",
                    "listed"]
 DATE_FIELDS = ("precision", "date", "date_end")  # a change in these is a move; wording alone is not
@@ -127,6 +128,7 @@ def build(data_dir: Path, events_path: Path, out: Path, gp_dir: Path | None = No
     followers = newest_followers(gp_dir)
     moved = recent_changes(snapshot_dir, snapshot_date)
     stale_before = (snapshot_date - timedelta(days=STALE_DAYS)).isoformat()
+    day_end = datetime.combine(snapshot_date + timedelta(days=1), datetime.min.time(), timezone.utc).timestamp()
 
     upcoming = []
     for r in storage.read_csv(snapshot_path):
@@ -137,6 +139,7 @@ def build(data_dir: Path, events_path: Path, out: Path, gp_dir: Path | None = No
             continue
         app = apps.get(appid, {})
         tags = tag_ids(app.get("tags", ""))
+        demo_ts = _int(app.get("demo_release_ts"))
         upcoming.append({
             "appid": appid, "name": app.get("name", ""), "precision": precision,
             "date": r["date"] or None, "date_end": r["date_end"] or None,
@@ -146,6 +149,7 @@ def build(data_dir: Path, events_path: Path, out: Path, gp_dir: Path | None = No
             "ea": r["early_access"] == "1", "wishlist_rank": _int(r["wishlist_rank"]),
             "followers": followers.get(appid), "hype_src": "f" if appid in followers else None,
             "moved": moved.get(appid) if precision != "unknown" else None,
+            "demo": demo_ts is not None and demo_ts < day_end,
         })
     curve = rank_curve([(g["wishlist_rank"], g["followers"]) for g in upcoming
                         if g["wishlist_rank"] and g["followers"] is not None])

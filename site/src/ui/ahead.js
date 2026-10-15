@@ -372,7 +372,7 @@ export function aheadSection(s, body) {
       "li",
       {},
       offsite({ href: g.url, class: "ah-game" }, s.newTab, g.name),
-      h("span", { class: "ah-game-meta" }, [g.date, g.followers].filter(Boolean).join(s.bar.sep)),
+      h("span", { class: "ah-game-meta" }, [g.date, g.followers, g.demo].filter(Boolean).join(s.bar.sep)),
       g.tagPos && h("span", { class: "ah-tagpos" }, g.tagPos),
       g.moved && h("span", { class: "ah-moved" }, g.moved),
     );
