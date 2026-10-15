@@ -6,7 +6,7 @@ Outputs (under --data-dir):
                                         last_seen is the last day the game was coming soon,
                                         so a launched game's row shows its pre-launch metadata
   upcoming/runs.csv                     one line per day, for monitoring (a rerun replaces it)
-  tags.csv                              tag id to name
+  tags.csv                              tag id to name, in English and Simplified Chinese
 
 Rerunning on the same day reuses cached pages, so a failed run can resume.
 If the wishlist crawl fails, the snapshot is still written with empty ranks,
@@ -67,8 +67,10 @@ def main(argv=None) -> int:
     out = args.data_dir
 
     _, tags = steam.tag_list(client)
-    storage.write_csv(out / "tags.csv", [{"tagid": k, "name": v} for k, v in sorted(tags.items())],
-                      ["tagid", "name"])
+    _, tags_zh = steam.tag_list(client, "schinese")  # the Chinese site's names; same ids
+    storage.write_csv(out / "tags.csv",
+                      [{"tagid": k, "name": v, "name_schinese": tags_zh.get(k, "")} for k, v in sorted(tags.items())],
+                      ["tagid", "name", "name_schinese"])
 
     items = steam.store_query(client, {"coming_soon_only": True, "type_filters": steam.GAMES_ONLY},
                               DATA_REQUEST, cache_ttl=CACHE_TTL)

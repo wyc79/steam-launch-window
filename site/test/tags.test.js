@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { searchTags, SHOWN, tagNames } from "../src/tags.js";
+import { zh } from "../src/strings.js";
+import { searchTags, SHOWN, tagName, tagNames } from "../src/tags.js";
 
-// meta.json rows: [id, name, upcoming games, past launches]
+// meta.json rows: [id, name, upcoming games, past launches, Simplified Chinese name]
 const TAGS = [
   [19, "Action", 7857, 31736],
   [1663, "FPS", 900, 4000],
@@ -60,5 +61,39 @@ describe("tag search", () => {
     const map = tagNames(TAGS);
     expect(map.get(1774)).toBe("Shooter");
     expect(map.get(99999)).toBe("99999");
+  });
+});
+
+describe("Chinese tag names", () => {
+  const ZH = [
+    [1716, "Roguelike", 900, 4500, "类 Rogue"],
+    [3959, "Roguelite", 1300, 5200, "轻度 Rogue"],
+    [42804, "Action Roguelike", 1100, 4800, "动作类 Rogue"],
+    [1663, "FPS", 900, 4000, "第一人称射击"],
+    [3871, "2D", 800, 3000, "2D"],
+    [7368, "Local Multiplayer", 500, 3000, null], // no Chinese name in the data yet
+  ];
+  const shown = (rows) => rows.map((t) => tagName(t, zh));
+
+  test("the Chinese page shows Steam's Chinese name, else the English one", () => {
+    expect(shown(ZH)).toEqual(["类 Rogue", "轻度 Rogue", "动作类 Rogue", "第一人称射击", "2D", "Local Multiplayer"]);
+    expect(tagNames(ZH, zh).get(1663)).toBe("第一人称射击");
+    expect(tagNames(ZH).get(1663)).toBe("FPS"); // the English page
+  });
+
+  test("search finds a tag by its Chinese or its English name", () => {
+    expect(shown(searchTags(ZH, "射击", { s: zh }))).toEqual(["第一人称射击"]);
+    expect(shown(searchTags(ZH, "fps", { s: zh }))).toEqual(["第一人称射击"]);
+    expect(shown(searchTags(ZH, "roguelike", { s: zh }))).toEqual(["类 Rogue", "动作类 Rogue"]);
+    expect(shown(searchTags(ZH, "local", { s: zh }))).toEqual(["Local Multiplayer"]);
+  });
+
+  test("the better of the two matches decides the order", () => {
+    // "rogue": a word start in every Chinese name, the start of two English names
+    expect(shown(searchTags(ZH, "rogue", { s: zh }))).toEqual(["轻度 Rogue", "类 Rogue", "动作类 Rogue"]);
+  });
+
+  test("the English page does not search the Chinese names", () => {
+    expect(searchTags(ZH, "射击")).toEqual([]);
   });
 });

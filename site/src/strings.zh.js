@@ -5,6 +5,7 @@ export const zh = {
   locale: "zh-CN",
   withYear: (date, year) => `${year}/${date}`,
   defaultLanguages: ["schinese"],
+  tagNameAt: 4,
 
   title: "Steam 发售窗口",
   pageTitle: (page, site) => `${page} · ${site}`,

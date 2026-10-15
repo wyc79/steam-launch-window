@@ -38,7 +38,8 @@ export function aheadSection(s, body) {
   const a = s.ahead;
   const phone = window.matchMedia(PHONE);
   let numbers = null;
-  let names = new Map();
+  let names = new Map(); // shown
+  let englishNames = new Map(); // what events.yaml's themed fests list
   let snapshot = null; // meta.json's snapshot_date: the day of the Top Wishlisted ranks
   let events; // undefined while loading, null if events.json failed
   let model; // model.json: undefined while loading, null if missing
@@ -517,7 +518,7 @@ export function aheadSection(s, body) {
     bandFor = [rows, events];
     band = events
       ? bandEvents(events, rows[0].weeks[0], WEEKS, {
-          tagNames: st.tags.map((t) => names.get(t)).filter(Boolean),
+          tagNames: st.tags.map((t) => englishNames.get(t)).filter(Boolean),
           languages: st.languages,
         })
       : { events: [], lanes: [] };
@@ -579,7 +580,8 @@ export function aheadSection(s, body) {
     // the shared numbers and meta.json (tag names) are in
     start(shared, meta) {
       numbers = shared;
-      names = tagNames(meta.tags);
+      names = tagNames(meta.tags, s);
+      englishNames = tagNames(meta.tags);
       snapshot = meta.snapshot_date;
     },
     // events.json's list, or null if it failed: the heatmap goes without lanes

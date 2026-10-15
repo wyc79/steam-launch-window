@@ -3,8 +3,9 @@
     python -m analysis.site_data --data-dir _data --gp-dir _gp --out site/public/data
 
 Writes, as compact JSON:
-  meta.json      snapshot date, tags (id, name, upcoming games, past launches),
-                 languages; rows below point into these two lists by index
+  meta.json      snapshot date, tags (id, name, upcoming games, past launches,
+                 Simplified Chinese name or null), languages; rows below point
+                 into these two lists by index
   upcoming.json  one row per game in the newest snapshot that has a date or a
                  wishlist rank (day dates more than 30 days past are stale pages
                  and left out); `date_text` is the store's text for games with
@@ -120,7 +121,9 @@ def build(data_dir: Path, events_path: Path, out: Path, gp_dir: Path | None = No
     snapshot_path = snapshots[-1]
     snapshot_date = date.fromisoformat(snapshot_path.name[:10])
     apps = {int(r["appid"]): r for r in storage.read_csv(data_dir / "upcoming" / "apps.csv")}
-    tag_names = {int(r["tagid"]): r["name"] for r in storage.read_csv(data_dir / "tags.csv")}
+    tag_rows = storage.read_csv(data_dir / "tags.csv")
+    tag_names = {int(r["tagid"]): r["name"] for r in tag_rows}
+    tag_names_zh = {int(r["tagid"]): r["name_schinese"] for r in tag_rows if r.get("name_schinese")}
     followers = newest_followers(gp_dir)
     moved = recent_changes(snapshot_dir, snapshot_date)
     stale_before = (snapshot_date - timedelta(days=STALE_DAYS)).isoformat()
@@ -182,7 +185,7 @@ def build(data_dir: Path, events_path: Path, out: Path, gp_dir: Path | None = No
             g["langs"] = [lang_index[x] for x in g["langs"]]
     meta = {
         "snapshot_date": snapshot_date.isoformat(),
-        "tags": [[t, tag_names.get(t), up_count[t], hist_count[t]] for t in tag_list],
+        "tags": [[t, tag_names.get(t), up_count[t], hist_count[t], tag_names_zh.get(t)] for t in tag_list],
         "languages": languages,
         "rank_curve": list(curve) if curve else None,
     }

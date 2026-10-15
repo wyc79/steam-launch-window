@@ -310,6 +310,8 @@ which "takes the same filters and returns the same fields"
 
 - `GET https://api.steampowered.com/IStoreService/GetTagList/v1/?language=english`
   No key. 446 tags. Has `version_hash` to detect changes. **Use this.**
+- `language=schinese` gives the same 446 ids with Steam's Simplified Chinese
+  names (checked 2026-10-15); 25 of them stay in English there (2D, 4X, Boss Rush...).
 - `IStoreService/GetMostPopularTags/v1` and
   `store.steampowered.com/tagdata/populartags/english` (429 tags) are subsets.
 

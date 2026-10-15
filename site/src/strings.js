@@ -13,6 +13,8 @@ export const en = {
   withYear: (date, year) => `${date}/${year}`,
   // the supported-language filter a visit starts with
   defaultLanguages: ["english"],
+  // where a meta.json tag row keeps this language's tag name (the English one, 1, stands in)
+  tagNameAt: 1,
 
   title: "Steam Launch Window",
   pageTitle: (page, site) => `${page} · ${site}`, // a page other than the tool
