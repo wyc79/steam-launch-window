@@ -25,15 +25,15 @@ test("links to the four sections in page order, in the bar and (numbers only) in
   const links = bar.el.querySelectorAll(".bar-nav a");
   expect(links.map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
     ["01 Trends", "#trends"],
-    ["02 History", "#history"],
-    ["03 Ahead", "#ahead"],
+    ["02 Ahead", "#ahead"],
+    ["03 History", "#history"],
     ["04 Season", "#season"],
   ]);
   const short = bar.summary.querySelectorAll(".summary-nav a");
   expect(short.map((a) => [a.textContent, a.getAttribute("aria-label")])).toEqual([
     ["01", "01 Trends"],
-    ["02", "02 History"],
-    ["03", "03 Ahead"],
+    ["02", "02 Ahead"],
+    ["03", "03 History"],
     ["04", "04 Season"],
   ]);
 });

@@ -6,7 +6,7 @@ import { REPO } from "./masthead.js";
 import { h, offsite } from "./dom.js";
 
 // page order; the numbers (01, 02, ...) follow it
-export const SECTIONS = ["trends", "history", "ahead", "season"];
+export const SECTIONS = ["trends", "ahead", "history", "season"];
 
 const METHOD_ANCHORS = {
   trends: "trends",

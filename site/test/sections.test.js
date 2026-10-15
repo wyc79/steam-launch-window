@@ -4,14 +4,14 @@ import { REPO } from "../src/ui/masthead.js";
 import { SECTIONS, footer, sectionNumber, sections } from "../src/ui/sections.js";
 import { installDom } from "./fakedom.js";
 
-test("the trends first, then history and the model, the heatmap and the season, numbered in that order", () => {
-  expect(SECTIONS).toEqual(["trends", "history", "ahead", "season"]);
+test("the trends first, then the heatmap, history and the model, and the season, numbered in that order", () => {
+  expect(SECTIONS).toEqual(["trends", "ahead", "history", "season"]);
   expect(SECTIONS.map(sectionNumber)).toEqual(["01", "02", "03", "04"]);
   for (const key of SECTIONS) expect(en.sections[key].title).toBeTruthy();
 });
 
 test("the top bar's warning points at the history section's own number", () => {
-  expect(en.bar.fewPast(sectionNumber("history"))).toBe("Too few for section 02.");
+  expect(en.bar.fewPast(sectionNumber("history"))).toBe("Too few for section 03.");
 });
 
 test("each section links to its stable Methods anchor", () => {
