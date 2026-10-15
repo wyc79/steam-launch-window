@@ -265,7 +265,7 @@ export function topbar(s, state) {
     onchange: (e) => state.set({ measure: e.target.checked ? "raw" : "relative" }),
   });
   state.subscribe((st) => (raw.checked = st.measure === "raw"));
-  const rawHint = s.bar.rawHint(sectionNumber("history"), sectionNumber("ahead"));
+  const rawHint = s.bar.rawHint(sectionNumber("ahead"), sectionNumber("history"));
   const rawToggle = h("label", { class: "raw-toggle", title: rawHint }, raw, h("span", {}, s.bar.raw));
 
   // links to the sections: in the bar (sticky on wide screens) and, short, in the
