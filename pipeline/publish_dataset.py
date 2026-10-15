@@ -53,6 +53,7 @@ INT_COLUMNS = {
     "demo_release_ts", "demo_before_launch", "reviews_total_now", "reviews_30d",
     "reviews_30d_positive", "reviews_before_launch", "steam_appid", "reviews_1d", "reviews_7d",
     "games", "dated", "ranked", "ranked_not_listed", "date_mismatch", "requests", "seconds", "ranking_ok",
+    "demos_ok",
 }
 BOOL_COLUMNS = {"on_steam_at_launch", "free_to_play"}
 DATE_COLUMNS = {"date", "date_end", "launch_date", "first_seen", "last_seen", "snapshot_date",
@@ -306,7 +307,7 @@ No personal data: no Steam IDs, usernames or review texts, only counts.
 |---|---|---|---|
 | `history` | today's view | {rows("history/games.parquet"):,} | games launched on Steam since 2022: launch date and type, price, tags, languages, demo, reviews in the first day, week and 30 days |
 | `upcoming_snapshots` | raw, daily | {rows("upcoming/snapshots"):,} | one row per coming-soon game per day ({snap_months[0] if snap_months else "-"} to {snap_months[-1] if snap_months else "-"}): release date and its precision, Early Access, wishlist rank, price if set |
-| `upcoming_apps` | latest | {rows("upcoming/apps.parquet"):,} | name, developers, publishers, tags with vote weights, languages, demo; `last_seen` is the last day the game was coming soon |
+| `upcoming_apps` | latest | {rows("upcoming/apps.parquet"):,} | name, developers, publishers, tags with vote weights, languages, demo and its release time; `last_seen` is the last day the game was coming soon |
 | `release_changes` | derived | {rows("upcoming/release_changes.parquet"):,} | each game's first day in the snapshots, every change of its release date text or range, each day it left the coming-soon list, and each day it came back (`returned`) |
 | `followers` | raw | {rows("followers/snapshots"):,} | Steam community hub follower counts, with fetch time |
 {gp_rows}| `events` | curated | {rows("events.parquet"):,} | Steam sales, Next Fests, themed fests, major releases, regional holidays, each with a source; `starts_at`/`ends_at` (UTC) give the exact window: Steam events run from 10:00 Pacific on `start` to 10:00 Pacific on `end` |

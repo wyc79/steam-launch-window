@@ -12,7 +12,8 @@ Outputs (under --data-dir):
 Rerunning on the same day reuses cached pages, so a failed run can resume.
 If the wishlist crawl fails, the snapshot is still written with empty ranks,
 runs.csv says ranking_ok=0, and the exit code is 1. If the demo lookup fails,
-apps.csv keeps each game's last demo_release_ts and the exit code is 1.
+apps.csv keeps each game's last demo_release_ts, runs.csv says demos_ok=0, and
+the exit code is 1.
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ SNAPSHOT_FIELDS = ["appid", "release_ts", "display", "raw", "precision", "date",
 APP_FIELDS = ["appid", "name", "developers", "publishers", "franchises", "tags",
               "demo_appids", "demo_release_ts", "is_free", "languages", "audio_languages", "first_seen", "last_seen"]
 RUN_FIELDS = ["date", "games", "dated", "ranked", "ranked_not_listed", "date_mismatch",
-              "requests", "seconds", "ranking_ok"]
+              "requests", "seconds", "ranking_ok", "demos_ok"]
 
 DATA_REQUEST = {"include_release": True, "include_tag_count": 20, "include_basic_info": True,
                 "include_supported_languages": True}
@@ -91,15 +92,16 @@ def main(argv=None) -> int:
         log.error("wishlist crawl failed (%s); writing the snapshot without ranks", e)
         ranking, ranking_ok = [], False
 
-    snapshot = build_snapshot(items, ranking)
-    storage.write_csv(out / "upcoming" / "snapshots" / f"{day}.csv.gz", snapshot, SNAPSHOT_FIELDS)
-
     try:
         demo_release = steam.demo_release(client, items, cache_ttl=CACHE_TTL)
         log.info("demos: %d looked up", len(demo_release))
     except Exception as e:  # noqa: BLE001 - keep the day's apps.csv update without new demo dates
         log.error("demo lookup failed (%s); keeping the last demo dates", e)
         demo_release = None
+
+    # the snapshot and apps.csv are written back to back, so a cancel cannot leave one without the other
+    snapshot = build_snapshot(items, ranking)
+    storage.write_csv(out / "upcoming" / "snapshots" / f"{day}.csv.gz", snapshot, SNAPSHOT_FIELDS)
     apps_path = out / "upcoming" / "apps.csv"
     storage.write_csv(apps_path, merge_apps(storage.read_csv(apps_path), items, day, demo_release), APP_FIELDS)
 
@@ -115,6 +117,7 @@ def main(argv=None) -> int:
         "requests": client.requests_made,
         "seconds": round(time.monotonic() - t0),
         "ranking_ok": int(ranking_ok),
+        "demos_ok": int(demo_release is not None),
     }
     storage.replace_row(out / "upcoming" / "runs.csv", stats, RUN_FIELDS, key="date")
     log.info("precision counts: %s", dict(precisions))

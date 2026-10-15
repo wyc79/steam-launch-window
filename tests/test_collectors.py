@@ -251,8 +251,9 @@ def test_merge_apps_records_last_seen():
     assert [(str(r["appid"]), r["last_seen"]) for r in rows] == [("3", "2026-10-11"), ("9", "2026-02-01")]
 
 
-def _fake_upcoming(monkeypatch, ranking):
-    items = [{"appid": 5, "name": "A", "release": {"coming_soon_display": "text_tba"}}]
+def _fake_upcoming(monkeypatch, ranking, demos=()):
+    items = [{"appid": 5, "name": "A", "release": {"coming_soon_display": "text_tba"},
+              "related_items": {"demo_appid": list(demos)}}]
     names = {"english": {492: "Indie"}, "schinese": {492: "独立"}}
     monkeypatch.setattr(steam, "tag_list", lambda client, language="english": ("v", names[language]))
     monkeypatch.setattr(steam, "store_query", lambda *a, **k: items)
@@ -283,6 +284,22 @@ def test_upcoming_keeps_the_last_demo_dates_when_the_lookup_fails(tmp_path, monk
     assert code == 1
     apps = storage.read_csv(tmp_path / "upcoming/apps.csv")
     assert [(r["appid"], r["last_seen"], r["demo_release_ts"]) for r in apps] == [("5", "2026-10-11", "100")]
+    assert storage.read_csv(tmp_path / "upcoming/runs.csv")[0]["demos_ok"] == "0"
+
+
+def test_upcoming_records_each_games_earliest_demo(tmp_path, monkeypatch):
+    _fake_upcoming(monkeypatch, lambda client, cache_ttl=None: [5], demos=[50, 51])
+    asked = []
+
+    def get_items(client, ids, data_request, cache_ttl=None):
+        asked.append(ids)
+        return {50: {"release": {"steam_release_date": 300}}, 51: {"release": {"steam_release_date": 200}}}
+    monkeypatch.setattr(steam, "get_items", get_items)
+    code = cu.main(["--data-dir", str(tmp_path), "--cache-dir", str(tmp_path / "c"), "--today", "2026-10-11"])
+    assert code == 0 and asked == [[50, 51]]
+    apps = storage.read_csv(tmp_path / "upcoming/apps.csv")
+    assert [(r["appid"], r["demo_appids"], r["demo_release_ts"]) for r in apps] == [("5", "50|51", "200")]
+    assert storage.read_csv(tmp_path / "upcoming/runs.csv")[0]["demos_ok"] == "1"
 
 
 def test_upcoming_rerun_replaces_the_days_run_row(tmp_path, monkeypatch):
