@@ -35,6 +35,7 @@ def _d(iso: str | None) -> date | None:
 # fn name: how to call the Python reference with the case's (resolved) arguments
 CALLS = {
     "matches": lambda a: hm.matches(a["tags"], a["selection"], a.get("mode", "and")),
+    "tag_pos": lambda a: hm.tag_pos(a["tags"], a["selection"]),
     "speaks": lambda a: hm.speaks(a["langs"], a["languages"]),
     "heatmap": lambda a: hm.heatmap(a["games"], _d(a["today"]), a.get("selection", ()), a.get("mode", "and"),
                                     a.get("languages", ()), a.get("history")),
@@ -341,6 +342,10 @@ def heatmap_cases() -> Cases:
           languages=["schinese"])
     c.add("week games: names compared by code point", "week_games", games="$games", today=today,
           week="2026-11-09")
+    c.add("week games: tag places, pixel or roguelike", "week_games", games="$games", today=today,
+          week="2026-11-02", selection=[PIXEL, ROGUELIKE], mode="or")
+    c.add("week games: tag places, roguelike and pixel", "week_games", games="$games", today=today,
+          week="2026-11-02", selection=[ROGUELIKE, PIXEL], mode="and")
     c.add("most anticipated: no tags", "most_anticipated", games="$ranked")
     c.add("most anticipated: no tags, top 3", "most_anticipated", games="$ranked", limit=3)
     c.add("most anticipated: shooter", "most_anticipated", games="$ranked", selection=[SHOOTER])
@@ -353,6 +358,7 @@ def heatmap_cases() -> Cases:
           languages=["english", "schinese"])
     c.add("most anticipated: free to play tag", "most_anticipated", games="$ranked", selection=[F2P])
     c.add("most anticipated: no match", "most_anticipated", games="$ranked", selection=[PIXEL])
+    c.add("most anticipated: cozy, a tag below the top 10", "most_anticipated", games="$ranked", selection=[COZY])
     c.add("most anticipated: no ranks", "most_anticipated", games="$games", selection=[SHOOTER])
     c.add("match count: all games", "match_count", games="$games", history="$typical")
     c.add("match count: shooter, by group", "match_count", games="$games", history="$typical", selection=[SHOOTER])
@@ -364,6 +370,9 @@ def heatmap_cases() -> Cases:
                             ([ROGUELIKE, 492, SHOOTER], [SHOOTER, COZY], "or"),
                             ([ROGUELIKE], [], "and"), ([], [SHOOTER], "or")):
         c.add(f"matches {sel} {mode} in {tags}", "matches", tags=tags, selection=sel, mode=mode)
+    for tags, sel in (([ROGUELIKE, 492, SHOOTER], [SHOOTER, ROGUELIKE]), ([ROGUELIKE, 492, SHOOTER], [COZY, 492]),
+                      ([ROGUELIKE], []), ([], [SHOOTER]), ([*FILLER, SHOOTER, COZY], [COZY, SHOOTER])):
+        c.add(f"tag pos {sel} in {tags}", "tag_pos", tags=tags, selection=sel)
     for langs, languages in ((["english"], []), (["english", "schinese"], ["schinese"]), (["english"], ["schinese"])):
         c.add(f"speaks {languages} with {langs}", "speaks", langs=langs, languages=languages)
     return c

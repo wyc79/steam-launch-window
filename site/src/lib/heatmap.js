@@ -33,6 +33,12 @@ export function matches(tags, selection, mode = "and") {
   return mode === "and" ? selection.every((t) => tags.includes(t)) : selection.some((t) => tags.includes(t));
 }
 
+// where each picked tag sits in the game's tags (Steam's order, 1 first): [tagid, place]
+// for the picked tags the game has, in the selection's order
+export function tagPos(tags, selection) {
+  return selection.filter((t) => tags.includes(t)).map((t) => [t, tags.indexOf(t) + 1]);
+}
+
 // true if the game supports at least one of the user's languages (none chosen: all games)
 export function speaks(langs, languages) {
   return !languages.length || langs.some((x) => languages.includes(x));
@@ -238,7 +244,8 @@ function compareText(a, b) {
 // The games behind one heatmap week (`week` is its Monday), as the heatmap counts
 // them, top-10 tag matches first, then the most followers, then by name, then appid.
 // `hype_src` says where `followers` comes from ("f" a count, "r" an estimate from
-// wishlist rank); `moved` is [kind, old date text, days since the change].
+// wishlist rank); `moved` is [kind, old date text, days since the change];
+// `tag_pos` is tagPos(tags, selection) and `tag_count` how many tags the game has.
 export function weekGames(games, today, week, { selection = [], mode = "and", languages = [], year = false } = {}) {
   const now = toDay(today);
   const monday = toDay(week);
@@ -268,6 +275,8 @@ export function weekGames(games, today, week, { selection = [], mode = "and", la
       followers: game.followers ?? null,
       hype_src: game.hype_src ?? null,
       top10: matches(game.tags.slice(0, 10), selection, mode),
+      tag_pos: tagPos(game.tags, selection),
+      tag_count: game.tags.length,
       moved: moved ? [moved[0], moved[1], now - toDay(moved[2])] : null,
     });
   }
@@ -295,7 +304,11 @@ export function mostAnticipated(games, { selection = [], mode = "and", languages
   return Object.fromEntries(
     GROUPS.map((group) => {
       const mine = chosen.filter((g) => groupOf(g) === group);
-      const pick = (g) => Object.fromEntries(RANKED_FIELDS.map((k) => [k, g[k] ?? null]));
+      const pick = (g) => ({
+        ...Object.fromEntries(RANKED_FIELDS.map((k) => [k, g[k] ?? null])),
+        tag_pos: tagPos(g.tags, selection),
+        tag_count: g.tags.length,
+      });
       return [group, { games: mine.slice(0, limit).map(pick), total: total[group] }];
     }),
   );

@@ -284,11 +284,31 @@ def test_most_anticipated_orders_by_rank_at_any_date_and_ignores_followers():
     assert [g["appid"] for g in top["paid"]["games"]] == [2, 1]  # rank 3 before rank 40, whatever the followers
     assert top["paid"]["total"] == 3
     assert top["paid"]["games"][1] == {"appid": 1, "name": "Undated", "precision": "unknown", "date": None,
-                                       "date_text": "Coming soon", "wishlist_rank": 40}  # no followers in it
+                                       "date_text": "Coming soon", "wishlist_rank": 40,
+                                       "tag_pos": [[SHOOTER, 1]], "tag_count": 1}  # no followers in it
     assert top["paid"]["games"][0]["date_text"] is None
     assert [g["appid"] for g in top["free"]["games"]] == [5]
     assert [g["appid"] for g in hm.most_anticipated(games, limit=1)["paid"]["games"]] == [3]
     assert hm.most_anticipated(games, [COZY, SHOOTER])["paid"] == {"games": [], "total": 3}
+
+
+def test_tag_pos_gives_each_picked_tags_place():
+    tags = [492, 19, 21, 4182, 597, ROGUELIKE, 1742, 3871, 1625, 4166, 1664, SHOOTER]
+    assert hm.tag_pos(tags, [SHOOTER, ROGUELIKE]) == [[SHOOTER, 12], [ROGUELIKE, 6]]  # in the selection's order
+    assert hm.tag_pos(tags, [COZY, SHOOTER]) == [[SHOOTER, 12]]  # only the tags the game has (or mode)
+    assert hm.tag_pos(tags, []) == []
+
+
+def test_week_games_and_most_anticipated_carry_tag_places():
+    low = [492, 19, 21, 4182, 597, 1742, 3871, 1625, 4166, 1664, SHOOTER, COZY]
+    games = [dict(game("day", "2026-10-14", tags=low), appid=1, name="Low", moved=None, wishlist_rank=5),
+             dict(game("day", "2026-10-15", tags=(COZY,)), appid=2, name="Cozy", moved=None, wishlist_rank=9)]
+    listed = hm.week_games(games, TODAY, date(2026, 10, 12), [SHOOTER, COZY], "or")
+    assert [(g["appid"], g["tag_pos"], g["tag_count"]) for g in listed] == [
+        (2, [[COZY, 1]], 1), (1, [[SHOOTER, 11], [COZY, 12]], 12)]
+    assert [g["tag_pos"] for g in hm.week_games(games, TODAY, date(2026, 10, 12))] == [[], []]  # no tags picked
+    top = hm.most_anticipated(games, [COZY])["paid"]["games"]
+    assert [(g["appid"], g["tag_pos"], g["tag_count"]) for g in top] == [(1, [[COZY, 12]], 12), (2, [[COZY, 1]], 1)]
 
 
 def test_unknown_mode_or_measure_is_an_error():

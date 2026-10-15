@@ -120,6 +120,10 @@ estimates; the weekly events check fails as a reminder around Nov 7, 2026.
    slow or blocked there; GitHub Pages works). Check the SCF billing page once when
    setting it up. Chinese text for the page comes after the English site.
 
+6. **Later:** Decide whether to match only the top 10 tags everywhere (fits the model,
+   drops weak matches, changes every count). Today a tag matches anywhere in a game's up to
+   20 tags; the week list puts top 10 matches first and shows each picked tag's place.
+
 Optional later, on the Pi: first-day and first-week review counts for all launches since
 2022 ([scripts/server/README.md](../scripts/server/README.md), section 4).
 

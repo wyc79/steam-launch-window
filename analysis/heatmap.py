@@ -61,6 +61,15 @@ def matches(tags, selection, mode: str = "and") -> bool:
     return all(t in have for t in selection) if mode == "and" else any(t in have for t in selection)
 
 
+def tag_pos(tags, selection) -> list[list[int]]:
+    """Where each picked tag sits in the game's tags (Steam's order, by weight; 1 is
+    the first): [tagid, place] for the picked tags the game has, in the selection's
+    order. Store pages show only the first few tags, so a tag at place 12 of 20 is
+    easy to miss there. The week list and the most anticipated list show it."""
+    tags = list(tags)
+    return [[t, tags.index(t) + 1] for t in selection if t in tags]
+
+
 def speaks(langs, languages) -> bool:
     """True if the game supports at least one of the user's languages (none chosen: all games)."""
     return not languages or bool(set(langs) & set(languages))
@@ -236,7 +245,8 @@ def week_games(games, today: date, week: date, selection=(), mode: str = "and", 
     Games whose top 10 tags match the selection come first, then the most followers
     (none last), then by name, then appid. `hype_src` says where `followers` comes from
     ("f" a count, "r" an estimate from wishlist rank). `moved` is [kind, old date
-    text, days since the change]."""
+    text, days since the change]. `tag_pos` is `tag_pos(tags, selection)` and
+    `tag_count` how many tags the game has (up to 20)."""
     out = []
     for game in selected(games, selection, mode, languages):
         precision = game["precision"]
@@ -257,6 +267,7 @@ def week_games(games, today: date, week: date, selection=(), mode: str = "and", 
         out.append({"appid": game["appid"], "name": game["name"], "free": game["free"], "layer": layer,
                     "share": share, "followers": game.get("followers"), "hype_src": game.get("hype_src"),
                     "top10": matches(game["tags"][:10], selection, mode),
+                    "tag_pos": tag_pos(game["tags"], selection), "tag_count": len(game["tags"]),
                     "moved": [moved[0], moved[1], (today - date.fromisoformat(moved[2])).days] if moved else None})
     return sorted(out, key=lambda g: (not g["top10"], g["followers"] is None, -(g["followers"] or 0),
                                       g["name"], g["appid"]))
@@ -267,13 +278,15 @@ def most_anticipated(games, selection=(), mode: str = "and", languages=(), limit
     on Steam's Top Wishlisted list, by their rank there (1 first; then appid): the first
     `limit` of them, with `total` (all ranked games in the group). Any date or none
     counts, so undated games are in it too. The order is the observed rank only, never
-    followers estimated from it."""
+    followers estimated from it. Each game has RANKED_FIELDS, plus `tag_pos` and
+    `tag_count` as in `week_games`."""
     ranked = [g for g in games if g.get("wishlist_rank") is not None]
     chosen = sorted(selected(ranked, selection, mode, languages), key=lambda g: (g["wishlist_rank"], g["appid"]))
     out = {}
     for group in GROUPS:
         mine = [g for g in chosen if group_of(g) == group]
-        out[group] = {"games": [{k: g.get(k) for k in RANKED_FIELDS} for g in mine[:limit]],
+        out[group] = {"games": [{**{k: g.get(k) for k in RANKED_FIELDS}, "tag_pos": tag_pos(g["tags"], selection),
+                                 "tag_count": len(g["tags"])} for g in mine[:limit]],
                       "total": sum(group_of(g) == group for g in ranked)}
     return out
 

@@ -119,6 +119,13 @@ describe("an opened week", () => {
     expect(body.querySelector(".ah-search").getAttribute("value")).toBe("");
   });
 
+  test("says where the picked tag sits in each game's tags, after the date and before a move", () => {
+    const first = body.querySelector(".ah-list li");
+    expect(first.children.map((c) => c.className)).toEqual(["ah-game", "ah-game-meta", "ah-tagpos", "ah-moved"]);
+    expect(first.querySelector(".ah-tagpos").textContent).toBe("Horror: tag 1 of 1");
+    expect(body.querySelectorAll(".ah-list .ah-tagpos")).toHaveLength(27);
+  });
+
   test("is announced with its row", () => {
     expect(body.querySelector("p.visually-hidden").textContent).toBe(
       "Horror, Week of Oct 19 to Oct 25. 27 games listed: 2 with exact dates · 25 dated only by month or quarter (together about 9.2 games' worth) · 1 in a typical week.",
@@ -191,6 +198,36 @@ describe("what past launches during an event did", () => {
   test("a group whose model is not ready: the tooltip has only the event", () => {
     const body = drawWith({ ...MODEL, paid: { status: "unreliable" } });
     expect(body.querySelector(".hm-block-name").getAttribute("title")).toBe("Steam Scream V Fest 2026, Oct 26 to Nov 2");
+  });
+});
+
+describe("tag places in the week list", () => {
+  const tagged = [
+    game(1, "day", "2026-10-20", "2026-10-20", { tags: [3, 4, 5, 6, 7, 2, 8, 9, 10, 11, 12, 1] }),
+    game(2, "day", "2026-10-21", "2026-10-21", { tags: [2] }),
+  ];
+  const meta = { ...META, tags: [...META.tags, [2, "Beat 'em up", 2, 0]] };
+  function openWeek(patch) {
+    const body = h("div");
+    const section = aheadSection(en, body);
+    section.start(createNumbers(tagged, HISTORY, TODAY), meta);
+    section.setEvents([]);
+    section.draw({ ...DEFAULT, ...patch });
+    const row = body.querySelectorAll(".hm-rowhead").length - 1; // the last row: the combination, or all games
+    body.querySelectorAll(".hm-cell")[row * 13 + 1].click(); // week of Oct 19
+    return body;
+  }
+  const lines = (body) => body.querySelectorAll(".ah-list li").map((li) => li.querySelector(".ah-tagpos")?.textContent ?? null);
+
+  test("or mode: only the picked tags each game has, in the selection's order", () => {
+    expect(lines(openWeek({ tags: [1, 2], mode: "or" }))).toEqual([
+      "Tags: Horror 12, Beat 'em up 6 of 12",
+      "Beat 'em up: tag 1 of 1",
+    ]);
+  });
+
+  test("no tags picked: no tag places", () => {
+    expect(lines(openWeek({}))).toEqual([null, null]);
   });
 });
 
@@ -312,6 +349,22 @@ describe("the most anticipated list", () => {
     const plain = draw(); // the week tests' games have no ranks at all
     expect(plain.querySelector(".ah-top-none").textContent).toBe("This snapshot has no Top Wishlisted ranks.");
     expect(plain.querySelector(".ah-top-note")).toBeNull();
+  });
+
+  test("with tags picked, says where they sit in each game's tags; none without", () => {
+    const deep = game(208, "unknown", null, null, { wishlist_rank: 100, tags: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1] });
+    const body = drawRanked({ tags: [1, 2], mode: "or" }, [...RANKED, deep, ...GAMES.slice(1)]);
+    const first = rows(body)[0];
+    expect(first.children.map((c) => c.className)).toEqual(["ah-top-game", "ah-top-meta", "ah-top-meta ah-top-tags"]);
+    expect(rows(body).map((li) => li.querySelector(".ah-top-tags").textContent)).toEqual([
+      "Tags: Horror 12, Puzzle 1 of 12",
+      "Horror: tag 1 of 1",
+      "Horror: tag 1 of 1",
+      "Horror: tag 1 of 1",
+      "Horror: tag 1 of 1",
+      "Puzzle: tag 1 of 1",
+    ]);
+    expect(drawRanked().querySelector(".ah-top-tags")).toBeNull();
   });
 
   test("never shows the words false or null", () => {

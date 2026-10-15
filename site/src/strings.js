@@ -151,6 +151,12 @@ export const en = {
     dateSet: (ago) => `date just set, ${ago}`,
     ago: (days) => (days <= 0 ? "today" : days === 1 ? "1 day ago" : `${days} days ago`),
     unnamed: (appid) => `App ${appid}`,
+    // where the picked tags sit in the game's tags (Steam's order; store pages show only
+    // the first few): "Beat 'em up: tag 6 of 20", "Tags: Beat 'em up 6, Roguelike 12 of 20"
+    tagPos: (places, count) =>
+      places.length === 1
+        ? `${places[0][0]}: tag ${places[0][1]} of ${count}`
+        : `Tags: ${places.map(([name, n]) => `${name} ${n}`).join(", ")} of ${count}`,
     // the week list's search
     search: "Find a game in this week",
     searchCount: (shown, total) => `${shown} of ${total} games`,

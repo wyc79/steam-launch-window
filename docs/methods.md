@@ -276,6 +276,8 @@ This is a warning about announcement quality, not a forecast. Selecting a week
 lists the exact and spread-date games behind its count. Matching top-10 tags
 come first, followed by followers, name, and app ID. Followers are a Games
 Popularity count or, failing that, an estimate from the Top Wishlisted rank.
+With tags picked, each game also shows where they sit in its tags, as
+[Which tags match](#which-tags-match) explains.
 
 The event lanes show seasonal sales, Next Fest, and themed fests that match a
 picked tag. Chinese holidays appear only with Simplified Chinese. A historical
@@ -303,7 +305,7 @@ languages, and paid or free. Unlike the heatmap, the list takes games at any
 date the site keeps: exact, month, quarter, year, or none yet, including those
 beyond the 13 weeks. The order is the rank alone, never followers. Each game
 shows its date as the store shows it and its rank, such as "#212 on Top
-Wishlisted". A game with no date shows the store's own words, such as "Coming
+Wishlisted", and with tags picked, where they sit in its tags. A game with no date shows the store's own words, such as "Coming
 soon" or "To be announced". When the store gave no words, it shows "To be
 announced".
 
@@ -313,6 +315,28 @@ date. The model measured how many games launched in the same week, as
 [The placebo and weekly competition](#the-placebo-and-weekly-competition)
 explains. It did not measure anticipated games at any date, and it never used
 Top Wishlisted ranks. So the list carries no warning and no advice.
+
+### Which tags match
+
+A game's tags come from Steam's `IStoreBrowseService/GetItems`: up to 20 per
+game, in Steam's order, strongest first. A store page shows only the first few,
+so a game can match a tag its page does not show. A game matches a tag if the
+tag is anywhere in its 20. On the 2026-10-13 snapshot, 61% of upcoming games had
+all 20 tags. For many genre tags, a fifth to a third of the matching upcoming
+games have the tag only at places 11 to 20: Strategy 17%, Roguelike 20%, Beat
+'em up 20%, Horror 25%, Cozy 35%. Broad tags are more often far down: Pixel
+Graphics 40%, Indie 67%. Over the 253 tags on at least 200 upcoming games, the median is 44%.
+
+The week list puts games whose top 10 tags match first. Each game in it, and in
+Most anticipated, shows where each picked tag sits, such as "Beat 'em up: tag 6
+of 20". With several tags it lists each one the game has, such as "Tags: Beat
+'em up 6, Roguelike 12 of 20". The heatmap and every count on the site use all
+20 tags. The timing model uses only the top 10, as
+[The timing model](#the-timing-model) explains.
+
+Before launch, most of a game's tags are the ones its developer picked. Past
+games carry today's tags, which players have reshaped by voting since launch.
+So comparing upcoming games with past launches is a little uneven.
 
 ### The held-back niche trend
 

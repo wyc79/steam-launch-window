@@ -23,7 +23,7 @@ import { WEEKS } from "../lib/heatmap.js";
 import { tagNames } from "../tags.js";
 import { langsText } from "../trendview.js";
 import { eventEffect } from "../eventeffects.js";
-import { detailItems, findGames, fullDate, listParts, steamDate, storeUrl } from "../weekdetail.js";
+import { detailItems, findGames, fullDate, listParts, steamDate, storeUrl, tagPosText } from "../weekdetail.js";
 import { fill, h, offsite, uid } from "./dom.js";
 import { laneItems } from "./lanes.js";
 
@@ -366,6 +366,7 @@ export function aheadSection(s, body) {
       {},
       offsite({ href: g.url, class: "ah-game" }, s.newTab, g.name),
       h("span", { class: "ah-game-meta" }, [g.date, g.followers].filter(Boolean).join(s.bar.sep)),
+      g.tagPos && h("span", { class: "ah-tagpos" }, g.tagPos),
       g.moved && h("span", { class: "ah-moved" }, g.moved),
     );
   }
@@ -398,7 +399,7 @@ export function aheadSection(s, body) {
     }
     const w = view.weeks[open.week];
     const row = view.rows[open.row];
-    const items = detailItems(numbers.weekGames(st, row.tags, w.iso, local.year), numbers.game, s);
+    const items = detailItems(numbers.weekGames(st, row.tags, w.iso, local.year), numbers.game, s, names);
     const cellText = row.cells[open.week].parts.map((p) => `${a.parts[p.part]} ${p.text}`).join(s.bar.sep);
     // the list: a search box, a live count, and the games in a scroll area; typing
     // redraws only the list, so the box keeps its focus
@@ -472,11 +473,13 @@ export function aheadSection(s, body) {
   // ---------- the most anticipated list ----------
   // the selection's games by Top Wishlisted rank, at any date: a rank, never a count
   function topLine(g) {
+    const tagPos = tagPosText(g.tag_pos, g.tag_count, names, s);
     return h(
       "li",
       {},
       offsite({ href: storeUrl(g.appid), class: "ah-top-game" }, s.newTab, g.name || a.unnamed(g.appid)),
       h("span", { class: "ah-top-meta" }, [steamDate(g, s), a.top.rank(formatNumber(g.wishlist_rank, s))].join(s.bar.sep)),
+      tagPos && h("span", { class: "ah-top-meta ah-top-tags" }, tagPos),
     );
   }
 
