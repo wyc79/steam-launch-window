@@ -4,7 +4,7 @@
 // so ui/ahead.js has nothing left to decide.
 
 import { formatNumber } from "./count.js";
-import { weekEvents } from "./events.js";
+import { eventName, weekEvents } from "./events.js";
 import { numberFormat } from "./format.js";
 import { toDay, toIso } from "./lib/dates.js";
 import { normalized, TYPICAL_WEEKS } from "./lib/heatmap.js";
@@ -81,8 +81,10 @@ export function weekHeads(weeks, band, s = en) {
   }));
 }
 
-export function eventText(e, s = en) {
-  return s.ahead.eventName(e.name, e.unconfirmed ? s.ahead.unconfirmed : e.estimate ? s.ahead.estimate : null);
+// short: the lanes' short name (events.js eventName)
+export function eventText(e, s = en, { short = false } = {}) {
+  const note = e.unconfirmed ? s.ahead.unconfirmed : e.estimate ? s.ahead.estimate : null;
+  return s.ahead.eventName(eventName(e.name, s, { short }), note);
 }
 
 // rows: heatmapRows' result (with history); band: bandEvents' events. Returns

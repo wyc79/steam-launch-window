@@ -9,6 +9,7 @@
 // languages, always marked unconfirmed. Releases and other holidays are left out.
 
 import { toDay } from "./lib/dates.js";
+import { en } from "./strings.js";
 
 // lanes of the band, top to bottom
 export const KINDS = ["seasonal_sale", "next_fest", "themed_fest", "cn_holiday"];
@@ -45,6 +46,16 @@ export function shortName(name) {
   return name.replace(/^Steam /, "").replace(/ \d{4}$/, "");
 }
 
+// An event's name (or a series' name, without the year) in the page's language,
+// else in English. short: without "Steam" and the year, for little room.
+export function eventName(name, s = en, { short = false } = {}) {
+  const year = name.match(/ (\d{4})$/)?.[1];
+  const local = s.eventSeries(year ? name.slice(0, -5) : name);
+  if (!local) return short ? shortName(name) : name;
+  if (short) return local.replace(/\{year\} 年 ?/, "").replace(/^Steam /, "");
+  return year ? local.replace("{year}", year) : local.replace(/\{year\} 年 ?/, "");
+}
+
 // covers at least MIN_DAYS of the week starting on day `start`, so a Steam event
 // that ends at 10:00 on a Monday is not counted in that week too
 function inWeek(e, start) {
@@ -52,7 +63,7 @@ function inWeek(e, start) {
 }
 
 // The events to draw for `weeks` weeks from the Monday `first` (an ISO date), in
-// time order: { name, short, kind, start, end, from, to, unconfirmed, estimate,
+// time order: { name, kind, start, end, from, to, unconfirmed, estimate,
 // weeks: [first, last] week index it covers, lane, room }. `lanes` lists the lanes
 // in use, { kind, row }: a second row when events of one kind share a week.
 // `room` is the week index where the next event in its lane starts (or `weeks`):
@@ -69,7 +80,6 @@ export function bandEvents(events, first, weeks, { tagNames = [], languages = []
     if (!covered.length) continue;
     picked.push({
       name: e.name,
-      short: shortName(e.name),
       kind,
       start: e.start,
       end: e.end,

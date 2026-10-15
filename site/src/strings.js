@@ -15,6 +15,8 @@ export const en = {
   defaultLanguages: ["english"],
   // where a meta.json tag row keeps this language's tag name (the English one, 1, stands in)
   tagNameAt: 1,
+  // an event series' name in this language ("{year}" for its year), or null for the English one
+  eventSeries: () => null,
 
   title: "Steam Launch Window",
   pageTitle: (page, site) => `${page} · ${site}`, // a page other than the tool

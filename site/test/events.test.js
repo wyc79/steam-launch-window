@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { bandEvents, kindOf, shortName, shows, span, weekEvents } from "../src/events.js";
+import { bandEvents, eventName, kindOf, shortName, shows, span, weekEvents } from "../src/events.js";
+import { EVENT_NAMES_ZH } from "../src/eventnames.zh.js";
+import { zh } from "../src/strings.js";
 import { toDay } from "../src/lib/dates.js";
 
 // events.json rows (pipeline/events.py fields), Pacific dates
@@ -79,7 +81,7 @@ describe("the band for 26 weeks from Monday 2026-10-12", () => {
       ROBOTS.name,
     ]);
     const spring = events.find((e) => e.kind === "cn_holiday");
-    expect(spring).toMatchObject({ unconfirmed: true, estimate: false, short: "China Spring Festival holiday" });
+    expect(spring).toMatchObject({ unconfirmed: true, estimate: false });
     expect(events.find((e) => e.kind === "seasonal_sale")).toMatchObject({ unconfirmed: false, estimate: false });
   });
 
@@ -161,5 +163,41 @@ describe("the events in a week", () => {
       expect(weekEvents(events, week).map((e) => e.name)).toContain(SALE.name);
     }
     expect(weekEvents(events, "2027-01-04").map((e) => e.name)).not.toContain(SALE.name);
+  });
+});
+
+describe("names on the Chinese page", () => {
+  test("Steam's Chinese names, with the year where Steam puts it", () => {
+    expect(eventName("Steam Winter Sale 2026", zh)).toBe("2026 年 Steam 冬季特卖");
+    expect(eventName("Steam Next Fest October 2026", zh)).toBe("Steam 新品节：2026 年 10 月版");
+    expect(eventName("China Spring Festival holiday 2027", zh)).toBe("2027 年春节假期");
+  });
+
+  test("short names drop Steam and the year", () => {
+    expect(eventName("Steam Dinos vs. Robots Fest 2027", zh, { short: true })).toBe("恐龙大战机器人游戏节");
+    expect(eventName("Steam Next Fest October 2026", zh, { short: true })).toBe("新品节：10 月版");
+    expect(eventName("Steam Next Fest October", zh, { short: true })).toBe("新品节：10 月版"); // a series
+    expect(eventName("Christmas to New Year 2026", zh, { short: true })).toBe("圣诞节至元旦");
+  });
+
+  test("a release keeps its English name, and the English page is unchanged", () => {
+    expect(eventName("Grand Theft Auto VI", zh)).toBe("Grand Theft Auto VI");
+    expect(eventName("Steam Winter Sale 2026")).toBe("Steam Winter Sale 2026");
+    expect(eventName("Steam Winter Sale 2026", undefined, { short: true })).toBe("Winter Sale");
+  });
+
+  test("every Steam event and holiday in events.yaml has a Chinese name", async () => {
+    const { readFileSync } = await import("node:fs");
+    const yaml = readFileSync(new URL("../../data/events.yaml", import.meta.url), "utf8");
+    const entries = yaml
+      .split(/\r?\n- name: /)
+      .slice(1)
+      .map((e) => [e.split(/\r?\n/)[0].replace(/^'(.*)'$/, "$1"), e.match(/\n {2}type: (\w+)/)[1]]);
+    const missing = entries
+      .filter(([, type]) => type !== "major_release")
+      .map(([name]) => name.replace(/ \d{4}$/, ""))
+      .filter((series) => !EVENT_NAMES_ZH[series]);
+    expect(entries.length).toBeGreaterThan(100);
+    expect([...new Set(missing)]).toEqual([]);
   });
 });

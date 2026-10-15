@@ -138,7 +138,7 @@ export function aheadSection(s, body) {
         h(
           "span",
           { class: "hm-week-events", "aria-hidden": "true" },
-          w.events.map((e) => h("span", { class: `hm-tag is-${e.kind}` }, eventText({ ...e, name: e.short }, s))),
+          w.events.map((e) => h("span", { class: `hm-tag is-${e.kind}` }, eventText(e, s, { short: true }))),
         ),
     );
   }

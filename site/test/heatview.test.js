@@ -133,7 +133,7 @@ describe("week heads", () => {
   });
 
   test("carry the events in each week", () => {
-    expect(weeks[1].events.map((e) => e.short)).toEqual(["Next Fest October"]);
+    expect(weeks[1].events.map((e) => e.name)).toEqual(["Steam Next Fest October 2026"]);
     expect(weeks[2].events).toEqual([]);
   });
 });

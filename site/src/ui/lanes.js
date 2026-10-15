@@ -31,7 +31,7 @@ export function laneItems(band, first, s, { fit = false, note = () => null } = {
         h(
           "div",
           { class: "hm-block-name", style: `--tr:${tr};--from:${e.weeks[0] + 2};--to:${end + 2}`, title: full },
-          eventText({ ...e, name: e.short }, s),
+          eventText(e, s, { short: true }),
         ),
       );
     }
