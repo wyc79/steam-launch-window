@@ -4,7 +4,7 @@
 // numbers, the demo lines, the headline fit, and the rounding of percentages.
 
 import { describe, expect, test } from "vitest";
-import { en } from "../src/strings.js";
+import { en, zh } from "../src/strings.js";
 import { busyNote, change, clear, combine, crowding, percentOf, ready, timingLines } from "../src/timing.js";
 
 const e = (key, rate_ratio, low, high, extra = {}) => ({ key, rate_ratio, low, high, p: 0.001, ...extra });
@@ -139,6 +139,23 @@ describe("paid games", () => {
     expect(timingLines({ paid: joint }, "paid").lines[2]).toBe(
       "If you have a demo, have it out before Next Fest. Launches whose demo was out by the last Next Fest got 71% more reviews (36% to 115% more) than those whose demo came out after it, and 25% more reviews (5% to 49% more) than launches with no demo.",
     );
+  });
+
+  test("the Chinese demo explanation contains no English conjunction", () => {
+    const text = timingLines(MODEL, "paid", { languages: ["schinese"] }, zh).lines.join(" ");
+    expect(text).toContain("试玩版");
+    expect(text).not.toMatch(/\band\b/);
+  });
+
+  test("Chinese sentences are not separated by Western spaces", () => {
+    const view = timingLines(MODEL, "paid", { languages: ["schinese"] }, zh);
+    expect(view.china).not.toContain("。 ");
+    expect(busyNote(MODEL, "paid", zh)).not.toContain("。 ");
+  });
+
+  test("a Chinese no-effect busy note also has no Western sentence spacing", () => {
+    const unclear = { paid: { ...PAID, reviews: { effects: [e("comp_tier", 1, 0.9, 1.1)] } } };
+    expect(busyNote(unclear, "paid", zh)).not.toContain("。 ");
   });
 });
 

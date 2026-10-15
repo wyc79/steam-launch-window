@@ -130,11 +130,11 @@ export function busyNote(model, group, s = en) {
   const m = model[group];
   const comp = effectOf(m, m.competition_measure);
   if (!comp) return first;
-  if (!clear(comp)) return `${first} ${t.busyModel.noEffect}`;
+  if (!clear(comp)) return `${first}${t.sentenceSep}${t.busyModel.noEffect}`;
   const kind = crowdingKind(m, comp);
   const said =
     kind === "none" ? t.busyModel.none(comp.rate_ratio < 1 ? t.fewer : t.more) : t.busyModel[kind](s.season[group]);
-  return `${first} ${said}`;
+  return `${first}${t.sentenceSep}${said}`;
 }
 
 // China's holidays as one line without numbers: each holiday whose effect for games
@@ -150,7 +150,7 @@ export function chinaLine(m, s = en) {
   });
   const windows = named.flatMap((v) => m.holidays?.[v.key] ?? []);
   if (windows.length && windows.every((w) => w.overlaps?.length > 0)) parts.push(t.chinaOverlap);
-  return parts.join(" ");
+  return parts.join(t.sentenceSep);
 }
 
 // The lines for `group` ("paid" or "free"). languages: the picked ones (China's
@@ -189,9 +189,10 @@ export function timingLines(model, group, { languages = [] } = {}, s = en) {
       const both = joint ?? combine(demo, fest);
       // the cautious note goes with a range shown, not with "no clear difference"
       const note = joint ? "" : t.cautious;
-      text += `, and ${clear(both) ? `${t.demoVsNone(change(both, s))}${note}` : t.demoAsNone}`;
+      text += `${t.demoAnd}${clear(both) ? `${t.demoVsNone(change(both, s))}${note}` : t.demoAsNone}`;
     }
-    lines.push(fest.rate_ratio > 1 ? `${t.demoAdvice} ${text}.` : `${text}.`);
+    const sentence = `${text}${t.sentenceEnd}`;
+    lines.push(fest.rate_ratio > 1 ? `${t.demoAdvice}${t.adviceSep}${sentence}` : sentence);
     if (demo && clear(demo)) lines.push(t.demoAfter(change(demo, s)));
   }
 

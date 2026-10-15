@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { renderMarkdown } from "../build/methods-markdown.js";
+import { methodsMarkdownPlugin, renderMarkdown } from "../build/methods-markdown.js";
 
 
 describe("methods Markdown", () => {
@@ -99,5 +99,15 @@ Text.
     expect(html).toContain('<h2 id="trends">Trends</h2>');
     expect(html).toContain('<h2 id="trends-2">Trends</h2>');
     expect(html).toContain('<h2 id="cafe-tags">Café &amp; Tags</h2>');
+  });
+
+  test("uses an explicit stable anchor for a translated heading", () => {
+    expect(renderMarkdown("## 趋势 {#trends}")).toBe('<h2 id="trends">趋势</h2>');
+  });
+
+  test("exposes a separate virtual article for Chinese", () => {
+    const plugin = methodsMarkdownPlugin({ en: "methods.md", zh: "methods.zh.md" });
+    expect(plugin.resolveId("virtual:methods-content")).not.toBeNull();
+    expect(plugin.resolveId("virtual:methods-content-zh")).not.toBeNull();
   });
 });

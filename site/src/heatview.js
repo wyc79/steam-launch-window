@@ -5,7 +5,7 @@
 
 import { formatNumber } from "./count.js";
 import { weekEvents } from "./events.js";
-import { dateFormat, numberFormat } from "./format.js";
+import { numberFormat } from "./format.js";
 import { toDay, toIso } from "./lib/dates.js";
 import { normalized, TYPICAL_WEEKS } from "./lib/heatmap.js";
 import { en } from "./strings.js";
@@ -58,8 +58,9 @@ export function formatCut(value, s = en) {
   return numberFormat(s.locale, { minimumFractionDigits: 1, maximumFractionDigits: 2 }).format(value);
 }
 
-export function formatDate(iso, s = en) {
-  return dateFormat(s.locale, { month: "short", day: "numeric" }).format(toDay(iso) * 86400000);
+// "10/12" in every language
+export function formatDate(iso) {
+  return `${+iso.slice(5, 7)}/${+iso.slice(8, 10)}`;
 }
 
 export function rowLabel(tags, mode, names, s = en) {
@@ -113,12 +114,12 @@ export function buildView(rows, { group, raw = false, year = false, mode = "and"
       });
       const w = weeks[i];
       const said = [
-        `${shown.map((p) => a.cellPart(a.partNames[p.part], p.spoken)).join(", ")} ${games ? a.unitRaw : a.unitNormal}`,
+        `${shown.map((p) => a.cellPart(a.partNames[p.part], p.spoken)).join(a.partSep)}${a.unitSep}${games ? a.unitRaw : a.unitNormal}`,
       ];
       if (w.far) said.push(a.far);
-      if (w.events.length) said.push(a.events(w.events.map((e) => eventText(e, s)).join(", ")));
+      if (w.events.length) said.push(a.events(w.events.map((e) => eventText(e, s)).join(a.eventSep)));
       const raw = countsText(cell, typical, w.date, year, s);
-      return { parts: shown, counts: raw, label: `${a.cell(label, w.date, said.join(". "))}. ${raw}` };
+      return { parts: shown, counts: raw, label: `${a.cell(label, w.date, said.join(a.sentenceSep))}${a.labelSep}${raw}` };
     });
     return {
       tags: row.tags,

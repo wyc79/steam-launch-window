@@ -3,8 +3,6 @@
 // lib/heatmap.js weekGames and mostAnticipated; this only formats them.
 
 import { formatNumber } from "./count.js";
-import { dateFormat } from "./format.js";
-import { toDay } from "./lib/dates.js";
 import { en } from "./strings.js";
 import { countText, formatDate } from "./heatview.js";
 
@@ -27,35 +25,29 @@ export function followersText(followers, source, s = en) {
   return source === "r" ? s.ahead.followersEstimate(n) : s.ahead.followers(n);
 }
 
-// the game's date as the store gives it: "Oct 21", "Nov 2026", "Q4 2026", "2027"
+// the game's date as the store gives it: "10/21", "11/2026", "Q4 2026", "2027"
 export function dateText(game, s = en) {
   if (!game?.date) return null;
   const year = game.date.slice(0, 4);
   const month = +game.date.slice(5, 7);
-  if (game.precision === "day") return formatDate(game.date, s);
-  if (game.precision === "month") {
-    const f = dateFormat(s.locale, { month: "short", year: "numeric" });
-    return f.format(toDay(game.date) * 86400000);
-  }
+  if (game.precision === "day") return formatDate(game.date);
+  if (game.precision === "month") return s.withYear(month, year);
   if (game.precision === "quarter") return s.ahead.quarter(Math.ceil(month / 3), year);
   return year;
 }
 
-// the date as the store page shows it, year included: "Oct 28, 2026", "December 2026",
-// "Q1 2027", "2027", or without one the store's own words ("Coming soon"), else
-// "To be announced" (the most anticipated list)
+// the date with its year included: "10/28/2026", "12/2026", "Q1 2027", "2027", or
+// without one the store's own words ("Coming soon"), else "To be announced" (the
+// most anticipated list)
 export function steamDate(game, s = en) {
   if (!game?.date) return game?.date_text || s.ahead.tba;
   if (game.precision === "day") return fullDate(game.date, s);
-  if (game.precision === "month") {
-    return dateFormat(s.locale, { month: "long", year: "numeric" }).format(toDay(game.date) * 86400000);
-  }
   return dateText(game, s);
 }
 
-// "Oct 13, 2026"
+// "10/13/2026"; "2026/10/13" in Chinese
 export function fullDate(iso, s = en) {
-  return dateFormat(s.locale, { month: "short", day: "numeric", year: "numeric" }).format(toDay(iso) * 86400000);
+  return s.withYear(formatDate(iso), iso.slice(0, 4));
 }
 
 // tagPos: weekGames' or mostAnticipated's [tagid, place] list, count: the game's number

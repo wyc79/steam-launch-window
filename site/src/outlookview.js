@@ -61,7 +61,7 @@ export function outlookView(outlook, group, { events = [], band = [], languages 
     const value = has ? two(o.expected, s) : t.none;
     const spread = has ? t.spread(two(lo, s), two(hi, s)) : null;
     const said = o.parts.map((p) => partText(p, kinds, languages, s)).filter(Boolean);
-    const drivers = said.length ? t.drivers(said.join("; ")) : null;
+    const drivers = said.length ? t.drivers(said.join(t.driverSep)) : null;
     const weekBand = weekEvents(band, iso);
     return {
       iso,

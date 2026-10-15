@@ -224,8 +224,7 @@ main :where(a[href], button, input, select, textarea, summary, [tabindex]) { scr
 .mast-seal { flex: none; display: block; }
 .mast-seal img { display: block; width: 2.25rem; height: 2.25rem; object-fit: contain; }
 .mast-name { display: block; font-size: .8125rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-.mast-sub { display: block; color: var(--ink-2); letter-spacing: var(--track-meta); text-transform: uppercase; }
-.mast-name:hover, .mast-sub:hover { color: var(--accent-ui); }
+.mast-name:hover { color: var(--accent-ui); }
 .mast-links { grid-column: 7 / span 3; }
 .mast-utils { grid-column: 10 / span 3; }
 .mast-links, .mast-utils {
@@ -252,6 +251,15 @@ main :where(a[href], button, input, select, textarea, summary, [tabindex]) { scr
 /* the theme in use and the current page: ink, bold, underlined in red (never colour alone) */
 .mast-links a[aria-current],
 .mast-toggle .is-on {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--accent-ui);
+  text-decoration-thickness: 2px;
+  text-underline-offset: .35em;
+}
+html:lang(en) .mast-language [data-opt="en"],
+html:lang(zh) .mast-language [data-opt="zh"] {
   color: var(--ink);
   font-weight: 700;
   text-decoration: underline;

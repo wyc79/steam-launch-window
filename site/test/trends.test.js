@@ -61,7 +61,7 @@ describe("the quarters", () => {
   test("the quarter under way is marked partial and says so far", () => {
     const last = options()[19];
     expect(last.classList.contains("is-partial")).toBe(true);
-    expect(last.getAttribute("aria-label")).toMatch(/^2026 Q4 so far \(Oct 1 to Oct 12; recent, tags may still change\): /);
+    expect(last.getAttribute("aria-label")).toMatch(/^2026 Q4 so far \(10\/1 to 10\/12; recent, tags may still change\): /);
     expect(last.querySelector(".tr-sofar").textContent).toBe("so far");
     expect(options().map((o) => o.classList.contains("is-recent"))).toEqual([...Array(17).fill(false), true, true, true]);
     expect(body.querySelector(".tr-recent-label").textContent).toBe("recent: tags may still change");

@@ -2,7 +2,9 @@
 
 import "./styles.css";
 import methodsHtml from "virtual:methods-content";
-import { strings as s } from "./strings.js";
+import methodsHtmlZh from "virtual:methods-content-zh";
+import { currentLanguage } from "./language.js";
+import { stringsFor } from "./strings.js";
 import { h } from "./ui/dom.js";
 import { masthead } from "./ui/masthead.js";
 import { footer } from "./ui/sections.js";
@@ -36,9 +38,12 @@ export function syncTableTabStops(root) {
 }
 
 export function mountMethods(doc = document) {
+  const s = stringsFor(currentLanguage());
+  const html = s.lang.startsWith("zh") ? methodsHtmlZh : methodsHtml;
   doc.documentElement.lang = s.lang;
   doc.title = s.pageTitle(s.methods.title, s.title);
-  doc.getElementById("app").replaceChildren(...methodsPage(s, methodsHtml));
+  doc.querySelector('meta[name="description"]')?.setAttribute("content", s.description);
+  doc.getElementById("app").replaceChildren(...methodsPage(s, html));
   const body = doc.querySelector("article.methods");
   const sync = () => syncTableTabStops(body);
   sync();

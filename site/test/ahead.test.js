@@ -10,9 +10,9 @@ const { aheadSection, SHOW_TREND } = await import("../src/ui/ahead.js");
 const { trendLines } = await import("../src/heatview.js");
 const { createNumbers } = await import("../src/numbers.js");
 const { DEFAULT } = await import("../src/state.js");
-const { en } = await import("../src/strings.js");
+const { en, zh } = await import("../src/strings.js");
 
-const TODAY = "2026-10-13"; // the first week starts Monday Oct 12
+const TODAY = "2026-10-13"; // the first week starts Monday 10/12
 const game = (appid, precision, date, date_end, extra = {}) => ({
   appid,
   name: `Game ${appid}`,
@@ -43,6 +43,7 @@ const HISTORY = Array.from({ length: 52 }, (_, i) => ({
 }));
 const META = { snapshot_date: TODAY, tags: [[1, "Horror", 27, 52]], languages: ["english"] };
 const FEST = { name: "Steam Scream V Fest 2026", type: "themed_fest", start: "2026-10-26", end: "2026-11-02", tags: ["Horror"] };
+const FEST_2 = { name: "Steam Fright Fest 2026", type: "themed_fest", start: "2026-10-26", end: "2026-10-30", tags: ["Horror"] };
 
 function draw(events = [FEST]) {
   const body = h("div");
@@ -65,12 +66,12 @@ describe("an opened week", () => {
   let body;
   beforeEach(() => {
     body = draw();
-    body.querySelectorAll(".hm-cell")[1].click(); // Horror, week of Oct 19
+    body.querySelectorAll(".hm-cell")[1].click(); // Horror, week of 10/19
   });
 
   test("never shows the words false or null", () => {
     const text = body.querySelector(".ah-detail").textContent;
-    expect(text).toContain("Week of Oct 19 to Oct 25");
+    expect(text).toContain("Week of 10/19 to 10/25");
     expect(text).not.toMatch(/false|null|undefined/);
   });
 
@@ -79,7 +80,7 @@ describe("an opened week", () => {
     expect([list.getAttribute("role"), list.getAttribute("tabindex"), list.getAttribute("aria-label")]).toEqual([
       "region",
       "0",
-      "Games in the week of Oct 19 to Oct 25",
+      "Games in the week of 10/19 to 10/25",
     ]);
     const parts = list.querySelectorAll(".ah-part");
     expect(parts.map((p) => p.querySelector("h4").textContent)).toEqual([
@@ -128,7 +129,7 @@ describe("an opened week", () => {
 
   test("is announced with its row", () => {
     expect(body.querySelector("p.visually-hidden").textContent).toBe(
-      "Horror, Week of Oct 19 to Oct 25. 27 games listed: 2 with exact dates · 25 dated only by month or quarter (together about 9.2 games' worth) · 1 in a typical week.",
+      "Horror, Week of 10/19 to 10/25. 27 games listed: 2 with exact dates · 25 dated only by month or quarter (together about 9.2 games' worth) · 1 in a typical week.",
     );
   });
 
@@ -145,7 +146,7 @@ describe("an opened week", () => {
     const tip = body.querySelector(".hm-tip");
     expect(tip.hidden).toBe(false);
     expect(tip.textContent).toBe(
-      "Week of Oct 19: 2 with exact dates, about 9.2 games' worth from month or quarter dates, 1 in a typical week.",
+      "Week of 10/19: 2 with exact dates, about 9.2 games' worth from month or quarter dates, 1 in a typical week.",
     );
     expect(cell.getAttribute("aria-label")).toContain(tip.textContent);
     cell.dispatch("pointerleave");
@@ -165,11 +166,11 @@ describe("what past launches during an event did", () => {
     },
     free: { status: "unreliable" },
   };
-  function drawWith(model, group = "paid") {
+  function drawWith(model, group = "paid", strings = en, events = [FEST]) {
     const body = h("div");
-    const section = aheadSection(en, body);
+    const section = aheadSection(strings, body);
     section.start(createNumbers(GAMES, HISTORY, TODAY), META);
-    section.setEvents([FEST]);
+    section.setEvents(events);
     section.setModel(model);
     section.draw({ ...DEFAULT, tags: [1], group });
     return body;
@@ -179,7 +180,7 @@ describe("what past launches during an event did", () => {
     const body = drawWith(MODEL);
     expect(body.querySelector(".hm-like")).toBeNull();
     expect(body.querySelector(".hm-block-name").getAttribute("title")).toBe(
-      "Steam Scream V Fest 2026, Oct 26 to Nov 2. Past paid launches during a themed fest matching their tags got 45% fewer reviews.",
+      "Steam Scream V Fest 2026, 10/26 to 11/2. Past paid launches during a themed fest matching their tags got 45% fewer reviews.",
     );
     expect(body.querySelector(".hm-block-name").textContent).toBe("Scream V Fest"); // no number drawn
     expect(body.querySelectorAll(".hm-week")[2].getAttribute("aria-label")).toContain(
@@ -189,15 +190,43 @@ describe("what past launches during an event did", () => {
 
   test("the opened week's Events line carries the effect too (phones have no lanes)", () => {
     const body = drawWith(MODEL);
-    body.querySelectorAll(".hm-cell")[2].click(); // the week of Oct 26
+    body.querySelectorAll(".hm-cell")[2].click(); // the week of 10/26
     expect(body.querySelector(".ah-detail-events").textContent).toContain(
-      "Steam Scream V Fest 2026, Oct 26 to Nov 2. Past paid launches during a themed fest matching their tags got 45% fewer reviews.",
+      "Steam Scream V Fest 2026, 10/26 to 11/2. Past paid launches during a themed fest matching their tags got 45% fewer reviews.",
     );
+  });
+
+  test("Chinese event lanes, week labels, and details use Chinese punctuation", () => {
+    const body = drawWith(MODEL, "paid", zh);
+    const title = body.querySelector(".hm-block-name").getAttribute("title");
+    const week = body.querySelectorAll(".hm-week")[2].getAttribute("aria-label");
+    body.querySelectorAll(".hm-cell")[2].click();
+    const detail = body.querySelector(".ah-detail-events").textContent;
+
+    for (const text of [title, week, detail]) {
+      expect(text).not.toContain(", ");
+      expect(text).not.toContain(". ");
+      expect(text).not.toContain("; ");
+    }
+    expect(title).toContain("，");
+    expect(title).toContain("。");
+  });
+
+  test("full descriptions of two Chinese events use a compound-item separator", () => {
+    const body = drawWith(MODEL, "paid", zh, [FEST, FEST_2]);
+    const week = body.querySelectorAll(".hm-week")[2].getAttribute("aria-label");
+    body.querySelectorAll(".hm-cell")[2].click();
+    const detail = body.querySelector(".ah-detail-events").textContent;
+
+    for (const text of [week, detail]) {
+      expect(text).toContain("；");
+      expect(text).not.toContain("。、");
+    }
   });
 
   test("a group whose model is not ready: the tooltip has only the event", () => {
     const body = drawWith({ ...MODEL, paid: { status: "unreliable" } });
-    expect(body.querySelector(".hm-block-name").getAttribute("title")).toBe("Steam Scream V Fest 2026, Oct 26 to Nov 2");
+    expect(body.querySelector(".hm-block-name").getAttribute("title")).toBe("Steam Scream V Fest 2026, 10/26 to 11/2");
   });
 });
 
@@ -214,7 +243,7 @@ describe("tag places in the week list", () => {
     section.setEvents([]);
     section.draw({ ...DEFAULT, ...patch });
     const row = body.querySelectorAll(".hm-rowhead").length - 1; // the last row: the combination, or all games
-    body.querySelectorAll(".hm-cell")[row * 13 + 1].click(); // week of Oct 19
+    body.querySelectorAll(".hm-cell")[row * 13 + 1].click(); // week of 10/19
     return body;
   }
   const lines = (body) => body.querySelectorAll(".ah-list li").map((li) => li.querySelector(".ah-tagpos")?.textContent ?? null);
@@ -269,11 +298,11 @@ describe("the most anticipated list", () => {
     expect(body.querySelector(".ah-top-for").textContent).toBe("Horror, Paid, in English");
     expect(body.querySelector(".ah-top-list").tagName).toBe("OL");
     expect(rows(body).map((li) => li.querySelector(".ah-top-meta").textContent)).toEqual([
-      "May 4, 2027 · #212 on Top Wishlisted",
+      "5/4/2027 · #212 on Top Wishlisted",
       "Coming soon · #812 on Top Wishlisted", // the store's own words for a game with no date
       // ranked lower, so after #812 whatever its followers; and the followers are not shown
-      "December 2026 · #1,500 on Top Wishlisted",
-      "Oct 20, 2026 · #2,500 on Top Wishlisted",
+      "12/2026 · #1,500 on Top Wishlisted",
+      "10/20/2026 · #2,500 on Top Wishlisted",
     ]);
     expect(rows(body)[3].querySelector("a").textContent).toBe("App 1 (opens in a new tab)");
     expect(body.querySelector(".ah-top").textContent).not.toMatch(/follower/);
@@ -291,7 +320,7 @@ describe("the most anticipated list", () => {
     expect(body.querySelector(".ah-top-for").textContent).toBe("All games, Free, in English");
     expect(rows(body)).toHaveLength(1);
     expect(body.querySelector(".ah-top-note").textContent).toBe(
-      "Rank on Steam's Top Wishlisted list on Oct 13, 2026. Not wishlist counts.",
+      "Rank on Steam's Top Wishlisted list on 10/13/2026. Not wishlist counts.",
     );
   });
 
@@ -403,7 +432,7 @@ describe("the grid", () => {
     expect(body.querySelector(".hm-band-label").textContent).toBe("Events");
     expect(body.querySelector(".hm-lane-name").textContent).toBe("Themed fests");
     expect(body.querySelector(".hm-block-name").textContent).toBe("Scream V Fest");
-    expect(body.querySelector(".hm-block-name").getAttribute("title")).toBe("Steam Scream V Fest 2026, Oct 26 to Nov 2");
+    expect(body.querySelector(".hm-block-name").getAttribute("title")).toBe("Steam Scream V Fest 2026, 10/26 to 11/2");
   });
 
   test("the legend has a swatch for each shade step, with the cells' classes", () => {

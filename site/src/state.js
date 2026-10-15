@@ -66,5 +66,3 @@ export function createState(initial = DEFAULT) {
 export function query(s) {
   return { selection: s.tags, mode: s.mode, languages: s.languages };
 }
-
-export const selection = createState();

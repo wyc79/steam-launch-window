@@ -19,9 +19,9 @@ export function laneItems(band, first, s, { fit = false, note = () => null } = {
     const tr = first + 1 + i;
     out.push(h("div", { class: "hm-lane-name", style: `--tr:${tr}` }, lane.row === 0 ? a.kinds[lane.kind] : ""));
     for (const e of band.events.filter((x) => x.lane === i)) {
-      const dates = `${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`;
+      const dates = `${eventText(e, s)}${a.partSep}${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`;
       const said = note(e);
-      const full = said ? `${dates}. ${said}` : dates;
+      const full = said ? `${dates}${a.sentenceSep}${said}` : dates;
       const end = fit ? e.weeks[1] + 1 : e.room; // where the name may run to (a week index)
       out.push(
         h("div", {

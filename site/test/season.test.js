@@ -58,7 +58,7 @@ describe("the weeks", () => {
     expect(options()).toHaveLength(26);
     expect(picked()).toBe(0);
     expect(options().filter((o) => o.getAttribute("tabindex") === "0")).toHaveLength(1);
-    expect(options()[0].getAttribute("aria-label")).toMatch(/^Week of Oct 12 to Oct 18: usually \d\.\d\d, /);
+    expect(options()[0].getAttribute("aria-label")).toMatch(/^Week of 10\/12 to 10\/18: usually \d\.\d\d, /);
     expect(body.querySelector(".ol-good").textContent).toBe("Quiet is not the same as good.");
   });
 
@@ -83,12 +83,12 @@ describe("the weeks", () => {
     // the week after Next Fest October 2026 (Oct 19): the golden history is busier then
     options()[2].click();
     const text = body.querySelector(".ol-detail").textContent;
-    expect(text).toMatch(/^Week of Oct 26 to Nov 1: usually /);
+    expect(text).toMatch(/^Week of 10\/26 to 11\/1: usually /);
     expect(text).toContain("1 week after Next Fest October");
     options()[10].dispatch("mouseenter");
-    expect(body.querySelector(".ol-detail").textContent).toMatch(/^Week of Dec 21 to Dec 27/);
+    expect(body.querySelector(".ol-detail").textContent).toMatch(/^Week of 12\/21 to 12\/27/);
     body.querySelector(".ol").dispatch("mouseleave");
-    expect(body.querySelector(".ol-detail").textContent).toMatch(/^Week of Oct 26 to Nov 1/);
+    expect(body.querySelector(".ol-detail").textContent).toMatch(/^Week of 10\/26 to 11\/1/);
   });
 
   test("keep the picked week when paid / free changes", () => {

@@ -75,7 +75,7 @@ describe("the share view", () => {
     expect(v.bars.at(-1)).toMatchObject({
       partial: true,
       over: false,
-      label: "2026 Q4 so far (Oct 1 to Oct 12; recent, tags may still change): 1 of 2 paid launches (50.0%)",
+      label: "2026 Q4 so far (10/1 to 10/12; recent, tags may still change): 1 of 2 paid launches (50.0%)",
     });
     expect(v.partial).toBe("Hatched: recent quarters, whose tags may still change. 2026 Q4 so far: 12 of 92 days.");
     expect(v.bars.filter((b) => b.partial)).toHaveLength(1);

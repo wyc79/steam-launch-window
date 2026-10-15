@@ -18,7 +18,7 @@ import {
   weekHeads,
 } from "../src/heatview.js";
 import { heatmapRows, WEEKS } from "../src/lib/heatmap.js";
-import { en } from "../src/strings.js";
+import { en, zh } from "../src/strings.js";
 
 const TODAY = "2026-10-13"; // a Tuesday: the first week starts Monday 2026-10-12
 const up = (appid, tags, precision, date, date_end, extra = {}) => ({
@@ -105,7 +105,7 @@ describe("numbers in cells", () => {
   });
 
   test("dates read as the store's short dates", () => {
-    expect(formatDate("2026-10-12")).toBe("Oct 12");
+    expect(formatDate("2026-10-12")).toBe("10/12");
   });
 });
 
@@ -126,8 +126,8 @@ describe("week heads", () => {
 
   test("13 weeks: dates, this week, and faded after 4 weeks", () => {
     expect(weeks).toHaveLength(13);
-    expect(weeks[0]).toMatchObject({ iso: "2026-10-12", date: "Oct 12", to: "Oct 18", current: true, far: false });
-    expect(weeks[3].date).toBe("Nov 2");
+    expect(weeks[0]).toMatchObject({ iso: "2026-10-12", date: "10/12", to: "10/18", current: true, far: false });
+    expect(weeks[3].date).toBe("11/2");
     expect(weeks.map((w) => w.far).indexOf(true)).toBe(5);
     expect(weeks.filter((w) => w.current)).toHaveLength(1);
   });
@@ -151,7 +151,7 @@ describe("the view", () => {
     ]);
     expect(view.parts).toEqual(["exact", "spread"]);
     expect(row.cells[0].label).toBe(
-      "Roguelike, week of Oct 12: exact dates 1.0, month or quarter dates 0 (1.0 = as many as a typical week). Week of Oct 12: 2 with exact dates, 0 games' worth from month or quarter dates, 2 in a typical week.",
+      "Roguelike, week of 10/12: exact dates 1.0, month or quarter dates 0 (1.0 = as many as a typical week). Week of 10/12: 2 with exact dates, 0 games' worth from month or quarter dates, 2 in a typical week.",
     );
   });
 
@@ -201,6 +201,13 @@ describe("the view", () => {
     const view = buildView(rowsFor([]), { group: "paid", band });
     expect(view.rows[0].label).toBe("All games");
     expect(view.rows[0].cells[1].label).toMatch(/\. Events: Steam Next Fest October 2026. Week of /);
+  });
+
+  test("Chinese cell labels use Chinese punctuation", () => {
+    const label = buildView(rowsFor([1]), { group: "paid", names: NAMES, s: zh }).rows[0].cells[0].label;
+    expect(label).toContain("确定日期");
+    expect(label).toContain("。");
+    expect(label).not.toContain(". ");
   });
 
   test("says when nothing matches, or only the combination is empty", () => {
@@ -276,11 +283,11 @@ describe("a cell's raw numbers (the tooltip)", () => {
 
   test("exact, the spread's worth and the typical week, from the cell's own values", () => {
     const cell = { exact: 274, spread: 240.3, year: 3.25 };
-    expect(countsText(cell, 343.4, "Oct 19")).toBe(
-      "Week of Oct 19: 274 with exact dates, about 240 games' worth from month or quarter dates, about 343 in a typical week.",
+    expect(countsText(cell, 343.4, "10/19")).toBe(
+      "Week of 10/19: 274 with exact dates, about 240 games' worth from month or quarter dates, about 343 in a typical week.",
     );
-    expect(countsText(cell, 0.5, "Oct 19", true)).toBe(
-      "Week of Oct 19: 274 with exact dates, about 240 games' worth from month or quarter dates, about 3.3 from year-only dates, about 0.5 in a typical week.",
+    expect(countsText(cell, 0.5, "10/19", true)).toBe(
+      "Week of 10/19: 274 with exact dates, about 240 games' worth from month or quarter dates, about 3.3 from year-only dates, about 0.5 in a typical week.",
     );
   });
 });
