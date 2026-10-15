@@ -1,3 +1,5 @@
+import { EVENT_NAMES_ZH } from "./eventnames.zh.js";
+
 const gamesWorth = (n) => `相当于 ${n} 款游戏`;
 
 export const zh = {
@@ -6,6 +8,7 @@ export const zh = {
   withYear: (date, year) => `${year}/${date}`,
   defaultLanguages: ["schinese"],
   tagNameAt: 4,
+  eventSeries: (series) => EVENT_NAMES_ZH[series] ?? null,
 
   title: "Steam 发售窗口",
   pageTitle: (page, site) => `${page} · ${site}`,

@@ -3,7 +3,7 @@
 // rests on: the same week in past years, and the events near it ("2 weeks after
 // Next Fest October"), the parts season.estimate combined.
 
-import { CHINESE, kindOf, shortName, weekEvents } from "./events.js";
+import { CHINESE, eventName, kindOf, weekEvents } from "./events.js";
 import { dateFormat, numberFormat } from "./format.js";
 import { eventText, formatDate } from "./heatview.js";
 import { parts as dayParts, toDay, toIso } from "./lib/dates.js";
@@ -30,7 +30,8 @@ export function partText(part, kinds, languages, s = en) {
   if (!m) return part;
   const china = kinds.get(m[1]) === "cn_holiday";
   if (china && !languages.includes(CHINESE)) return null;
-  const name = china ? `${shortName(m[1])} (${t.unconfirmed})` : shortName(m[1]);
+  const short = eventName(m[1], s, { short: true });
+  const name = china ? s.ahead.eventName(short, t.unconfirmed) : short;
   const offset = +m[2];
   if (offset === 0) return t.at(name);
   return offset > 0 ? t.after(offset, name) : t.before(-offset, name);
@@ -73,7 +74,7 @@ export function outlookView(outlook, group, { events = [], band = [], languages 
       value,
       spread,
       drivers,
-      events: weekBand.map((e) => eventText({ ...e, name: e.short }, s)),
+      events: weekBand.map((e) => eventText(e, s, { short: true })),
       eventsFull: weekBand.map((e) => eventText(e, s)),
       bar: has ? { v: (o.expected - 1) / scale, lo: (lo - 1) / scale, hi: (hi - 1) / scale } : null,
       label: t.option(week, has ? t.usually(value) : t.noneSaid, spread, drivers),
