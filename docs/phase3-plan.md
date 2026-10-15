@@ -192,7 +192,12 @@ older quarters have lost, and the chart would show a rise that is not there.
   year layer). Each game has its store link (new tab), date, the "moved here from October 2026,
   3 days ago" marker and the follower count when known (marked when it is an estimate
   from wishlist rank). Order inside each part: games whose top 10 tags match first,
-  then the most followers (unknown last), then name, then appid.
+  then the most followers (unknown last), then name, then appid. With tags picked, each
+  game also says where each picked tag sits among its up to 20 tags (by Steam's tag
+  weight, strongest first, ties by tag id; store pages show only the first few tags at
+  first): "Beat 'em up: tag 6 of 20", or with several tags each one the game has, by
+  place, joined with " · ": "Beat 'em up: tag 6 of 20 · Roguelike: tag 12 of 20"
+  (`tag_pos` and `tag_count` from `week_games`). Real text on its own line, under the date.
 - Most anticipated (built): beside the week's games, the top 10 matching games of the picked
   group by Steam's Top Wishlisted rank, at any date or none, each with its store link (new
   tab), its date as the store shows it and "#212 on Top Wishlisted". A game with no date shows
@@ -201,7 +206,9 @@ older quarters have lost, and the chart would show a rise that is not there.
   under the title names the rest, as the week list does: "All games, Paid, in Simplified
   Chinese". One caveat line: "Rank on Steam's Top Wishlisted list on <snapshot date>. Not
   wishlist counts." No threat, no advice, no follower counts or estimates. Nothing ranked
-  matches: "No matching game is on Top Wishlisted." Methods anchor: `#most-anticipated`.
+  matches: "No matching game is on Top Wishlisted." With tags picked, each game also has the
+  week list's tag place line (`tag_pos` and `tag_count` from `most_anticipated`). Methods
+  anchors: `#most-anticipated`, `#which-tags-match`.
 
 **04 Typical for this time of year, for all games.** The seasonal outlook for the next 26
 weeks (the all-games pattern for the picked languages, paid or free; the intro, "How busy

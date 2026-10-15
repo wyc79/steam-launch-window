@@ -58,8 +58,18 @@ export function fullDate(iso, s = en) {
   return dateFormat(s.locale, { month: "short", day: "numeric", year: "numeric" }).format(toDay(iso) * 86400000);
 }
 
-// list: weekGames' result; gameOf: appid -> the upcoming game (for its date)
-export function detailItems(list, gameOf, s = en) {
+// tagPos: weekGames' or mostAnticipated's [tagid, place] list, count: the game's number
+// of tags, names: tag id -> name. "Beat 'em up: tag 6 of 20 · Roguelike: tag 12 of 20";
+// null when no tags are picked.
+export function tagPosText(tagPos, count, names, s = en) {
+  if (!tagPos?.length) return null;
+  const of = formatNumber(count, s);
+  return tagPos.map(([t, n]) => s.ahead.tagPos(names.get(t) ?? String(t), formatNumber(n, s), of)).join(s.bar.sep);
+}
+
+// list: weekGames' result; gameOf: appid -> the upcoming game (for its date);
+// names: tag id -> name (for where the picked tags sit)
+export function detailItems(list, gameOf, s = en, names = new Map()) {
   return list.map((g) => ({
     appid: g.appid,
     name: g.name || s.ahead.unnamed(g.appid),
@@ -69,6 +79,7 @@ export function detailItems(list, gameOf, s = en) {
     date: dateText(gameOf(g.appid), s),
     followers: followersText(g.followers, g.hype_src, s),
     moved: movedText(g.moved, s),
+    tagPos: tagPosText(g.tag_pos, g.tag_count, names, s),
   }));
 }
 

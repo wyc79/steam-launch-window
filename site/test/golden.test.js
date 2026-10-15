@@ -16,6 +16,7 @@ const TOLERANCE = 1e-9;
 const CALLS = {
   matches: (a) => hm.matches(a.tags, a.selection, a.mode),
   speaks: (a) => hm.speaks(a.langs, a.languages),
+  tag_pos: (a) => hm.tagPos(a.tags, a.selection),
   heatmap: (a) => hm.heatmap(a.games, a.today, a),
   heatmap_rows: (a) => hm.heatmapRows(a.games, a.today, a),
   match_count: (a) => hm.matchCount(a.games, a.history, a),

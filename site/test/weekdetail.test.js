@@ -12,7 +12,29 @@ import {
   movedText,
   steamDate,
   storeUrl,
+  tagPosText,
 } from "../src/weekdetail.js";
+
+describe("where the picked tags sit", () => {
+  const names = new Map([
+    [4158, "Beat 'em up"],
+    [492, "Roguelike"],
+  ]);
+
+  test("one tag: its place of the game's tags", () => {
+    expect(tagPosText([[4158, 6]], 20, names)).toBe("Beat 'em up: tag 6 of 20");
+  });
+
+  test("several tags: each one in the one-tag form, joined with the bar's separator", () => {
+    expect(tagPosText([[4158, 6], [492, 12]], 20, names)).toBe("Beat 'em up: tag 6 of 20 · Roguelike: tag 12 of 20");
+  });
+
+  test("an unnamed tag shows its id; nothing when no tags are picked", () => {
+    expect(tagPosText([[7, 1]], 3, names)).toBe("7: tag 1 of 3");
+    expect(tagPosText([], 20, names)).toBeNull();
+    expect(tagPosText(undefined, 20, names)).toBeNull();
+  });
+});
 
 describe("the moved marker", () => {
   test("says where the game came from and when", () => {
@@ -96,7 +118,7 @@ describe("a week's games", () => {
 
   test("keep weekGames' order and format each line", () => {
     const list = weekGames(games, "2026-10-13", "2026-10-19", { selection: [1], year: true });
-    const items = detailItems(list, (id) => byId.get(id));
+    const items = detailItems(list, (id) => byId.get(id), en, new Map([[1, "Horror"]]));
     expect(items.map((i) => i.appid)).toEqual(list.map((g) => g.appid)); // not re-sorted
     expect(items).toEqual([
       {
@@ -108,6 +130,7 @@ describe("a week's games", () => {
         date: "Oct 2026",
         followers: "about 5,000 followers, estimated from wishlist rank",
         moved: null,
+        tagPos: "Horror: tag 1 of 1",
       },
       {
         appid: 3,
@@ -118,6 +141,7 @@ describe("a week's games", () => {
         date: "2026",
         followers: "120 followers",
         moved: null,
+        tagPos: "Horror: tag 1 of 1",
       },
       {
         appid: 1,
@@ -128,8 +152,14 @@ describe("a week's games", () => {
         date: "Oct 21",
         followers: null,
         moved: "moved here from October 2026, 3 days ago",
+        tagPos: "Horror: tag 1 of 1",
       },
     ]);
+  });
+
+  test("no tag places when no tags are picked", () => {
+    const list = weekGames(games, "2026-10-13", "2026-10-19", { year: true });
+    expect(detailItems(list, (id) => byId.get(id)).map((i) => i.tagPos)).toEqual([null, null, null]);
   });
 
   test("leave the year layer out unless it is on", () => {

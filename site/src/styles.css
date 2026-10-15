@@ -825,7 +825,9 @@ main { display: block; }
   font-size: var(--fs-small);
 }
 .ah-game-meta { color: var(--ink-2); text-align: right; font-variant-numeric: tabular-nums; }
-.ah-moved { grid-column: 1 / -1; color: var(--ink-2); font-size: var(--fs-meta); }
+/* where the picked tags sit in the game's tags, and a date change: full width, under the name */
+.ah-tagpos, .ah-moved { grid-column: 1 / -1; color: var(--ink-2); font-size: var(--fs-meta); overflow-wrap: anywhere; }
+.ah-tagpos { font-variant-numeric: tabular-nums; }
 /* the week's games: a search box with a live count, then a scroll area */
 .ah-find { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-top: var(--s3); }
 .ah-search {
@@ -866,6 +868,8 @@ main { display: block; }
 .ah-top-list li { padding: var(--s2) 0; border-top: 1px solid var(--rule-soft); font-size: var(--fs-small); }
 .ah-top-game { overflow-wrap: anywhere; }
 .ah-top-meta { display: block; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+/* where the picked tags sit: the week list's size (.ah-tagpos) */
+.ah-top-tags { font-size: var(--fs-meta); overflow-wrap: anywhere; }
 .ah-top-note { margin: var(--s2) 0 0; }
 
 /* Tablets and small laptops: narrower weeks; the heatmap scrolls in its own area if it must */
