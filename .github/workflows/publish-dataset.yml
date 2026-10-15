@@ -6,7 +6,9 @@ name: publish dataset
 # off still starts the weekly upload. Starting from that run, not from a cron
 # of its own, keeps the order when GitHub delays schedules (9 hours on 2026-10-12).
 # The manifest check below still stops an upload of a broken build.
-# The gp/ folder in the dataset is written by the daily job and left alone here.
+# The gp/ folder in the dataset is written by the daily job and left alone here;
+# its CSV files are downloaded and copied to gp_parquet/, which the dataset
+# viewer can show.
 #
 # Off by default. Needs:
 #   secret   HF_TOKEN          Hugging Face token with write access to the dataset
@@ -48,12 +50,20 @@ jobs:
           cache: pip
       - run: pip install ".[publish]"
 
-      - name: Build (dry run)
-        if: github.event_name == 'workflow_dispatch' && !inputs.upload
-        env:  # read only: to list the gp/ configs on the card
+      - name: Download the Games Popularity files
+        if: vars.HF_DATASET_REPO != ''
+        env:  # the token is only for the higher rate limit: runners share IPs
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_DATASET_REPO: ${{ vars.HF_DATASET_REPO }}
-        run: python -m pipeline.publish_dataset --dry-run
+        run: |
+          for kind in followers players; do
+            python -m pipeline.hf_sync fetch --repo "$HF_DATASET_REPO" --dest _hf \
+              --glob "gp/$kind/*.csv.gz" --allow-none
+          done
+
+      - name: Build (dry run)
+        if: github.event_name == 'workflow_dispatch' && !inputs.upload
+        run: python -m pipeline.publish_dataset --gp-dir _hf/gp --dry-run
       - name: Attach the built files to this run
         if: github.event_name == 'workflow_dispatch' && !inputs.upload
         uses: actions/upload-artifact@v4
@@ -68,4 +78,4 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_DATASET_REPO: ${{ vars.HF_DATASET_REPO }}
-        run: python -m pipeline.publish_dataset
+        run: python -m pipeline.publish_dataset --gp-dir _hf/gp

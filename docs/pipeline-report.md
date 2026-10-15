@@ -130,10 +130,12 @@ As built (`strikeoo/steam-launch-data`, public):
   `upcoming/snapshots/YYYY-MM.parquet` (with `snapshot_date`),
   `upcoming/release_changes.parquet`, `upcoming/runs.parquet`, `tags.parquet`,
   `events.parquet`, and `gp/followers|players/YYYY-MM-DD.csv.gz` with
-  `gp/state.csv` and `gp/runs.csv`. The card defines one config per table and
-  says for each column whether it was observed at the time or is today's view.
-- **Writers:** the publish job writes the Parquet files and the card after each
-  history run; the daily job writes `gp/`. Both are in one concurrency group and
+  `gp/state.csv` and `gp/runs.csv`, plus `gp_parquet/followers|players/YYYY-MM.parquet`,
+  a weekly copy of the `gp/` points (the dataset viewer reads every config as Parquet).
+  The card defines one config per table and says for each column whether it was
+  observed at the time or is today's view.
+- **Writers:** the publish job writes the Parquet files (`gp_parquet/` from a download
+  of `gp/`) and the card after each history run; the daily job writes `gp/`. Both are in one concurrency group and
   both commit with a parent revision, so neither can overwrite the other. The
   publisher never deletes, and a test guards that.
 - **Auth:** fine-grained `HF_TOKEN` secret with write access to the dataset.
@@ -197,7 +199,6 @@ new `gp.py`, `collect_gp.py`, `hf_sync.py`, `scripts/compare_followers.py`;
 - Trusted Publisher login for Hugging Face.
 - First-day and first-week review counts for launches since 2022 (an optional
   Pi job, about 100,000 requests; command in the server README).
-- Monthly Parquet for `gp/` if the CSV files grow past what the estimate says.
 - Quarterly tags on the dataset (for example `v2026.10`) so a paper can cite a
   fixed version.
 

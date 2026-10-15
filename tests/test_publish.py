@@ -1,6 +1,5 @@
 import gzip
 import json
-from types import SimpleNamespace
 
 import pytest
 
@@ -83,31 +82,48 @@ def test_card_lists_only_configs_with_data(data, tmp_path):
     assert "license: cc-by-4.0" in card
 
 
-def test_card_lists_games_popularity_configs_found_in_the_dataset(data, tmp_path):
+GP_FOLLOWERS = ("appid,followers,observed_at,fetched_at\n"
+                "10,5,2026-09-30T08:12:46.378000+00:00,2026-10-12T04:43:15+00:00\n"
+                "10,7,2026-10-01T00:00:00+00:00,2026-10-12T04:43:15+00:00\n")  # no fraction: isoformat drops .000000
+
+
+def test_card_lists_games_popularity_configs_built_from_gp_dir(data, tmp_path):
     d, events = data
     out = tmp_path / "out"
     pub.build(d, events, out, "mit")
     card = (out / "README.md").read_text(encoding="utf-8")
     assert "gp_followers" not in card and "gp_players" not in card
-    pub.build(d, events, out, "mit", gp_kinds={"followers"})
+    write_gz(tmp_path / "gp/followers/2026-10-12.csv.gz", GP_FOLLOWERS)
+    pub.build(d, events, out, "mit", gp_dir=tmp_path / "gp")
     card = (out / "README.md").read_text(encoding="utf-8")
-    assert "config_name: gp_followers" in card and "gp/followers/*.csv.gz" in card
-    assert "| `gp_followers` |" in card and "gp_players" not in card
-    assert "games-popularity.com" in card
-    assert "gp/followers/2026-10-01.csv.gz" not in json.loads((out / "manifest.json").read_text())
+    assert "config_name: gp_followers" in card and "gp_parquet/followers/*.parquet" in card
+    assert "| `gp_followers` | raw | 2 |" in card and "gp_players" not in card
+    assert "games-popularity.com" in card and ".csv.gz" not in card.split("---")[1]  # no CSV config
 
 
-def test_remote_gp_kinds_looks_for_csv_files_under_gp():
-    api = SimpleNamespace(list_repo_files=lambda repo_id, repo_type=None: [
-        "README.md", "gp/state.csv", "gp/followers/2026-10-12.csv.gz", "followers/latest.parquet"])
-    assert pub.remote_gp_kinds("me/data", "x", api=api) == {"followers"}
+def test_gp_points_become_monthly_parquet_by_fetch_day(data, tmp_path):
+    d, events = data
+    write_gz(tmp_path / "gp/followers/2026-10-12.csv.gz", GP_FOLLOWERS)
+    write_gz(tmp_path / "gp/followers/2026-10-13.csv.gz", "appid,followers,observed_at,fetched_at\n"
+             "11,3,2026-10-12T08:00:00.5+00:00,2026-10-13T01:00:00+00:00\n")
+    write_gz(tmp_path / "gp/players/2026-11-02.csv.gz", "appid,players,observed_at,fetched_at\n"
+             "10,40,2026-10-30T10:00:00+00:00,2026-11-02T01:00:00+00:00\n")
+    out = tmp_path / "out"
+    stats = pub.build(d, events, out, "mit", gp_dir=tmp_path / "gp")
+    assert stats["gp_parquet/followers"] == {"2026-10": 3} and stats["gp_parquet/players"] == {"2026-11": 1}
+    df = pd.read_parquet(out / "gp_parquet/followers/2026-10.parquet")
+    assert list(df.columns) == ["appid", "followers", "observed_at", "fetched_at"]
+    assert str(df["followers"].dtype) == "Int64" and df["observed_at"].notna().all()
+    assert df["observed_at"].iloc[1] == pd.Timestamp("2026-10-01", tz="UTC")
+    assert str(pd.read_parquet(out / "gp_parquet/players/2026-11.parquet")["players"].dtype) == "Int64"
+    assert "gp_parquet/followers/2026-10.parquet" in json.loads((out / "manifest.json").read_text())
+    assert not (out / "gp").exists()  # the upload must never touch the daily job's gp/
 
 
 def test_default_card_grants_no_data_license(data, tmp_path, monkeypatch):
     d, events = data
     out = tmp_path / "out"
     monkeypatch.setenv("HF_TOKEN", "x")
-    monkeypatch.delenv("HF_DATASET_REPO", raising=False)  # with a repo, the build would ask Hugging Face
     monkeypatch.setattr(pub, "upload", lambda *a, **k: pytest.fail("a dry run must not upload"))
     assert pub.main(["--data-dir", str(d), "--events", str(events), "--out", str(out), "--dry-run"]) == 0
     card = (out / "README.md").read_text(encoding="utf-8")
@@ -267,23 +283,14 @@ def test_upload_names_its_parent_and_skips_the_marker(data, tmp_path):
     assert not hub.uploads[0].get("delete_patterns")  # gp/ in the dataset is the daily job's; never delete it
 
 
-def test_main_lists_the_remote_gp_configs_on_the_card(data, tmp_path, monkeypatch):
+def test_main_passes_gp_dir_to_the_build(data, tmp_path):
     d, events = data
     out = tmp_path / "out"
-    monkeypatch.setenv("HF_TOKEN", "x")
-    monkeypatch.setattr(pub, "remote_gp_kinds", lambda repo_id, token: {"players"})
+    write_gz(tmp_path / "gp/players/2026-10-12.csv.gz", "appid,players,observed_at,fetched_at\n"
+             "10,40,2026-10-01T10:00:00+00:00,2026-10-12T01:00:00+00:00\n")
     assert pub.main(["--data-dir", str(d), "--events", str(events), "--out", str(out),
-                     "--repo-id", "me/data", "--dry-run"]) == 0
+                     "--gp-dir", str(tmp_path / "gp"), "--dry-run"]) == 0
     assert "config_name: gp_players" in (out / "README.md").read_text(encoding="utf-8")
-
-
-def test_remote_gp_kinds_explains_a_missing_dataset():
-    from huggingface_hub.errors import RepositoryNotFoundError
-
-    def missing(repo_id, repo_type=None):
-        raise RepositoryNotFoundError("nope", response=SimpleNamespace(headers={}, request=None))
-    with pytest.raises(SystemExit, match="create it"):
-        pub.remote_gp_kinds("me/data", "x", api=SimpleNamespace(list_repo_files=missing))
 
 
 def test_upload_stops_when_the_check_fails(data, tmp_path):
