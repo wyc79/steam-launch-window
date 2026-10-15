@@ -29,7 +29,7 @@ const game = (appid, precision, date, date_end, extra = {}) => ({
 });
 // week of Oct 19: 2 exact dates and 25 October games spread over it; no events in it
 const GAMES = [
-  game(1, "day", "2026-10-20", "2026-10-20", { moved: ["moved", "Q4 2026", "2026-10-12"] }),
+  game(1, "day", "2026-10-20", "2026-10-20", { moved: ["moved", "Q4 2026", "2026-10-12"], demo: true }),
   game(2, "day", "2026-10-21", "2026-10-21"),
   ...Array.from({ length: 25 }, (_, i) => game(100 + i, "month", "2026-10-01", "2026-10-31")),
 ];
@@ -122,9 +122,17 @@ describe("an opened week", () => {
 
   test("says where the picked tag sits in each game's tags, after the date and before a move", () => {
     const first = body.querySelector(".ah-list li");
-    expect(first.children.map((c) => c.className)).toEqual(["ah-game", "ah-game-meta", "ah-tagpos", "ah-moved"]);
+    expect(first.children.map((c) => c.className)).toEqual(["ah-name", "ah-game-meta", "ah-tagpos", "ah-moved"]);
     expect(first.querySelector(".ah-tagpos").textContent).toBe("Horror: tag 1 of 1");
     expect(body.querySelectorAll(".ah-list .ah-tagpos")).toHaveLength(27);
+  });
+
+  test("marks a game with a demo right after its name", () => {
+    const [first, second] = body.querySelectorAll(".ah-list li");
+    expect(first.querySelector(".ah-name").children.map((c) => c.className)).toEqual(["ah-game", "ah-demo"]);
+    expect(first.querySelector(".ah-demo").textContent).toBe("Demo available");
+    expect(first.querySelector(".ah-game-meta").textContent).not.toContain("Demo");
+    expect(second.querySelector(".ah-demo")).toBeNull();
   });
 
   test("is announced with its row", () => {

@@ -209,6 +209,21 @@ def test_merge_apps_keeps_first_seen():
         (3, "New", "2026-01-01"), (4, "B", "2026-10-11")]
 
 
+def test_merge_apps_records_the_earliest_demo():
+    items = [{"appid": 3, "related_items": {"demo_appid": [30, 31]}},
+             {"appid": 4, "related_items": {"demo_appid": [40]}},  # Steam no longer lists the demo
+             {"appid": 5}]
+    rows = cu.merge_apps([], items, "2026-10-11", {30: 200, 31: 100})
+    assert [(r["appid"], r["demo_appids"], r["demo_release_ts"]) for r in rows] == [
+        (3, "30|31", 100), (4, "40", ""), (5, "", "")]
+
+
+def test_merge_apps_keeps_the_last_demo_date_without_a_lookup():
+    existing = [{"appid": "3", "name": "Old", "demo_release_ts": "100"}]
+    rows = cu.merge_apps(existing, [{"appid": 3, "related_items": {"demo_appid": [30]}}, {"appid": 4}], "2026-10-11")
+    assert [(r["appid"], r["demo_release_ts"]) for r in rows] == [(3, "100"), (4, "")]
+
+
 # -- storage -----------------------------------------------------------------
 
 def test_csv_round_trip_and_deterministic_gzip(tmp_path):
@@ -236,8 +251,9 @@ def test_merge_apps_records_last_seen():
     assert [(str(r["appid"]), r["last_seen"]) for r in rows] == [("3", "2026-10-11"), ("9", "2026-02-01")]
 
 
-def _fake_upcoming(monkeypatch, ranking):
-    items = [{"appid": 5, "name": "A", "release": {"coming_soon_display": "text_tba"}}]
+def _fake_upcoming(monkeypatch, ranking, demos=()):
+    items = [{"appid": 5, "name": "A", "release": {"coming_soon_display": "text_tba"},
+              "related_items": {"demo_appid": list(demos)}}]
     names = {"english": {492: "Indie"}, "schinese": {492: "独立"}}
     monkeypatch.setattr(steam, "tag_list", lambda client, language="english": ("v", names[language]))
     monkeypatch.setattr(steam, "store_query", lambda *a, **k: items)
@@ -254,6 +270,36 @@ def test_upcoming_keeps_the_snapshot_when_the_wishlist_crawl_fails(tmp_path, mon
     assert [(r["appid"], r["wishlist_rank"]) for r in snap] == [("5", "")]
     runs = storage.read_csv(tmp_path / "upcoming/runs.csv")
     assert runs[0]["ranking_ok"] == "0"
+
+
+def test_upcoming_keeps_the_last_demo_dates_when_the_lookup_fails(tmp_path, monkeypatch):
+    _fake_upcoming(monkeypatch, lambda client, cache_ttl=None: [5])
+    storage.write_csv(tmp_path / "upcoming/apps.csv", [{"appid": 5, "name": "A", "demo_release_ts": 100}],
+                      cu.APP_FIELDS)
+
+    def broken(*a, **k):
+        raise HTTPStatusError(429, "https://api.steampowered.com/IStoreBrowseService/GetItems/v1/")
+    monkeypatch.setattr(steam, "demo_release", broken)
+    code = cu.main(["--data-dir", str(tmp_path), "--cache-dir", str(tmp_path / "c"), "--today", "2026-10-11"])
+    assert code == 1
+    apps = storage.read_csv(tmp_path / "upcoming/apps.csv")
+    assert [(r["appid"], r["last_seen"], r["demo_release_ts"]) for r in apps] == [("5", "2026-10-11", "100")]
+    assert storage.read_csv(tmp_path / "upcoming/runs.csv")[0]["demos_ok"] == "0"
+
+
+def test_upcoming_records_each_games_earliest_demo(tmp_path, monkeypatch):
+    _fake_upcoming(monkeypatch, lambda client, cache_ttl=None: [5], demos=[50, 51])
+    asked = []
+
+    def get_items(client, ids, data_request, cache_ttl=None):
+        asked.append(ids)
+        return {50: {"release": {"steam_release_date": 300}}, 51: {"release": {"steam_release_date": 200}}}
+    monkeypatch.setattr(steam, "get_items", get_items)
+    code = cu.main(["--data-dir", str(tmp_path), "--cache-dir", str(tmp_path / "c"), "--today", "2026-10-11"])
+    assert code == 0 and asked == [[50, 51]]
+    apps = storage.read_csv(tmp_path / "upcoming/apps.csv")
+    assert [(r["appid"], r["demo_appids"], r["demo_release_ts"]) for r in apps] == [("5", "50|51", "200")]
+    assert storage.read_csv(tmp_path / "upcoming/runs.csv")[0]["demos_ok"] == "1"
 
 
 def test_upcoming_rerun_replaces_the_days_run_row(tmp_path, monkeypatch):

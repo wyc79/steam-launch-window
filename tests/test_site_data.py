@@ -9,7 +9,7 @@ from pipeline import storage
 
 SNAP = ["appid", "release_ts", "display", "raw", "precision", "date", "date_end", "date_ok",
         "early_access", "wishlist_rank", "price_cents"]
-APPS = ["appid", "name", "developers", "publishers", "franchises", "tags", "demo_appids", "is_free",
+APPS = ["appid", "name", "developers", "publishers", "franchises", "tags", "demo_appids", "demo_release_ts", "is_free",
         "languages", "audio_languages", "first_seen", "last_seen"]
 EVENTS = """events:
 - name: Steam Autumn Sale
@@ -18,6 +18,7 @@ EVENTS = """events:
   end: 2026-12-02
   source: https://example.com
 """
+LAST_SECOND = 1791849599  # 2026-10-12 23:59:59 UTC, the newest snapshot's last second
 
 
 def snap(appid, raw, precision, start="", end="", rank="", ea="0"):
@@ -41,8 +42,10 @@ def data(tmp_path):
             snap(7, "2027", "year", "2027-01-01", "2027-12-31")]
     storage.write_csv(snaps / "2026-10-11.csv.gz", day1, SNAP)
     storage.write_csv(snaps / "2026-10-12.csv.gz", day2, SNAP)
-    apps = [{"appid": 1, "name": "Mover", "tags": "1716:50|1774:900", "is_free": "0", "languages": "english"},
-            {"appid": 2, "name": "Setter", "tags": "113:100|1774:90", "is_free": "0", "languages": "english|schinese"},
+    apps = [{"appid": 1, "name": "Mover", "tags": "1716:50|1774:900", "is_free": "0", "languages": "english",
+             "demo_release_ts": LAST_SECOND},
+            {"appid": 2, "name": "Setter", "tags": "113:100|1774:90", "is_free": "0", "languages": "english|schinese",
+             "demo_release_ts": LAST_SECOND + 1},
             {"appid": 3, "name": "Free Flag", "tags": "1774:10", "is_free": "1", "languages": "schinese"},
             {"appid": 5, "name": "Ranked", "tags": "1774:5|99999:4", "is_free": "0", "languages": "english"},
             {"appid": 7, "name": "Someday", "tags": "1774:5", "is_free": "0", "languages": "english"}]
@@ -116,6 +119,11 @@ def test_moved_marker_from_the_last_30_days(data, tmp_path):
     assert up[2]["moved"] == ["date_set", "Coming soon", "2026-10-12"]
     assert up[3]["moved"] is None and up[7]["moved"] is None  # unchanged, or new on the list
     assert stats["moved"] == 2
+
+
+def test_demo_when_one_was_out_by_the_end_of_the_snapshot_day(data, tmp_path):
+    _, _, up, _, _ = built(data, tmp_path)
+    assert {a: g["demo"] for a, g in up.items()} == {1: True, 2: False, 3: False, 5: False, 7: False}
 
 
 def test_recent_changes_ignores_changes_older_than_the_window(tmp_path):

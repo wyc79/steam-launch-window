@@ -59,7 +59,7 @@ export function tagPosText(tagPos, count, names, s = en) {
   return tagPos.map(([t, n]) => s.ahead.tagPos(names.get(t) ?? String(t), formatNumber(n, s), of)).join(s.bar.sep);
 }
 
-// list: weekGames' result; gameOf: appid -> the upcoming game (for its date);
+// list: weekGames' result; gameOf: appid -> the upcoming game (for its date and demo);
 // names: tag id -> name (for where the picked tags sit)
 export function detailItems(list, gameOf, s = en, names = new Map()) {
   return list.map((g) => ({
@@ -71,6 +71,7 @@ export function detailItems(list, gameOf, s = en, names = new Map()) {
     date: dateText(gameOf(g.appid), s),
     followers: followersText(g.followers, g.hype_src, s),
     moved: movedText(g.moved, s),
+    demo: gameOf(g.appid)?.demo ? s.ahead.demo : null,
     tagPos: tagPosText(g.tag_pos, g.tag_count, names, s),
   }));
 }

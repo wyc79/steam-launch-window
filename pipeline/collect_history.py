@@ -129,8 +129,7 @@ def game_row(item: dict, demo_release: dict[int, int]) -> dict | None:
     if not launch_ts:
         return None
     meta = steam.meta_fields(item)
-    demos = [int(d) for d in meta["demo_appids"].split("|") if d]
-    demo_ts = min((demo_release[d] for d in demos if d in demo_release), default=None)
+    demo_ts = steam.first_demo(steam.demo_appids(item), demo_release)
     reviews = ((item.get("reviews") or {}).get("summary_filtered") or {}).get("review_count", 0)
     return {
         "appid": item["appid"],
@@ -262,11 +261,7 @@ def main(argv=None) -> int:
             got = list_month(client, month)
             items.update((it["appid"], it) for it in got)
             log.info("%s: %d games", month.strftime("%Y-%m"), len(got))
-        demo_ids = sorted({int(d) for it in items.values()
-                           for d in (it.get("related_items") or {}).get("demo_appid") or []})
-        demos = steam.get_items(client, demo_ids, {"include_release": True}, cache_ttl=LISTING_TTL)
-        demo_release = {a: d["release"]["steam_release_date"] for a, d in demos.items()
-                        if (d.get("release") or {}).get("steam_release_date")}
+        demo_release = steam.demo_release(client, items.values(), cache_ttl=LISTING_TTL)
         since_ts = pacific_ts(args.since)
         rows = {}
         for appid, it in items.items():

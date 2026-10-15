@@ -3,8 +3,8 @@ name: collect daily
 # Daily: snapshot every coming-soon game, then pull follower and player history
 # from Games Popularity within its daily budget (see pipeline/collect_gp.py).
 # A second, later schedule is a catch-up: it skips the snapshot if today's is
-# already saved with working wishlist ranks, so a dropped or failed 18:30 run
-# (including a failed wishlist crawl) is retried once.
+# already saved with working wishlist ranks and demo dates, so a dropped or failed
+# 18:30 run (including a failed wishlist crawl or demo lookup) is retried once.
 #
 # Off by default. Repository variables (Settings > Secrets and variables >
 # Actions > Variables) turn parts on:
@@ -54,12 +54,12 @@ jobs:
         with:
           ref: data
           path: _data
-      - name: Is today's snapshot already saved, with wishlist ranks?
+      - name: Is today's snapshot already saved, with wishlist ranks and demo dates?
         id: today
         run: |
           day=$(date -u +%F)
-          # ranking_ok is the last column of runs.csv
-          if [ -f "_data/upcoming/snapshots/$day.csv.gz" ] && grep -q "^$day,.*,1$" _data/upcoming/runs.csv 2>/dev/null; then
+          # ranking_ok and demos_ok are the last two columns of runs.csv
+          if [ -f "_data/upcoming/snapshots/$day.csv.gz" ] && grep -q "^$day,.*,1,1$" _data/upcoming/runs.csv 2>/dev/null; then
             echo "done=true" >> "$GITHUB_OUTPUT"
           fi
       - uses: actions/setup-python@v5

@@ -199,3 +199,17 @@ def test_review_counts_sends_the_purchase_type_and_language():
     steam.review_counts(client, 1, 0, 1, steam.PURCHASE_ALL, "schinese")
     _, payload = client.calls[0]
     assert payload["purchase_type"] == 1 and payload["languages"] == ["schinese"]
+
+
+def test_demo_release_looks_up_each_linked_demo_once(monkeypatch):
+    asked = []
+
+    def get_items(client, ids, data_request, cache_ttl=None):
+        asked.append(ids)
+        return {30: {"release": {"steam_release_date": 100}}, 31: {"release": {}}}
+    items = [{"related_items": {"demo_appid": [31, 30]}}, {"related_items": {"demo_appid": [30]}}, {}]
+    monkeypatch.setattr(steam, "get_items", get_items)
+    assert steam.demo_release(None, items) == {30: 100}  # 31 has no date
+    assert asked == [[30, 31]]
+    assert steam.first_demo([31, 30], {30: 100, 31: 50}) == 50
+    assert steam.first_demo([7], {30: 100}) is None

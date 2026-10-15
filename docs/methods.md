@@ -336,6 +336,12 @@ equal weight differently, so a place can differ from the store page by one or
 so. On the 2026-10-13 snapshot, such ties changed the order for 19% of upcoming
 games and moved 2.8% of all places, most of them by one.
 
+The week list marks a game "Demo available" when Steam links a demo to it and
+that demo's release date is on or before the snapshot day. The collector looks
+up every linked demo each day, so a demo Steam no longer lists drops out. On
+the 2026-10-15 snapshot, 8,111 of the 20,709 upcoming games on the site had
+one. Only 2 of the 18,140 linked demos were not out yet.
+
 The heatmap and every count on the site use all 20 tags. The timing model's
 niches and tag effects use the top 10 tags by weight, as
 [The timing model](#the-timing-model) explains. Its checks also try the top 5

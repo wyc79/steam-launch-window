@@ -177,8 +177,9 @@ upcoming/snapshots/YYYY-MM-DD.csv.gz  one row per coming-soon game per day:
                                       release date (raw, date, date_end, precision),
                                       Early Access flag, wishlist rank, price if set
 upcoming/apps.csv                     name, developers, publishers, tags with weights,
-                                      demo, supported and full-audio languages,
-                                      first_seen, last_seen (last day coming soon)
+                                      demo and its release time, supported and
+                                      full-audio languages, first_seen,
+                                      last_seen (last day coming soon)
 upcoming/runs.csv                     one line per day (a rerun replaces it)
 followers/latest.csv                  newest community follower count per game
 followers/snapshots/YYYY-MM-DD.csv.gz community counts fetched that day

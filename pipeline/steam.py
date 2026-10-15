@@ -89,6 +89,24 @@ def get_items(client: Client, appids: list[int], data_request: dict, *,
     return out
 
 
+def demo_appids(item: dict) -> list[int]:
+    return [int(d) for d in (item.get("related_items") or {}).get("demo_appid") or []]
+
+
+def demo_release(client: Client, items, *, cache_ttl: float | None = None) -> dict[int, int]:
+    """Release time of each demo the items link to. A demo Steam no longer lists, or
+    one with no date, is left out."""
+    ids = sorted({d for it in items for d in demo_appids(it)})
+    demos = get_items(client, ids, {"include_release": True}, cache_ttl=cache_ttl)
+    return {a: d["release"]["steam_release_date"] for a, d in demos.items()
+            if (d.get("release") or {}).get("steam_release_date")}
+
+
+def first_demo(demo_ids: list[int], release: dict[int, int]) -> int | None:
+    """The earliest release time among a game's demos, or None."""
+    return min((release[d] for d in demo_ids if d in release), default=None)
+
+
 _SEARCH_ROW = re.compile(r'data-ds-appid="(\d+)"')
 _SEARCH_ROW_ANY = re.compile(r'data-ds-appid="[^"]*"')  # bundles too, for counting rows
 
@@ -295,7 +313,7 @@ def meta_fields(item: dict) -> dict:
     """Slow-changing descriptive fields for one store item."""
     basic = item.get("basic_info") or {}
     tags = item.get("tags") or [{"tagid": t, "weight": 0} for t in item.get("tagids") or []]
-    demos = (item.get("related_items") or {}).get("demo_appid") or []
+    demos = demo_appids(item)
     return {
         "name": item.get("name", ""),
         "developers": _names(basic.get("developers")),

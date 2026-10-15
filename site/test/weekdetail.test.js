@@ -111,7 +111,7 @@ describe("a week's games", () => {
   });
   const games = [
     up(1, "Zed", "day", "2026-10-21", "2026-10-21", { moved: ["moved", "October 2026", "2026-10-10"] }),
-    up(2, "", "month", "2026-10-01", "2026-10-31", { followers: 5000, hype_src: "r" }),
+    up(2, "", "month", "2026-10-01", "2026-10-31", { followers: 5000, hype_src: "r", demo: true }),
     up(3, "Alpha", "year", "2026-01-01", "2026-12-31", { followers: 120, hype_src: "f" }),
   ];
   const byId = new Map(games.map((g) => [g.appid, g]));
@@ -130,6 +130,7 @@ describe("a week's games", () => {
         date: "10/2026",
         followers: "about 5,000 followers, estimated from wishlist rank",
         moved: null,
+        demo: "Demo available",
         tagPos: "Horror: tag 1 of 1",
       },
       {
@@ -141,6 +142,7 @@ describe("a week's games", () => {
         date: "2026",
         followers: "120 followers",
         moved: null,
+        demo: null,
         tagPos: "Horror: tag 1 of 1",
       },
       {
@@ -152,6 +154,7 @@ describe("a week's games", () => {
         date: "10/21",
         followers: null,
         moved: "moved here from October 2026, 3 days ago",
+        demo: null,
         tagPos: "Horror: tag 1 of 1",
       },
     ]);
