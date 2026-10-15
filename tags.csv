@@ -1,447 +1,447 @@
-tagid,name
-9,Strategy
-19,Action
-21,Adventure
-84,Design & Illustration
-87,Utilities
-113,Free to Play
-122,RPG
-128,Massively Multiplayer
-492,Indie
-493,Early Access
-597,Casual
-599,Simulation
-699,Racing
-701,Sports
-784,Video Production
-809,Photo Editing
-872,Animation & Modeling
-1027,Audio Production
-1036,Education
-1445,Software Training
-1616,Trains
-1621,Music
-1625,Platformer
-1628,Metroidvania
-1637,Dogs
-1638,Dog
-1643,Building
-1644,Driving
-1645,Tower Defense
-1646,Hack and Slash
-1647,Western
-1651,Satire
-1654,Relaxing
-1659,Zombies
-1662,Survival
-1663,FPS
-1664,Puzzle
-1665,Match 3
-1666,Card Game
-1667,Horror
-1669,Moddable
-1670,4X
-1671,Superhero
-1673,Aliens
-1674,Typing
-1676,RTS
-1677,Turn-Based
-1678,War
-1680,Heist
-1681,Pirates
-1684,Fantasy
-1685,Co-op
-1687,Stealth
-1688,Ninja
-1693,Classic
-1695,Open World
-1697,Third Person
-1698,Point & Click
-1702,Crafting
-1708,Tactical
-1710,Surreal
-1714,Psychedelic
-1716,Roguelike
-1717,Hex Grid
-1718,MOBA
-1719,Comedy
-1720,Dungeon Crawler
-1721,Psychological Horror
-1723,Action RTS
-1730,Sokoban
-1732,Voxel
-1733,Unforgiving
-1734,Fast-Paced
-1738,Hidden Object
-1741,Turn-Based Strategy
-1742,Story Rich
-1743,Fighting
-1746,Basketball
-1751,Comic Book
-1752,Rhythm
-1753,Skateboarding
-1754,MMORPG
-1755,Space
-1756,Great Soundtrack
-1759,Perma Death
-1770,Board Game
-1773,Arcade
-1774,Shooter
-1775,PvP
-1776,Espionage
-1777,Steampunk
-3796,Based On A Novel
-3798,Side Scroller
-3799,Visual Novel
-3810,Sandbox
-3813,Real Time Tactics
-3814,Third-Person Shooter
-3834,Exploration
-3835,Post-apocalyptic
-3839,First-Person
-3841,Local Co-Op
-3843,Online Co-Op
-3854,Lore-Rich
-3859,Multiplayer
-3871,2D
-3877,Precision Platformer
-3878,Competitive
-3916,Old School
-3920,Cooking
-3934,Immersive
-3942,Sci-fi
-3952,Gothic
-3954,Rail Shooter
-3955,Character Action Game
-3959,Roguelite
-3964,Pixel Graphics
-3965,Epic
-3968,Physics
-3978,Survival Horror
-3987,Historical
-3993,Combat
-4004,Retro
-4026,Difficult
-4036,Parkour
-4046,Dragons
-4057,Magic
-4064,Thriller
-4085,Anime
-4094,Minimalist
-4102,Combat Racing
-4106,Action-Adventure
-4115,Cyberpunk
-4136,Funny
-4137,Transhumanism
-4145,Cinematic
-4150,World War II
-4155,Class-Based
-4158,Beat 'em up
-4161,Real-Time
-4162,Kids
-4166,Atmospheric
-4168,Military
-4172,Medieval
-4175,Realistic
-4182,Singleplayer
-4184,Chess
-4190,Addictive
-4191,3D
-4195,Cartoony
-4202,Trading
-4231,Action RPG
-4234,Short
-4236,Loot
-4242,Episodic
-4252,Stylized
-4255,Shoot 'Em Up
-4291,Spaceships
-4295,Futuristic
-4305,Colorful
-4325,Turn-Based Combat
-4328,City Builder
-4342,Dark
-4345,Gore
-4364,Grand Strategy
-4376,Assassin
-4400,Abstract
-4434,JRPG
-4474,CRPG
-4486,Choose Your Own Adventure
-4508,Co-op Campaign
-4520,Farming
-4535,Dwarves
-4559,Quick-Time Events
-4562,Cartoon
-4598,Alternate History
-4604,Dark Fantasy
-4608,Swordplay
-4637,Top-Down Shooter
-4667,Violent
-4684,Wargame
-4695,Economy
-4711,Replay Value
-4726,Cute
-4736,2D Fighter
-4747,Character Customization
-4758,Twin Stick Shooter
-4777,Spectacle fighter
-4791,Top-Down
-4821,Mechs
-4835,6DOF
-4840,4 Player Local
-4845,Capitalism
-4852,Billiards
-4878,Parody 
-4885,Bullet Hell
-4947,Romance
-4975,2.5D
-4994,Naval Combat
-5030,Dystopian 
-5055,eSports
-5125,Procedural Generation
-5154,Score Attack
-5160,Dinosaurs
-5179,Cold War
-5186,Psychological
-5228,Blood
-5230,Sequel
-5300,God Game
-5348,Mod
-5350,Family Friendly
-5363,Destruction
-5372,Conspiracy
-5379,2D Platformer
-5382,World War I
-5390,Time Attack
-5395,3D Platformer
-5407,Benchmark
-5411,Beautiful
-5432,Programming
-5502,Hacking
-5537,Puzzle Platformer
-5547,Arena Shooter
-5608,Emotional
-5613,Detective
-5652,Collectathon
-5673,Modern
-5708,Remake
-5711,Team-Based
-5716,Mystery
-5727,Baseball
-5752,Robots
-5765,Gun Customization
-5794,Science
-5796,Bullet Time
-5851,Isometric
-5900,Walking Simulator
-5914,Tennis
-5923,Dark Humor
-5941,Reboot
-5981,Mining
-6041,Horses
-6052,Noir
-6054,Elves
-6129,Logic
-6214,Birds
-6276,Inventory Management
-6310,Diplomacy
-6378,Crime
-6426,Choices Matter
-6506,3D Fighter
-6621,Pinball
-6625,Time Manipulation
-6650,Nudity
-6691,1990's
-6702,Mars
-6730,PvE
-6815,Hand-drawn
-6835,Poker
-6869,Nonlinear
-6910,Naval
-6915,Martial Arts
-6948,Rome
-6971,Multiple Endings
-7038,Golf
-7107,Real-Time with Pause
-7108,Party
-7178,Party Game
-7208,Female Protagonist
-7250,Linear
-7309,Skiing
-7328,Bowling
-7332,Base Building
-7368,Local Multiplayer
-7423,Sniper
-7432,Lovecraftian
-7481,Controller
-7556,Dice
-7569,Grid-Based Movement
-7622,Offroad
-7702,Narrative
-7743,1980s
-7918,Dwarf
-7926,Artificial Intelligence
-7948,Soundtrack
-8013,Software
-8075,TrackIR
-8093,Minigames
-8122,Level Editor
-8253,Music-Based Procedural Generation
-8369,Investigation
-8666,Runner
-8945,Resource Management
-9130,Hentai
-9157,Underwater
-9204,Immersive Sim
-9271,Trading Card Game
-9541,Demons
-9551,Dating Sim
-9564,Hunting
-9592,Dynamic Narration
-9626,Animals
-9803,Snow
-10235,Life Sim
-10383,Transportation
-10397,Memes
-10437,Trivia
-10617,Samurai
-10679,Time Travel
-10695,Party-Based RPG
-10808,Supernatural
-10816,Split Screen
-11014,Interactive Fiction
-11095,Boss Rush
-11104,Vehicular Combat
-11123,Mouse Only
-11333,Villain Protagonist
-11634,Vikings
-12057,Tutorial
-12095,Sexual Content
-12190,Boxing
-12472,Management
-12686,Vampires
-13070,Solitaire
-13276,Tanks
-13382,Archery
-13577,Sailing
-13782,Experimental
-13906,Game Development
-14139,Turn-Based Tactics
-14720,Nostalgia
-14906,Intentionally Awkward Controls
-15045,Flight
-15172,Conversation
-15277,Philosophical
-15564,Fishing
-15868,Motocross
-15954,Silent Protagonist
-16094,Mythology
-16250,Gambling
-16598,Space Sim
-16689,Time Management
-17015,Werewolves
-17305,Strategy RPG
-17337,Lemmings
-17389,Tabletop
-17770,Asynchronous Multiplayer
-17894,Cats
-17927,Pool
-18594,FMV
-19568,Cycling
-19780,Submarine
-19995,Dark Comedy
-20486,Wolves
-21006,Underground
-21635,Language Learning
-21725,Tactical RPG
-21978,VR
-22602,Agriculture
-22955,Mini Golf
-23491,Cleaning
-24003,Word Game
-25085,Touch-Friendly
-25959,Wuxia
-26921,Political Sim
-27758,Voice Control
-28444,Snowboarding
-29482,Souls-like
-30358,Nature
-30927,Fox
-31275,Text-Based
-31579,Otome
-32322,Deckbuilding
-33572,Mahjong
-35079,Job Simulator
-37376,Falling Blocks
-37799,Combat Flight Simulator
-40500,Sexual Themes
-42089,Jump Scare
-42152,Dialogue Heavy
-42329,Coding
-42804,Action Roguelike
-44868,LGBTQ+
-46348,Zoo
-47827,Wrestling
-49213,Rugby
-52406,Cult
-56690,On-Rails Shooter
-61357,Electronic Music
-71389,Spelling
-87918,Farming Sim
-91114,Shop Keeper
-92092,Jet
-96359,Skating
-97070,Assassins
-97376,Cozy
-102530,Elf
-117648,8-bit Music
-123332,Bikes
-129761,ATV
-150626,Gaming
-158638,Cricket
-176981,Battle Royale
-180368,Faith
-189941,Instrumental Music
-198631,Mystery Dungeon
-198913,Motorbike
-220585,Colony Sim
-252854,BMX
-255534,Automation
-323922,Musou
-324176,Hockey
-337964,Rock Music
-353880,Looter Shooter
-363767,Snooker
-379975,Clicker
-454187,Traditional Roguelike
-507423,Foxes
-552282,Wholesome
-560542,Incremental
-603297,Hardware
-615955,Idler
-620519,Hero Shooter
-723991,Bullet Heaven
-745697,Social Deduction
-760247,Xianxia
-769306,Escape Room
-776177,360 Video
-791774,Card Battler
-847164,Volleyball
-856791,Asymmetric VR
-889937,Decorating
-916648,Creature Collector
-1023537,Boomer Shooter
-1084988,Auto Battler
-1091588,Roguelike Deckbuilder
-1100686,Outbreak Sim
-1100687,Automobile Sim
-1100688,Medical Sim
-1100689,Open World Survival Craft
-1199779,Extraction Shooter
-1220528,Hobby Sim
-1239876,Organizing
-1254546,Football (Soccer)
-1254552,Football (American)
-1320952,Desktop Companion
-1352486,Capybaras
+tagid,name,name_schinese
+9,Strategy,策略
+19,Action,动作
+21,Adventure,冒险
+84,Design & Illustration,设计与插画
+87,Utilities,实用工具
+113,Free to Play,免费开玩
+122,RPG,角色扮演
+128,Massively Multiplayer,大型多人在线
+492,Indie,独立
+493,Early Access,抢先体验
+597,Casual,休闲
+599,Simulation,模拟
+699,Racing,竞速
+701,Sports,体育
+784,Video Production,视频制作
+809,Photo Editing,照片编辑
+872,Animation & Modeling,动画制作和建模
+1027,Audio Production,音频制作
+1036,Education,教育
+1445,Software Training,软件培训
+1616,Trains,火车
+1621,Music,音乐
+1625,Platformer,平台游戏
+1628,Metroidvania,类银河战士恶魔城
+1637,Dogs,狗
+1638,Dog,Dog
+1643,Building,建造
+1644,Driving,驾驶
+1645,Tower Defense,塔防
+1646,Hack and Slash,砍杀
+1647,Western,西部
+1651,Satire,讽刺
+1654,Relaxing,放松
+1659,Zombies,僵尸
+1662,Survival,生存
+1663,FPS,第一人称射击
+1664,Puzzle,解谜
+1665,Match 3,三消
+1666,Card Game,卡牌游戏
+1667,Horror,恐怖
+1669,Moddable,可模组化
+1670,4X,4X
+1671,Superhero,超级英雄
+1673,Aliens,外星人
+1674,Typing,打字
+1676,RTS,即时战略
+1677,Turn-Based,回合制
+1678,War,战争
+1680,Heist,劫掠
+1681,Pirates,海盗
+1684,Fantasy,奇幻
+1685,Co-op,合作
+1687,Stealth,潜行
+1688,Ninja,忍者
+1693,Classic,经典
+1695,Open World,开放世界
+1697,Third Person,第三人称
+1698,Point & Click,指向点击
+1702,Crafting,制作
+1708,Tactical,战术
+1710,Surreal,超现实
+1714,Psychedelic,迷幻
+1716,Roguelike,类 Rogue
+1717,Hex Grid,六角格棋盘
+1718,MOBA,多人在线战术竞技
+1719,Comedy,喜剧
+1720,Dungeon Crawler,迷宫探索
+1721,Psychological Horror,心理恐怖
+1723,Action RTS,动作即时战略
+1730,Sokoban,推箱子
+1732,Voxel,体素
+1733,Unforgiving,Unforgiving
+1734,Fast-Paced,快节奏
+1738,Hidden Object,隐藏物体
+1741,Turn-Based Strategy,回合战略
+1742,Story Rich,剧情丰富
+1743,Fighting,格斗
+1746,Basketball,篮球
+1751,Comic Book,漫画
+1752,Rhythm,节奏
+1753,Skateboarding,滑板
+1754,MMORPG,大型多人在线角色扮演
+1755,Space,太空
+1756,Great Soundtrack,好评原声音轨
+1759,Perma Death,永久死亡
+1770,Board Game,棋盘游戏
+1773,Arcade,街机
+1774,Shooter,射击
+1775,PvP,玩家对战
+1776,Espionage,谍战
+1777,Steampunk,蒸汽朋克
+3796,Based On A Novel,小说改编
+3798,Side Scroller,横向滚屏
+3799,Visual Novel,视觉小说
+3810,Sandbox,沙盒
+3813,Real Time Tactics,即时战术
+3814,Third-Person Shooter,第三人称射击
+3834,Exploration,探索
+3835,Post-apocalyptic,后末日
+3839,First-Person,第一人称
+3841,Local Co-Op,本地合作
+3843,Online Co-Op,在线合作
+3854,Lore-Rich,故事架构丰富 
+3859,Multiplayer,多人
+3871,2D,2D
+3877,Precision Platformer,精确平台
+3878,Competitive,竞技
+3916,Old School,老式
+3920,Cooking,烹饪
+3934,Immersive,沉浸式
+3942,Sci-fi,科幻
+3952,Gothic,哥特
+3954,Rail Shooter,Rail Shooter
+3955,Character Action Game,角色动作
+3959,Roguelite,轻度 Rogue
+3964,Pixel Graphics,像素图形
+3965,Epic,史诗级
+3968,Physics,物理
+3978,Survival Horror,生存恐怖
+3987,Historical,历史
+3993,Combat,战斗
+4004,Retro,复古
+4026,Difficult,低容错
+4036,Parkour,跑酷
+4046,Dragons,龙
+4057,Magic,魔法
+4064,Thriller,惊悚
+4085,Anime,动漫
+4094,Minimalist,极简主义
+4102,Combat Racing,战斗竞速
+4106,Action-Adventure,动作冒险
+4115,Cyberpunk,赛博朋克
+4136,Funny,欢乐
+4137,Transhumanism,超人类主义
+4145,Cinematic,电影式
+4150,World War II,二战
+4155,Class-Based,职业导向
+4158,Beat 'em up,清版动作
+4161,Real-Time,即时
+4162,Kids,Kids
+4166,Atmospheric,氛围
+4168,Military,军事
+4172,Medieval,中世纪
+4175,Realistic,拟真
+4182,Singleplayer,单人
+4184,Chess,棋类
+4190,Addictive,欲罢不能
+4191,3D,3D
+4195,Cartoony,卡通风格
+4202,Trading,贸易
+4231,Action RPG,动作角色扮演
+4234,Short,短篇
+4236,Loot,刷宝
+4242,Episodic,剧集
+4252,Stylized,风格化
+4255,Shoot 'Em Up,清版射击
+4291,Spaceships,太空飞船
+4295,Futuristic,未来
+4305,Colorful,彩色
+4325,Turn-Based Combat,回合制战斗
+4328,City Builder,城市营造
+4342,Dark,黑暗
+4345,Gore,鲜血
+4364,Grand Strategy,大战略
+4376,Assassin,Assassin
+4400,Abstract,抽象
+4434,JRPG,日系角色扮演
+4474,CRPG,电脑角色扮演
+4486,Choose Your Own Adventure,自选历险体验
+4508,Co-op Campaign,合作战役
+4520,Farming,农场管理
+4535,Dwarves,矮人
+4559,Quick-Time Events,快速反应事件
+4562,Cartoon,卡通
+4598,Alternate History,架空历史
+4604,Dark Fantasy,黑暗奇幻
+4608,Swordplay,剑术
+4637,Top-Down Shooter,俯视射击
+4667,Violent,暴力
+4684,Wargame,战争游戏
+4695,Economy,经济
+4711,Replay Value,重玩价值
+4726,Cute,可爱
+4736,2D Fighter,2D 格斗
+4747,Character Customization,角色自定义
+4758,Twin Stick Shooter,双摇杆射击
+4777,Spectacle fighter,华丽格斗
+4791,Top-Down,俯视
+4821,Mechs,机甲
+4835,6DOF,六自由度
+4840,4 Player Local,4 人本地
+4845,Capitalism,资本主义
+4852,Billiards,台球
+4878,Parody ,谐仿
+4885,Bullet Hell,弹幕射击
+4947,Romance,爱情
+4975,2.5D,2.5D
+4994,Naval Combat,海战
+5030,Dystopian ,反乌托邦
+5055,eSports,电竞
+5125,Procedural Generation,程序生成
+5154,Score Attack,竞分
+5160,Dinosaurs,恐龙
+5179,Cold War,冷战
+5186,Psychological,心理
+5228,Blood,Blood
+5230,Sequel,续作
+5300,God Game,上帝模拟
+5348,Mod,模组
+5350,Family Friendly,阖家
+5363,Destruction,破坏
+5372,Conspiracy,阴谋
+5379,2D Platformer,2D 平台
+5382,World War I,一战
+5390,Time Attack,时间竞速
+5395,3D Platformer,3D 平台
+5407,Benchmark,标杆测试
+5411,Beautiful,唯美
+5432,Programming,编程
+5502,Hacking,黑客
+5537,Puzzle Platformer,平台解谜
+5547,Arena Shooter,竞技场射击
+5608,Emotional,情感
+5613,Detective,推理
+5652,Collectathon,收集马拉松
+5673,Modern,现代
+5708,Remake,重制
+5711,Team-Based,团队导向
+5716,Mystery,悬疑
+5727,Baseball,棒球
+5752,Robots,机器人
+5765,Gun Customization,枪械改装
+5794,Science,科学
+5796,Bullet Time,子弹时间
+5851,Isometric,等角视角
+5900,Walking Simulator,步行模拟
+5914,Tennis,网球
+5923,Dark Humor,黑色幽默
+5941,Reboot,重启
+5981,Mining,采矿
+6041,Horses,马匹
+6052,Noir,黑色
+6054,Elves,精灵
+6129,Logic,逻辑
+6214,Birds,鸟
+6276,Inventory Management,库存管理
+6310,Diplomacy,外交
+6378,Crime,犯罪
+6426,Choices Matter,选择取向
+6506,3D Fighter,3D 格斗
+6621,Pinball,弹球
+6625,Time Manipulation,时空操控
+6650,Nudity,裸露
+6691,1990's,90 年代
+6702,Mars,火星
+6730,PvE,玩家对战环境
+6815,Hand-drawn,手绘
+6835,Poker,扑克
+6869,Nonlinear,非线性
+6910,Naval,海军
+6915,Martial Arts,武术
+6948,Rome,罗马
+6971,Multiple Endings,多结局
+7038,Golf,高尔夫
+7107,Real-Time with Pause,即时含暂停
+7108,Party,社交聚会
+7178,Party Game,社交聚会游戏
+7208,Female Protagonist,女性主角
+7250,Linear,线性
+7309,Skiing,滑雪
+7328,Bowling,保龄球
+7332,Base Building,基地建设
+7368,Local Multiplayer,本地多人
+7423,Sniper,狙击手
+7432,Lovecraftian,洛夫克拉夫特式
+7481,Controller,控制器
+7556,Dice,骰子
+7569,Grid-Based Movement,网格导向动作
+7622,Offroad,越野
+7702,Narrative,叙事
+7743,1980s,80 年代
+7918,Dwarf,Dwarf
+7926,Artificial Intelligence,人工智能
+7948,Soundtrack,原声音轨
+8013,Software,软件
+8075,TrackIR,TrackIR
+8093,Minigames,小游戏
+8122,Level Editor,关卡编辑
+8253,Music-Based Procedural Generation,基于音乐的程序生成
+8369,Investigation,调查
+8666,Runner,奔跑
+8945,Resource Management,资源管理
+9130,Hentai,动漫色情
+9157,Underwater,水底
+9204,Immersive Sim,沉浸式模拟
+9271,Trading Card Game,集换式卡牌游戏
+9541,Demons,恶魔
+9551,Dating Sim,恋爱模拟
+9564,Hunting,狩猎
+9592,Dynamic Narration,动态旁白
+9626,Animals,动物
+9803,Snow,雪
+10235,Life Sim,生活模拟
+10383,Transportation,交通运输
+10397,Memes,网络梗
+10437,Trivia,益智问答
+10617,Samurai,武士
+10679,Time Travel,时空旅行
+10695,Party-Based RPG,团队角色扮演
+10808,Supernatural,灵异
+10816,Split Screen,分屏
+11014,Interactive Fiction,互动小说
+11095,Boss Rush,Boss Rush
+11104,Vehicular Combat,车辆作战
+11123,Mouse Only,仅鼠标
+11333,Villain Protagonist,恶人主角
+11634,Vikings,维京人
+12057,Tutorial,教程
+12095,Sexual Content,色情内容
+12190,Boxing,拳击
+12472,Management,管理
+12686,Vampires,吸血鬼
+13070,Solitaire,纸牌
+13276,Tanks,坦克
+13382,Archery,射箭
+13577,Sailing,航海
+13782,Experimental,试验性
+13906,Game Development,游戏开发
+14139,Turn-Based Tactics,回合制战术
+14720,Nostalgia,怀旧
+14906,Intentionally Awkward Controls,蓄意操控困难
+15045,Flight,飞行
+15172,Conversation,Conversation
+15277,Philosophical,哲理
+15564,Fishing,钓鱼
+15868,Motocross,摩托车越野
+15954,Silent Protagonist,无声主角
+16094,Mythology,神话
+16250,Gambling,赌博
+16598,Space Sim,太空模拟
+16689,Time Management,时间管理
+17015,Werewolves,狼人
+17305,Strategy RPG,策略角色扮演
+17337,Lemmings,旅鼠
+17389,Tabletop,桌上游戏
+17770,Asynchronous Multiplayer,异步多人
+17894,Cats,猫
+17927,Pool,Pool
+18594,FMV,全动态影像
+19568,Cycling,骑车
+19780,Submarine,潜水艇
+19995,Dark Comedy,黑色喜剧
+20486,Wolves,狼
+21006,Underground,地下
+21635,Language Learning,语言学习
+21725,Tactical RPG,战术角色扮演
+21978,VR,虚拟现实
+22602,Agriculture,农业
+22955,Mini Golf,迷你高尔夫
+23491,Cleaning,清洁
+24003,Word Game,文字游戏
+25085,Touch-Friendly,触控
+25959,Wuxia,武侠
+26921,Political Sim,政治模拟
+27758,Voice Control,声控
+28444,Snowboarding,单板滑雪
+29482,Souls-like,类魂系列
+30358,Nature,自然
+30927,Fox,Fox
+31275,Text-Based,基于文字
+31579,Otome,少女游戏
+32322,Deckbuilding,牌组构建
+33572,Mahjong,麻将
+35079,Job Simulator,工作模拟
+37376,Falling Blocks,下落方块
+37799,Combat Flight Simulator,Combat Flight Simulator
+40500,Sexual Themes,Sexual Themes
+42089,Jump Scare,突发惊吓
+42152,Dialogue Heavy,对话丰富
+42329,Coding,Coding
+42804,Action Roguelike,动作类 Rogue
+44868,LGBTQ+,LGBTQ+
+46348,Zoo,动物园
+47827,Wrestling,摔角
+49213,Rugby,英式橄榄球
+52406,Cult,邪教
+56690,On-Rails Shooter,轨道射击
+61357,Electronic Music,电子音乐
+71389,Spelling,拼字
+87918,Farming Sim,农场模拟
+91114,Shop Keeper,商店管理
+92092,Jet,Jet
+96359,Skating,滑行
+97070,Assassins,刺客
+97376,Cozy,温馨惬意
+102530,Elf,Elf
+117648,8-bit Music,8-bit 音乐
+123332,Bikes,自行车
+129761,ATV,ATV
+150626,Gaming,游戏相关
+158638,Cricket,板球
+176981,Battle Royale,大逃杀
+180368,Faith,信仰
+189941,Instrumental Music,器乐
+198631,Mystery Dungeon,不可思议迷宫
+198913,Motorbike,摩托车
+220585,Colony Sim,殖民模拟
+252854,BMX,自行车越野
+255534,Automation,自动化
+323922,Musou,无双
+324176,Hockey,冰球
+337964,Rock Music,摇滚乐
+353880,Looter Shooter,刷宝射击游戏
+363767,Snooker,Snooker
+379975,Clicker,Clicker
+454187,Traditional Roguelike,传统类 Rogue
+507423,Foxes,狐狸
+552282,Wholesome,治愈系
+560542,Incremental,增量
+603297,Hardware,硬件
+615955,Idler,挂机游戏
+620519,Hero Shooter,英雄射击
+723991,Bullet Heaven,逆弹幕射击
+745697,Social Deduction,社交推理
+760247,Xianxia,仙侠
+769306,Escape Room,密室逃脱
+776177,360 Video,360 全景视频
+791774,Card Battler,卡牌战斗
+847164,Volleyball,排球
+856791,Asymmetric VR,非对称 VR
+889937,Decorating,装饰
+916648,Creature Collector,生物收集
+1023537,Boomer Shooter,复古射击
+1084988,Auto Battler,自走棋
+1091588,Roguelike Deckbuilder,牌组构建式类 Rogue
+1100686,Outbreak Sim,疫病爆发模拟
+1100687,Automobile Sim,汽车模拟
+1100688,Medical Sim,医疗模拟
+1100689,Open World Survival Craft,开放世界生存制作
+1199779,Extraction Shooter,撤离射击
+1220528,Hobby Sim,爱好模拟
+1239876,Organizing,整理
+1254546,Football (Soccer),足球
+1254552,Football (American),美式橄榄球
+1320952,Desktop Companion,桌面伴侣
+1352486,Capybaras,水豚
