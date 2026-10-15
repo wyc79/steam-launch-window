@@ -125,8 +125,8 @@ def wishlist_ranking(client: Client, *, cache_ttl: float | None = None) -> list[
     return ranked
 
 
-def tag_list(client: Client) -> tuple[str, dict[int, str]]:
-    res = client.get_json(f"{API}/IStoreService/GetTagList/v1/", {"language": "english"})["response"]
+def tag_list(client: Client, language: str = "english") -> tuple[str, dict[int, str]]:
+    res = client.get_json(f"{API}/IStoreService/GetTagList/v1/", {"language": language})["response"]
     return res.get("version_hash", ""), {t["tagid"]: t["name"] for t in res.get("tags", [])}
 
 

@@ -4,7 +4,7 @@ import methodsHtml from "virtual:methods-content";
 import { methodsPage, syncTableTabStops } from "../src/methods.js";
 import { h } from "../src/ui/dom.js";
 import { HOME, REPO, masthead } from "../src/ui/masthead.js";
-import { en } from "../src/strings.js";
+import { en, zh } from "../src/strings.js";
 import { installDom } from "./fakedom.js";
 
 
@@ -24,6 +24,24 @@ test("the build-time article has its contents, sources, anchors, and language ta
   expect(methodsHtml).toContain("72 paid games without a usable price");
   expect(methodsHtml).toContain("625 launches, including 555 paid and 70 free launches");
   expect(methodsHtml).not.toContain("currently cover 626 launches");
+});
+
+test("the build-time Chinese article has translated content and the same section anchors", async () => {
+  const article = await import("virtual:methods-content-zh").catch(() => null);
+  expect(article).not.toBeNull();
+  expect(article.default).toContain('<h1 id="methods">方法说明</h1>');
+  expect(article.default).toContain('<h2 id="trends">趋势</h2>');
+  expect(article.default).toContain('<h2 id="what-history-says">历史表现</h2>');
+  expect(article.default).toContain('<h2 id="competition-ahead">未来竞争</h2>');
+  expect(article.default).toContain('<h2 id="typical-for-this-time-of-year">一年中这个时段通常有多拥挤</h2>');
+  expect(article.default).toContain("支持简体中文");
+  expect(article.default).toContain("55.0%");
+  expect(article.default).toContain('aria-label="付费游戏：发售条件"');
+  expect(article.default).toContain("（在新标签页中打开）");
+  for (const tag of ["Free to Play", "Strategy", "Roguelike", "Beat 'em up", "Horror", "Cozy", "Pixel Graphics", "Indie"]) {
+    expect(article.default).toContain(tag);
+  }
+  expect(article.default).not.toContain(" (opens in a new tab)");
 });
 
 
@@ -48,12 +66,25 @@ test("the masthead opens GitHub in a new tab; the links home and within this sit
   expect(links.map((a) => [a.getAttribute("href"), a.getAttribute("target"), a.getAttribute("rel")])).toEqual([
     [HOME, null, null],
     [import.meta.env.BASE_URL, null, null],
-    [HOME, null, null],
     [`${import.meta.env.BASE_URL}methods.html`, null, null],
     [REPO, "_blank", "noopener"],
   ]);
-  expect(links[4].textContent).toBe(`${en.mast.source}${en.newTab}`);
-  expect(links[4].querySelector(".visually-hidden").textContent).toBe(en.newTab);
+  expect(links[3].textContent).toBe(`${en.mast.source}${en.newTab}`);
+  expect(links[3].querySelector(".visually-hidden").textContent).toBe(en.newTab);
+});
+
+test("the masthead offers the bilingual switch and requests the other language", () => {
+  const doc = installDom();
+  doc.documentElement = doc.createElement("html");
+  const changes = [];
+  doc.body.append(masthead(zh, "methods", (language) => changes.push(language)));
+
+  const toggle = doc.body.querySelector(".mast-language");
+  expect(toggle.getAttribute("aria-label")).toBe("切换语言");
+  expect(toggle.textContent).toBe("EN/中文");
+  expect(toggle.querySelector('[data-opt="zh"]')).not.toBeNull();
+  toggle.click();
+  expect(changes).toEqual(["en"]);
 });
 
 

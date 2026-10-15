@@ -64,8 +64,8 @@ describe("followers", () => {
 });
 
 test("dates as the store gives them", () => {
-  expect(dateText({ precision: "day", date: "2026-10-21" })).toBe("Oct 21");
-  expect(dateText({ precision: "month", date: "2026-11-01" })).toBe("Nov 2026");
+  expect(dateText({ precision: "day", date: "2026-10-21" })).toBe("10/21");
+  expect(dateText({ precision: "month", date: "2026-11-01" })).toBe("11/2026");
   expect(dateText({ precision: "quarter", date: "2026-10-01" })).toBe("Q4 2026");
   expect(dateText({ precision: "quarter", date: "2027-01-01" })).toBe("Q1 2027");
   expect(dateText({ precision: "year", date: "2027-01-01" })).toBe("2027");
@@ -73,12 +73,12 @@ test("dates as the store gives them", () => {
 });
 
 test("dates as the store page shows them, year included, for the most anticipated list", () => {
-  expect(steamDate({ precision: "day", date: "2026-10-28" })).toBe("Oct 28, 2026");
-  expect(steamDate({ precision: "month", date: "2026-12-01" })).toBe("December 2026");
+  expect(steamDate({ precision: "day", date: "2026-10-28" })).toBe("10/28/2026");
+  expect(steamDate({ precision: "month", date: "2026-12-01" })).toBe("12/2026");
   expect(steamDate({ precision: "quarter", date: "2027-01-01" })).toBe("Q1 2027");
   expect(steamDate({ precision: "year", date: "2027-01-01" })).toBe("2027");
-  expect(steamDate({ precision: "day", date: "2026-09-30" })).toBe("Sep 30, 2026"); // passed, still as the store has it
-  expect(fullDate("2026-10-13")).toBe("Oct 13, 2026");
+  expect(steamDate({ precision: "day", date: "2026-09-30" })).toBe("9/30/2026"); // passed, still as the store has it
+  expect(fullDate("2026-10-13")).toBe("10/13/2026");
 });
 
 test("a game with no date shows the store's own words, else To be announced", () => {
@@ -127,7 +127,7 @@ describe("a week's games", () => {
         url: "https://store.steampowered.com/app/2/",
         share: expect.closeTo(7 / 19, 12),
         part: "spread",
-        date: "Oct 2026",
+        date: "10/2026",
         followers: "about 5,000 followers, estimated from wishlist rank",
         moved: null,
         tagPos: "Horror: tag 1 of 1",
@@ -149,7 +149,7 @@ describe("a week's games", () => {
         url: "https://store.steampowered.com/app/1/",
         share: 1,
         part: "exact",
-        date: "Oct 21",
+        date: "10/21",
         followers: null,
         moved: "moved here from October 2026, 3 days ago",
         tagPos: "Horror: tag 1 of 1",

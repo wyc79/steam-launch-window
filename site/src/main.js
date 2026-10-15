@@ -3,10 +3,11 @@
 // once, the data files load in parallel, and each part fills in when its data is in.
 
 import "./styles.css";
+import { currentLanguage } from "./language.js";
 import { loadData } from "./load.js";
 import { connect } from "./page.js";
-import { selection } from "./state.js";
-import { strings as s } from "./strings.js";
+import { createState } from "./state.js";
+import { stringsFor } from "./strings.js";
 import { aheadSection } from "./ui/ahead.js";
 import { h } from "./ui/dom.js";
 import { historySection } from "./ui/history.js";
@@ -16,7 +17,12 @@ import { footer, sections } from "./ui/sections.js";
 import { topbar } from "./ui/topbar.js";
 import { trendsSection } from "./ui/trends.js";
 
+const s = stringsFor(currentLanguage());
 document.documentElement.lang = s.lang;
+document.title = s.title;
+document.querySelector('meta[name="description"]')?.setAttribute("content", s.description);
+
+const selection = createState({ languages: s.defaultLanguages });
 
 const bar = topbar(s, selection);
 const parts = sections(s);

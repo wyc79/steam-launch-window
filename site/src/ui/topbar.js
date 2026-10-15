@@ -3,7 +3,7 @@
 
 import { arrowActive, openActive } from "../combo.js";
 import { numberFormat } from "../format.js";
-import { searchTags, tagNames } from "../tags.js";
+import { searchTags, tagName, tagNames } from "../tags.js";
 import { fill, h, uid } from "./dom.js";
 import { SECTIONS, sectionNumber } from "./sections.js";
 
@@ -45,7 +45,7 @@ function tagPicker(s, state) {
   }
 
   function show() {
-    options = searchTags(tags, input.value, { exclude: state.get().tags });
+    options = searchTags(tags, input.value, { exclude: state.get().tags, s });
     active = openActive(input.value.trim() !== "", options.length);
     draw();
     list.hidden = false;
@@ -58,19 +58,19 @@ function tagPicker(s, state) {
     fill(
       list,
       ...(options.length
-        ? options.map(([id, name], i) =>
+        ? options.map((tag, i) =>
             h(
               "li",
               {
-                id: optionId(id),
+                id: optionId(tag[0]),
                 role: "option",
                 class: "tag-option",
                 "aria-selected": String(i === active),
                 onmousedown: (e) => e.preventDefault(), // keep focus in the field
-                onclick: () => pick(id),
+                onclick: () => pick(tag[0]),
               },
-              h("span", {}, name),
-              counts && h("span", { class: "tag-count" }, s.bar.tagUpcoming(fmt.format(counts.get(id) ?? 0))),
+              h("span", {}, tagName(tag, s)),
+              counts && h("span", { class: "tag-count" }, s.bar.tagUpcoming(fmt.format(counts.get(tag[0]) ?? 0))),
             ),
           )
         : [h("li", { role: "option", "aria-disabled": "true", class: "tag-none" }, s.bar.tagNone)]),
@@ -159,7 +159,7 @@ function tagPicker(s, state) {
     ),
     setTags(meta) {
       tags = meta.tags;
-      names = tagNames(tags);
+      names = tagNames(tags, s);
       input.disabled = false;
       input.placeholder = s.bar.tagPlaceholder;
       drawChips(state.get());

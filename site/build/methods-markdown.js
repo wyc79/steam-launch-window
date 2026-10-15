@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
-import { strings } from "../src/strings.js";
+import { strings, zh } from "../src/strings.js";
 
 
 const VIRTUAL_ID = "virtual:methods-content";
 const RESOLVED_ID = `\0${VIRTUAL_ID}`;
+const VIRTUAL_ZH_ID = "virtual:methods-content-zh";
+const RESOLVED_ZH_ID = `\0${VIRTUAL_ZH_ID}`;
 
 const escapeHtml = (text) =>
   text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
@@ -14,13 +16,13 @@ function safeHref(href) {
 
 // a link off this site opens in a new tab and says so, out of sight, as the
 // site's own off-site links do (src/ui/dom.js offsite)
-function link(href, label) {
+function link(href, label, newTab) {
   if (!/^https?:\/\//i.test(href)) return `<a href="${escapeHtml(href)}">${label}</a>`;
-  const hidden = `<span class="visually-hidden">${escapeHtml(strings.newTab)}</span>`;
+  const hidden = `<span class="visually-hidden">${escapeHtml(newTab)}</span>`;
   return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">${label}${hidden}</a>`;
 }
 
-function inline(text) {
+function inline(text, newTab) {
   let html = "";
   for (let i = 0; i < text.length; ) {
     if (text[i] === "`") {
@@ -34,7 +36,7 @@ function inline(text) {
     if (text.startsWith("**", i)) {
       const end = text.indexOf("**", i + 2);
       if (end >= 0) {
-        html += `<strong>${inline(text.slice(i + 2, end))}</strong>`;
+        html += `<strong>${inline(text.slice(i + 2, end), newTab)}</strong>`;
         i = end + 2;
         continue;
       }
@@ -42,8 +44,8 @@ function inline(text) {
     if (text[i] === "[") {
       const match = text.slice(i).match(/^\[([^\]]+)]\((\S+)\)/);
       if (match) {
-        const label = inline(match[1]);
-        html += safeHref(match[2]) ? link(match[2], label) : label;
+        const label = inline(match[1], newTab);
+        html += safeHref(match[2]) ? link(match[2], label, newTab) : label;
         i += match[0].length;
         continue;
       }
@@ -95,7 +97,7 @@ function startsBlock(lines, i) {
   );
 }
 
-export function renderMarkdown(markdown) {
+export function renderMarkdown(markdown, copy = strings) {
   const lines = markdown.replaceAll("\r\n", "\n").replaceAll("\r", "\n").split("\n");
   const html = [];
   const slugs = new Map();
@@ -110,12 +112,14 @@ export function renderMarkdown(markdown) {
     const heading = lines[i].match(/^(#{1,6})\s+(.+?)\s*#*$/);
     if (heading) {
       const level = heading[1].length;
-      const base = headingSlug(heading[2]);
+      const explicit = heading[2].match(/^(.*?)\s+\{#([a-z0-9][\w:.-]*)\}$/i);
+      const headingText = explicit ? explicit[1] : heading[2];
+      const base = explicit ? explicit[2] : headingSlug(headingText);
       const count = (slugs.get(base) ?? 0) + 1;
       slugs.set(base, count);
       const id = count === 1 ? base : `${base}-${count}`;
-      html.push(`<h${level} id="${id}">${inline(heading[2])}</h${level}>`);
-      lastHeading = plainText(heading[2]);
+      html.push(`<h${level} id="${id}">${inline(headingText, copy.newTab)}</h${level}>`);
+      lastHeading = plainText(headingText);
       i += 1;
       continue;
     }
@@ -130,19 +134,19 @@ export function renderMarkdown(markdown) {
         i += 1;
       }
       const head = headings
-        .map((cell, index) => `<th scope="col" class="align-${aligns[index] ?? "left"}">${inline(cell)}</th>`)
+        .map((cell, index) => `<th scope="col" class="align-${aligns[index] ?? "left"}">${inline(cell, copy.newTab)}</th>`)
         .join("");
       const body = rows
         .map(
           (row) =>
             `<tr>${headings
-              .map((_, index) => `<td class="align-${aligns[index] ?? "left"}">${inline(row[index] ?? "")}</td>`)
+              .map((_, index) => `<td class="align-${aligns[index] ?? "left"}">${inline(row[index] ?? "", copy.newTab)}</td>`)
               .join("")}</tr>`,
         )
         .join("\n");
       // a frame that scrolls is a named region the keyboard can reach (src/methods.js
       // drops the tab stop while it fits)
-      const label = [lastHeading, plainText(headings[0])].filter(Boolean).join(": ");
+      const label = [lastHeading, plainText(headings[0])].filter(Boolean).join(copy.methods.tableLabelSep);
       html.push(
         `<div class="method-table" role="region" aria-label="${escapeHtml(label)}" tabindex="0">\n<table>\n<thead><tr>${head}</tr></thead>\n<tbody>${body ? `\n${body}\n` : ""}</tbody>\n</table>\n</div>`,
       );
@@ -166,7 +170,7 @@ export function renderMarkdown(markdown) {
         }
         items.push(parts.join(" "));
       }
-      html.push(`<${tag}>\n${items.map((value) => `<li>${inline(value)}</li>`).join("\n")}\n</${tag}>`);
+      html.push(`<${tag}>\n${items.map((value) => `<li>${inline(value, copy.newTab)}</li>`).join("\n")}\n</${tag}>`);
       continue;
     }
 
@@ -175,22 +179,26 @@ export function renderMarkdown(markdown) {
       paragraph.push(lines[i].trim());
       i += 1;
     }
-    html.push(`<p>${inline(paragraph.join(" "))}</p>`);
+    html.push(`<p>${inline(paragraph.join(" "), copy.newTab)}</p>`);
   }
 
   return html.join("\n");
 }
 
-export function methodsMarkdownPlugin(markdownPath) {
+export function methodsMarkdownPlugin(markdownPaths) {
+  const paths = typeof markdownPaths === "string" ? { en: markdownPaths } : markdownPaths;
   return {
     name: "methods-markdown",
     resolveId(id) {
-      return id === VIRTUAL_ID ? RESOLVED_ID : null;
+      if (id === VIRTUAL_ID) return RESOLVED_ID;
+      if (id === VIRTUAL_ZH_ID) return RESOLVED_ZH_ID;
+      return null;
     },
     load(id) {
-      if (id !== RESOLVED_ID) return null;
+      const markdownPath = id === RESOLVED_ID ? paths.en : id === RESOLVED_ZH_ID ? paths.zh : null;
+      if (!markdownPath) return null;
       this.addWatchFile(markdownPath);
-      const html = renderMarkdown(readFileSync(markdownPath, "utf8"));
+      const html = renderMarkdown(readFileSync(markdownPath, "utf8"), id === RESOLVED_ZH_ID ? zh : strings);
       return `export default ${JSON.stringify(html)};`;
     },
   };

@@ -47,8 +47,9 @@ def data(tmp_path):
             {"appid": 5, "name": "Ranked", "tags": "1774:5|99999:4", "is_free": "0", "languages": "english"},
             {"appid": 7, "name": "Someday", "tags": "1774:5", "is_free": "0", "languages": "english"}]
     storage.write_csv(d / "upcoming" / "apps.csv", apps, APPS)
-    storage.write_csv(d / "tags.csv", [{"tagid": 113, "name": "Free to Play"}, {"tagid": 1716, "name": "Roguelike"},
-                                       {"tagid": 1774, "name": "Shooter"}], ["tagid", "name"])
+    storage.write_csv(d / "tags.csv", [{"tagid": 113, "name": "Free to Play"},
+                                       {"tagid": 1716, "name": "Roguelike", "name_schinese": "类 Rogue"},
+                                       {"tagid": 1774, "name": "Shooter"}], ["tagid", "name", "name_schinese"])
     hist_fields = ["appid", "launch_date", "launch_type", "tags", "languages", "is_free", "price_cents", "reviews_30d"]
     storage.write_csv(d / "history" / "games.csv", [
         {"appid": 10, "launch_date": "2025-03-03", "launch_type": "full", "tags": "1774:9", "languages": "english",
@@ -104,7 +105,8 @@ def test_tags_heaviest_first_and_free_flag(data, tmp_path):
     assert up[3]["free"] is True   # Steam's flag
     assert up[1]["free"] is False
     assert up[5]["tags"] == [1774, 99999]  # a tag missing from tags.csv is kept
-    assert [99999, None, 1, 0] in meta["tags"]
+    assert [99999, None, 1, 0, None] in meta["tags"]
+    assert [t[4] for t in meta["tags"] if t[0] in (1716, 1774)] == ["类 Rogue", None]  # no Chinese name: null
     assert up[2]["langs"] == ["english", "schinese"]
 
 

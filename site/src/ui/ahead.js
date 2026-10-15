@@ -38,7 +38,8 @@ export function aheadSection(s, body) {
   const a = s.ahead;
   const phone = window.matchMedia(PHONE);
   let numbers = null;
-  let names = new Map();
+  let names = new Map(); // shown
+  let englishNames = new Map(); // what events.yaml's themed fests list
   let snapshot = null; // meta.json's snapshot_date: the day of the Top Wishlisted ranks
   let events; // undefined while loading, null if events.json failed
   let model; // model.json: undefined while loading, null if missing
@@ -106,21 +107,27 @@ export function aheadSection(s, body) {
 
   function withEffect(text, e) {
     const effect = effectOf(e);
-    return effect ? `${text}. ${effect}` : text;
+    return effect ? `${text}${a.sentenceSep}${effect}` : text;
+  }
+
+  function joinEventDetails(items) {
+    return items
+      .map((text, i) => i < items.length - 1 && text.endsWith(a.sentenceEnd) ? text.slice(0, -a.sentenceEnd.length) : text)
+      .join(a.compoundSep);
   }
 
   function weekHead(w, i) {
     const label = [a.week(w.date, w.to)];
     if (w.current) label.push(a.thisWeek);
     if (w.far) label.push(a.far);
-    if (w.events.length) label.push(a.events(w.events.map((e) => withEffect(eventText(e, s), e)).join("; ")));
+    if (w.events.length) label.push(a.events(joinEventDetails(w.events.map((e) => withEffect(eventText(e, s), e)))));
     return h(
       "div",
       {
         role: "columnheader",
         class: `hm-week${w.current ? " is-current" : ""}${w.far ? " is-far" : ""}`,
         style: `--wk:${i + 2}`,
-        "aria-label": label.join(". "),
+        "aria-label": label.join(a.labelSep),
         "data-week": i,
       },
       h("span", { class: "hm-date", "aria-hidden": "true" }, w.date),
@@ -458,9 +465,9 @@ export function aheadSection(s, body) {
           { class: "ah-detail-events" },
           h("span", { class: "label" }, a.detailEvents),
           " ",
-          w.events
-            .map((e) => withEffect(`${eventText(e, s)}, ${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`, e))
-            .join("; "),
+          joinEventDetails(
+            w.events.map((e) => withEffect(`${eventText(e, s)}${a.partSep}${a.eventDates(formatDate(e.start, s), formatDate(e.end, s))}`, e)),
+          ),
         ),
       h("p", { class: "ah-detail-count" }, items.length ? listed(items, row) : a.detailNone),
       items.length > 0 && h("p", { class: "ah-detail-how quiet" }, a.detailHow(sumText(row.cells[open.week]))),
@@ -511,7 +518,7 @@ export function aheadSection(s, body) {
     bandFor = [rows, events];
     band = events
       ? bandEvents(events, rows[0].weeks[0], WEEKS, {
-          tagNames: st.tags.map((t) => names.get(t)).filter(Boolean),
+          tagNames: st.tags.map((t) => englishNames.get(t)).filter(Boolean),
           languages: st.languages,
         })
       : { events: [], lanes: [] };
@@ -573,7 +580,8 @@ export function aheadSection(s, body) {
     // the shared numbers and meta.json (tag names) are in
     start(shared, meta) {
       numbers = shared;
-      names = tagNames(meta.tags);
+      names = tagNames(meta.tags, s);
+      englishNames = tagNames(meta.tags);
       snapshot = meta.snapshot_date;
     },
     // events.json's list, or null if it failed: the heatmap goes without lanes

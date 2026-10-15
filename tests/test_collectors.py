@@ -238,7 +238,8 @@ def test_merge_apps_records_last_seen():
 
 def _fake_upcoming(monkeypatch, ranking):
     items = [{"appid": 5, "name": "A", "release": {"coming_soon_display": "text_tba"}}]
-    monkeypatch.setattr(steam, "tag_list", lambda client: ("v", {492: "Indie"}))
+    names = {"english": {492: "Indie"}, "schinese": {492: "独立"}}
+    monkeypatch.setattr(steam, "tag_list", lambda client, language="english": ("v", names[language]))
     monkeypatch.setattr(steam, "store_query", lambda *a, **k: items)
     monkeypatch.setattr(steam, "wishlist_ranking", ranking)
 
@@ -261,6 +262,7 @@ def test_upcoming_rerun_replaces_the_days_run_row(tmp_path, monkeypatch):
     assert cu.main(args) == 0 and cu.main(args) == 0
     runs = storage.read_csv(tmp_path / "upcoming/runs.csv")
     assert len(runs) == 1 and runs[0]["ranking_ok"] == "1" and runs[0]["ranked"] == "1"
+    assert storage.read_csv(tmp_path / "tags.csv") == [{"tagid": "492", "name": "Indie", "name_schinese": "独立"}]
 
 
 # -- history: listing merge and early review windows ---------------------------

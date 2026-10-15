@@ -205,7 +205,7 @@ def build(data_dir: Path, events_path: Path, out: Path, license_id: str, gp_kind
         "history/games.parquet": (data_dir / "history" / "games.csv", collect_history.FIELDS),
         "upcoming/apps.parquet": (data_dir / "upcoming" / "apps.csv", collect_upcoming.APP_FIELDS),
         "followers/latest.parquet": (data_dir / "followers" / "latest.csv", collect_followers.FIELDS),
-        "tags.parquet": (data_dir / "tags.csv", ["tagid", "name"]),
+        "tags.parquet": (data_dir / "tags.csv", ["tagid", "name", "name_schinese"]),
         "upcoming/runs.parquet": (data_dir / "upcoming" / "runs.csv", collect_upcoming.RUN_FIELDS),
     }
     for dest, (src, columns) in simple.items():
@@ -310,7 +310,7 @@ No personal data: no Steam IDs, usernames or review texts, only counts.
 | `release_changes` | derived | {rows("upcoming/release_changes.parquet"):,} | each game's first day in the snapshots, every change of its release date text or range, each day it left the coming-soon list, and each day it came back (`returned`) |
 | `followers` | raw | {rows("followers/snapshots"):,} | Steam community hub follower counts, with fetch time |
 {gp_rows}| `events` | curated | {rows("events.parquet"):,} | Steam sales, Next Fests, themed fests, major releases, regional holidays, each with a source; `starts_at`/`ends_at` (UTC) give the exact window: Steam events run from 10:00 Pacific on `start` to 10:00 Pacific on `end` |
-| `tags` | latest | {rows("tags.parquet"):,} | Steam tag id to name |
+| `tags` | latest | {rows("tags.parquet"):,} | Steam tag id to name, in English and in Steam's Simplified Chinese (`name_schinese`) |
 | `runs` | log | {rows("upcoming/runs.parquet"):,} | one row per daily collection: games, requests, whether the wishlist crawl worked |
 
 ```python

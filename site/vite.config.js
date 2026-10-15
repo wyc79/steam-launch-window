@@ -24,7 +24,10 @@ const pageText = {
 
 export default defineConfig({
   base: "/steam-launch-window/",
-  plugins: [pageText, methodsMarkdownPlugin(resolve(root, "../docs/methods.md"))],
+  plugins: [pageText, methodsMarkdownPlugin({
+    en: resolve(root, "../docs/methods.md"),
+    zh: resolve(root, "../docs/methods.zh.md"),
+  })],
   build: {
     rolldownOptions: {
       input: { main: resolve(root, "index.html"), methods: resolve(root, "methods.html") },

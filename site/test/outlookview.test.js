@@ -5,6 +5,7 @@
 import { describe, expect, test } from "vitest";
 import { bandEvents } from "../src/events.js";
 import { MIN_SCALE, outlookView, partText, seriesKinds } from "../src/outlookview.js";
+import { zh } from "../src/strings.js";
 
 const EVENTS = [
   { name: "Steam Next Fest October 2026", type: "next_fest", start: "2026-10-19", end: "2026-10-26" },
@@ -58,15 +59,15 @@ describe("the weeks", () => {
       "From the same week in past years; 1 week before Next Fest October.",
     ]);
     expect(w.label).toBe(
-      "Week of Oct 12 to Oct 18: usually 0.97, typical spread across years 0.73 to 1.21. From the same week in past years; 1 week before Next Fest October.",
+      "Week of 10/12 to 10/18: usually 0.97, typical spread across years 0.73 to 1.21. From the same week in past years; 1 week before Next Fest October.",
     );
-    expect(w.detail).toBe("Week of Oct 12 to Oct 18: usually 0.97 (typical spread across years 0.73 to 1.21).");
+    expect(w.detail).toBe("Week of 10/12 to 10/18: usually 0.97 (typical spread across years 0.73 to 1.21).");
   });
 
   test("a week without enough past years says so", () => {
     const w = v.weeks[3];
     expect([w.value, w.spread, w.drivers, w.bar]).toEqual(["n/a", null, null, null]);
-    expect(w.label).toBe("Week of Nov 2 to Nov 8: not enough past years.");
+    expect(w.label).toBe("Week of 11/2 to 11/8: not enough past years.");
   });
 
   test("events of the week, short and in full", () => {
@@ -93,5 +94,12 @@ describe("the weeks", () => {
     expect(free.scale).toBe(1.1);
     const flat = outlookView({ weeks: ["2026-10-12"], paid: [{ expected: 1, sd: 0.01, parts: [] }] }, "paid");
     expect(flat.scale).toBe(MIN_SCALE);
+  });
+
+  test("Chinese driver lists use Chinese punctuation", () => {
+    const view = outlookView(OUTLOOK, "paid", { events: EVENTS, languages: ["schinese"] }, zh);
+    expect(view.weeks[0].drivers).toContain("；");
+    expect(view.weeks[0].drivers).not.toContain("; ");
+    expect(view.weeks[0].label).not.toContain("。 ");
   });
 });

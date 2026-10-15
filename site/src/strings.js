@@ -1,5 +1,7 @@
-// Every piece of text the site shows. English now; Chinese comes later as a
-// second object with the same keys. Functions take numbers already formatted.
+// Every piece of interface text the site shows. Functions take numbers already
+// formatted for the active locale.
+
+import { zh } from "./strings.zh.js";
 
 // "1 game's worth", "about 1 game's worth", "about 38 games' worth"
 const gamesWorth = (n) => (/^(about )?1$/.test(n) ? `${n} game's worth` : `${n} games' worth`);
@@ -7,25 +9,31 @@ const gamesWorth = (n) => (/^(about )?1$/.test(n) ? `${n} game's worth` : `${n} 
 export const en = {
   lang: "en",
   locale: "en-US",
+  // a numeric date ("10/28") or month ("11") with its year: "10/28/2026", "11/2026"
+  withYear: (date, year) => `${date}/${year}`,
+  // the supported-language filter a visit starts with
+  defaultLanguages: ["english"],
+  // where a meta.json tag row keeps this language's tag name (the English one, 1, stands in)
+  tagNameAt: 1,
 
   title: "Steam Launch Window",
   pageTitle: (page, site) => `${page} · ${site}`, // a page other than the tool
   // after a link off this site, which opens in a new tab: read out, not shown
   newTab: " (opens in a new tab)",
   description:
-    "Pick a Steam launch week: how crowded the coming weeks are for your tags, and how similar games did when they launched.",
+    "Compare Steam launch weeks: see how crowded the calendar is for your tags and how similar games performed at launch.",
 
   mast: {
     name: "Steam Launch Window",
-    by: "By Yuanchen Wang",
     sealAlt: "Yuanchen Wang: back to the main site",
     methods: "Methods",
     source: "GitHub",
+    language: "Change language",
     theme: "Dark theme",
     light: "Light",
     dark: "Dark",
     // under the masthead, in place of a big title
-    lede: "Pick your game's Steam tags. See how similar games did when they launched, and how crowded the coming weeks are.",
+    lede: "Choose your game's Steam tags to compare past launch performance and see how crowded the coming weeks are.",
     caveat: "Reviews stand in for sales. Patterns, not promises.",
   },
 
@@ -34,20 +42,20 @@ export const en = {
     tags: "Tags",
     tagPlaceholder: "Type a Steam tag",
     tagLoading: "Loading tags…",
-    tagNone: "No tag matches",
+    tagNone: "No matching tags",
     tagUpcoming: (n) => `${n} upcoming`,
     removeTag: (name) => `Remove ${name}`,
     mode: "Match",
     and: "All of these",
     or: "Any of these",
-    languages: "Languages",
+    languages: "Supported languages",
     anyLanguage: "Any language",
     nLanguages: (n) => `${n} languages`,
     price: "Price",
     paid: "Paid",
     free: "Free",
     loading: "Loading data…",
-    error: "Could not load the data. Reload the page to try again.",
+    error: "The data could not be loaded. Reload the page to try again.",
     upcoming: (n, total) => `${n} of ${total} upcoming`,
     past: (n, total) => `${n} of ${total} past launches`,
     sep: " · ",
@@ -75,18 +83,18 @@ export const en = {
     corner: "Week of",
     thisWeek: "This week",
     far: "Dates still being set",
-    yearLayer: "Show games without a firm date",
+    yearLayer: "Include games without a firm date",
     scaleNormal: "1.0 = as many as a typical week. 2.0 = twice as many.",
-    scaleRaw: "Numbers are games. Shades still compare with a typical week.",
-    key: "Each week: exact dates on top (E), month and quarter dates spread below (S).",
-    keyYear: "Hatched (Y): games dated only by year, spread over the weeks left in that year.",
+    scaleRaw: "Numbers show games. Shading still compares each week with a typical one.",
+    key: "Each week is split into exact dates above (E) and month or quarter dates spread below (S).",
+    keyYear: "Hatched (Y): games dated only by year, spread across the weeks remaining in that year.",
     // the legend's two year-only swatches, under and from 1.0
     yearUnder: (one) => `Y <${one}`,
     yearFrom: (one) => `Y ${one}+`,
     typicalNote: "A typical week is the row's average week of real launches over the last 52 weeks.",
     countsNote: "Rows marked counts had too few past launches to compare with: they show games, unshaded.",
-    caveatNear: "Near weeks run high: some of these dates will slip.",
-    caveatFar: "Far weeks run low: many dates are not set yet.",
+    caveatNear: "Near-term totals run high because some dates will slip.",
+    caveatFar: "Longer-term totals run low because many dates have not been set.",
     caveatYear: "The year-only layer is a spread, not real dates.",
     games: (n, count) => (count === 1 ? `${n} game` : `${n} games`),
     below: (v) => `<${v}`, // a value too small to show as 0.1
@@ -95,12 +103,19 @@ export const en = {
     sometime: (year, games) => `sometime in ${year}: ${games}`,
     later: (games) => `later: ${games}`,
     noSometime: "no games dated only by year.",
-    empty: "No upcoming games match. Try fewer tags, Any of these, or more languages.",
+    empty: "No upcoming games match these filters. Try fewer tags, Any of these, or more languages.",
     emptyCombo: "No upcoming games have all of these tags. The rows show each tag alone.",
     eventsFailed: "Steam events could not be loaded, so the events lanes are missing.",
     // one cell, for screen readers
     cell: (row, week, parts) => `${row}, week of ${week}: ${parts}`,
     cellPart: (name, value) => `${name} ${value}`,
+    partSep: ", ",
+    unitSep: " ",
+    sentenceSep: ". ",
+    sentenceEnd: ".",
+    labelSep: ". ",
+    eventSep: ", ",
+    compoundSep: "; ",
     // the raw numbers behind a cell (its tooltip, and the end of its label)
     counts: (week, exact, spread, year, typical) =>
       `Week of ${week}: ${exact} with exact dates, ${gamesWorth(spread)} from month or quarter dates${year === null ? "" : `, ${year} from year-only dates`}, ${typical} in a typical week.`,
@@ -121,7 +136,7 @@ export const en = {
     eventName: (name, note) => (note ? `${name} (${note})` : name),
     eventDates: (from, to) => `${from} to ${to}`,
     // the week detail
-    hint: "Pick a week to see its games.",
+    hint: "Select a week to see its games.",
     week: (from, to) => `Week of ${from} to ${to}`,
     detailFor: (row, group) => `${row}, ${group}`,
     // the week's list: "2,206 games listed: 274 with exact dates · ..."
@@ -260,6 +275,10 @@ export const en = {
       `Launches whose demo was out by the last Next Fest got ${change} than those whose demo came out after it`,
     demoVsNone: (change) => `${change} than launches with no demo`,
     demoAsNone: "no clear difference from launches with no demo",
+    demoAnd: ", and ",
+    sentenceEnd: ".",
+    adviceSep: " ",
+    sentenceSep: " ",
     cautious: " (a cautious range)",
     demoAfter: (change) => `A demo that came out after the last Next Fest went with ${change} than no demo.`,
     // weekly competition: described from the fit with the placebo, never a predicted penalty
@@ -297,6 +316,7 @@ export const en = {
     after: (n, name) => (n === 1 ? `1 week after ${name}` : `${n} weeks after ${name}`),
     before: (n, name) => (n === 1 ? `1 week before ${name}` : `${n} weeks before ${name}`),
     drivers: (list) => `From ${list}.`,
+    driverSep: "; ",
     unconfirmed: "unconfirmed",
     detail: (week, value, spread) => (spread ? `${week}: ${value} (${spread}).` : `${week}: ${value}.`),
     option: (week, value, spread, drivers) =>
@@ -399,6 +419,7 @@ export const en = {
   methods: {
     title: "Methods",
     measured: "How this is measured",
+    tableLabelSep: ": ",
     // read after it by screen readers only, so the four links have different names
     measuredWhich: (section) => `: ${section}`,
     back: "Back to the tool",
@@ -439,4 +460,6 @@ export const en = {
   },
 };
 
+export { zh };
+export const stringsFor = (language) => (language === "zh" ? zh : en);
 export const strings = en;
