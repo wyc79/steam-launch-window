@@ -8,8 +8,8 @@ The model numbers below come from the 2026-10-13 run.
 
 - [Sources](#sources)
 - [Trends](#trends)
-- [What history says](#what-history-says)
 - [Competition ahead](#competition-ahead)
+- [What history says](#what-history-says)
 - [Typical for this time of year](#typical-for-this-time-of-year)
 - [Reviews by language](#reviews-by-language)
 - [Limits](#limits)
@@ -22,7 +22,8 @@ The model numbers below come from the 2026-10-13 run.
   tags, prices, demos, languages, and reviews. The collector also reads Steam's
   store search for the Top Wishlisted rank. The rank decides which undated
   games get a Games Popularity follower lookup, and gives an estimated follower
-  count to a ranked coming-soon game that has none.
+  count to a ranked coming-soon game that has none. The Chinese page shows
+  Steam's own Simplified Chinese tag names, also from `GetTagList`.
 - **[Games Popularity](https://games-popularity.com/):** follower and player
   counts. Games Popularity's owner gave permission to republish these counts on
   2026-10-12. The site credits the source wherever it uses them.
@@ -65,6 +66,120 @@ Tags are today's Steam tags. Player votes can reshape a new game's tags, so the
 current quarter and the two full quarters before it are hatched. The comparison
 line uses 2022 and the four full quarters before those recent quarters. It is
 shown only when each side has at least 20 selected launches.
+
+## Competition ahead
+
+The heatmap covers the current week and the next 12, a total of 13 weeks. It
+filters the announced games by paid or free, language, and tags. Each picked tag
+gets a row. A final row combines the tags with the selected all or any rule.
+
+An exact-date game adds 1 to its week. A month or quarter date is divided evenly
+across every day still possible, then each week receives the share of those days
+that falls inside it. Exact and spread amounts remain visible as separate parts
+of a cell. A year-only date uses the same split in a hatched layer that is off by
+default. The line below the chart counts all year-only games, including those
+beyond the visible weeks.
+
+The default number divides the cell by a typical week. A typical week is the
+row's matching full and Early Access launches in the previous 52 weeks divided
+by 52. Thus 1.0 means as many launches as that row's average week. Raw-count
+mode shows the same cell without the division. When a row averages less than 1
+launch a week, the ratios would swing too much, so the row shows unshaded raw
+counts.
+
+Weeks more than 4 weeks away are faded and marked as dates still being set.
+This is a warning about announcement quality, not a forecast. Selecting a week
+lists the exact and spread-date games behind its count. Matching top-10 tags
+come first, followed by followers, name, and app ID. Followers are a Games
+Popularity count or, failing that, an estimate from the Top Wishlisted rank.
+With tags picked, each game also shows where each picked tag sits, as
+[Which tags match](#which-tags-match) explains.
+
+The week list marks a game "Demo available" when Steam links a demo to it and
+that demo's release date is on or before the snapshot day. The collector looks
+up every linked demo each day, so a demo Steam no longer lists drops out. On
+the 2026-10-15 snapshot, 8,111 of the 20,709 upcoming games on the site had
+one. Only 2 of the 18,140 linked demos were not out yet.
+
+The event lanes show seasonal sales, Next Fest, and themed fests that match a
+picked tag. Chinese holidays appear only with Simplified Chinese. A historical
+effect appears in an event's label only when the
+[advice rule](#when-a-pattern-becomes-advice) permits it.
+
+### Most anticipated
+
+Beside the week's games, the section lists up to 10 upcoming games that match
+the selection, in the order of their rank on Steam's Top Wishlisted list. With
+no tags picked, it is the top 10 of all paid or all free games in the picked
+languages. A line under the title names the selection: tags, paid or free, and
+languages.
+
+The collector reads the whole list each day from Steam's US store search with
+`filter=popularwishlist`. Our rank is a game's place in that list after bundles
+and games listed twice are dropped, so it can differ from Steam's page by a few
+places. On 2026-10-13, Steam had about 60,300 coming-soon games, and 5,251 of
+them (about 9%) had a rank. The site keeps a game with no date only when it
+has a rank, and drops exact dates more than 30 days past (one ranked game that
+day). The list gives a rank only. Steam publishes no wishlist counts, so the
+site shows none.
+
+Matching is the heatmap's own: the same tags with the all or any rule, the
+languages, and paid or free. Unlike the heatmap, the list takes games at any
+date the site keeps: exact, month, quarter, year, or none yet, including those
+beyond the 13 weeks. The order is the rank alone, never followers. Each game
+shows its date as the store shows it and its rank, such as "#212 on Top
+Wishlisted", and with tags picked, where each picked tag sits. A game with no
+date shows the store's own words, such as "Coming soon" or "To be announced".
+When the store gave no words, it shows "To be announced".
+
+The list is context. A rank says how a game compares with other unreleased
+games, not how many wishlists it has, and not whether it will launch on its
+date. The model measured how many games launched in the same week, as
+[The placebo and weekly competition](#the-placebo-and-weekly-competition)
+explains. It did not measure anticipated games at any date, and it never used
+Top Wishlisted ranks. So the list carries no warning and no advice.
+
+### Which tags match
+
+A game's tags come from Steam's `IStoreBrowseService/GetItems`: up to 20 per
+game. The site orders them by Steam's tag weight, strongest first (ties by tag
+id). A store page shows only the first few tags at first, so a matching tag can
+be easy to miss there. A game matches a tag if the tag is anywhere in its 20.
+On the 2026-10-13 snapshot, 61% of upcoming games had all 20 tags. For common
+genre tags, about a sixth to a third of the matching upcoming games have the
+tag only at places 11 to 20: Strategy 17%, Roguelike 20%, Beat 'em up 20%,
+Horror 25%, Cozy 35%. Broad tags are more often far down: Pixel Graphics 40%,
+Indie 67%. Over the 253 tags on at least 200 upcoming games, the median is 44%.
+
+The week list puts games whose top 10 tags match first. Each game in it, and in
+Most anticipated, shows where each picked tag sits, such as "Beat 'em up: tag 6
+of 20". With several tags it lists each one the game has, by place, such as
+"Beat 'em up: tag 6 of 20 · Roguelike: tag 12 of 20". Steam may order tags of
+equal weight differently, so a place can differ from the store page by one or
+so. On the 2026-10-13 snapshot, such ties changed the order for 19% of upcoming
+games and moved 2.8% of all places, most of them by one.
+
+The heatmap and every count on the site use all 20 tags. The timing model's
+niches and tag effects use the top 10 tags by weight, as
+[The timing model](#the-timing-model) explains. Its checks also try the top 5
+and top 20, as [Other trust checks](#other-trust-checks) describes.
+
+Before launch, few players have voted, so a game's tags are often mostly its
+developer's picks. Past games carry today's tags, which player votes can have
+changed since launch. So upcoming and past games are not tagged in quite the
+same way.
+
+### The held-back niche trend
+
+A trend check compares a niche's share of exact-date upcoming games with its
+share of launches in the past 52 weeks. It needs at least 10 exact upcoming
+games, 52 past launches, a share ratio of at least 1.45 or at most its inverse,
+and a two-proportion test outside the 95% range.
+
+The check flags 4.4% of tags when calibrated on launches against launches, but
+about one fifth on today's upcoming list. It is mostly measuring the difference
+between announced games and completed launches. The line stays hidden until
+daily snapshots can be compared with their later launches, around 2027-01-10.
 
 ## What history says
 
@@ -250,119 +365,6 @@ general advice.
   with log-likelihood per game of -3.690 against -3.697, but ranks games a
   little worse, 0.485 against 0.489. The model explains which games get reviews
   better than it explains timing.
-
-## Competition ahead
-
-The heatmap covers the current week and the next 12, a total of 13 weeks. It
-filters the announced games by paid or free, language, and tags. Each picked tag
-gets a row. A final row combines the tags with the selected all or any rule.
-
-An exact-date game adds 1 to its week. A month or quarter date is divided evenly
-across every day still possible, then each week receives the share of those days
-that falls inside it. Exact and spread amounts remain visible as separate parts
-of a cell. A year-only date uses the same split in a hatched layer that is off by
-default. The line below the chart counts all year-only games, including those
-beyond the visible weeks.
-
-The default number divides the cell by a typical week. A typical week is the
-row's matching full and Early Access launches in the previous 52 weeks divided
-by 52. Thus 1.0 means as many launches as that row's average week. Raw-count
-mode shows the same cell without the division. When a row averages less than 1
-launch a week, the ratios would swing too much, so the row shows unshaded raw
-counts.
-
-Weeks more than 4 weeks away are faded and marked as dates still being set.
-This is a warning about announcement quality, not a forecast. Selecting a week
-lists the exact and spread-date games behind its count. Matching top-10 tags
-come first, followed by followers, name, and app ID. Followers are a Games
-Popularity count or, failing that, an estimate from the Top Wishlisted rank.
-With tags picked, each game also shows where each picked tag sits, as
-[Which tags match](#which-tags-match) explains.
-
-The event lanes show seasonal sales, Next Fest, and themed fests that match a
-picked tag. Chinese holidays appear only with Simplified Chinese. A historical
-effect appears in an event's label only when the advice rule permits it.
-
-### Most anticipated
-
-Beside the week's games, the section lists up to 10 upcoming games that match
-the selection, in the order of their rank on Steam's Top Wishlisted list. With
-no tags picked, it is the top 10 of all paid or all free games in the picked
-languages. A line under the title names the selection: tags, paid or free, and
-languages.
-
-The collector reads the whole list each day from Steam's US store search with
-`filter=popularwishlist`. Our rank is a game's place in that list after bundles
-and games listed twice are dropped, so it can differ from Steam's page by a few
-places. On 2026-10-13, Steam had about 60,300 coming-soon games, and 5,251 of
-them (about 9%) had a rank. The site keeps a game with no date only when it
-has a rank, and drops exact dates more than 30 days past (one ranked game that
-day). The list gives a rank only. Steam publishes no wishlist counts, so the
-site shows none.
-
-Matching is the heatmap's own: the same tags with the all or any rule, the
-languages, and paid or free. Unlike the heatmap, the list takes games at any
-date the site keeps: exact, month, quarter, year, or none yet, including those
-beyond the 13 weeks. The order is the rank alone, never followers. Each game
-shows its date as the store shows it and its rank, such as "#212 on Top
-Wishlisted", and with tags picked, where each picked tag sits. A game with no
-date shows the store's own words, such as "Coming soon" or "To be announced".
-When the store gave no words, it shows "To be announced".
-
-The list is context. A rank says how a game compares with other unreleased
-games, not how many wishlists it has, and not whether it will launch on its
-date. The model measured how many games launched in the same week, as
-[The placebo and weekly competition](#the-placebo-and-weekly-competition)
-explains. It did not measure anticipated games at any date, and it never used
-Top Wishlisted ranks. So the list carries no warning and no advice.
-
-### Which tags match
-
-A game's tags come from Steam's `IStoreBrowseService/GetItems`: up to 20 per
-game. The site orders them by Steam's tag weight, strongest first (ties by tag
-id). A store page shows only the first few tags at first, so a matching tag can
-be easy to miss there. A game matches a tag if the tag is anywhere in its 20.
-On the 2026-10-13 snapshot, 61% of upcoming games had all 20 tags. For common
-genre tags, about a sixth to a third of the matching upcoming games have the
-tag only at places 11 to 20: Strategy 17%, Roguelike 20%, Beat 'em up 20%,
-Horror 25%, Cozy 35%. Broad tags are more often far down: Pixel Graphics 40%,
-Indie 67%. Over the 253 tags on at least 200 upcoming games, the median is 44%.
-
-The week list puts games whose top 10 tags match first. Each game in it, and in
-Most anticipated, shows where each picked tag sits, such as "Beat 'em up: tag 6
-of 20". With several tags it lists each one the game has, by place, such as
-"Beat 'em up: tag 6 of 20 · Roguelike: tag 12 of 20". Steam may order tags of
-equal weight differently, so a place can differ from the store page by one or
-so. On the 2026-10-13 snapshot, such ties changed the order for 19% of upcoming
-games and moved 2.8% of all places, most of them by one.
-
-The week list marks a game "Demo available" when Steam links a demo to it and
-that demo's release date is on or before the snapshot day. The collector looks
-up every linked demo each day, so a demo Steam no longer lists drops out. On
-the 2026-10-15 snapshot, 8,111 of the 20,709 upcoming games on the site had
-one. Only 2 of the 18,140 linked demos were not out yet.
-
-The heatmap and every count on the site use all 20 tags. The timing model's
-niches and tag effects use the top 10 tags by weight, as
-[The timing model](#the-timing-model) explains. Its checks also try the top 5
-and top 20, as [Other trust checks](#other-trust-checks) describes.
-
-Before launch, few players have voted, so a game's tags are often mostly its
-developer's picks. Past games carry today's tags, which player votes can have
-changed since launch. So upcoming and past games are not tagged in quite the
-same way.
-
-### The held-back niche trend
-
-A trend check compares a niche's share of exact-date upcoming games with its
-share of launches in the past 52 weeks. It needs at least 10 exact upcoming
-games, 52 past launches, a share ratio of at least 1.45 or at most its inverse,
-and a two-proportion test outside the 95% range.
-
-The check flags 4.4% of tags when calibrated on launches against launches, but
-about one fifth on today's upcoming list. It is mostly measuring the difference
-between announced games and completed launches. The line stays hidden until
-daily snapshots can be compared with their later launches, around 2027-01-10.
 
 ## Typical for this time of year
 

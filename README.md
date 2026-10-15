@@ -10,10 +10,12 @@ Website: <https://wyc79.github.io/steam-launch-window/> (live since 2026-10-14;
 see [Website](#website)).
 
 Status: **Phase 3 (website)**. The data pipeline (Phase 1) and the analysis
-(Phase 2) are done and run on a schedule. Website steps 1 to 5 are merged: the
-page with its four sections, the most anticipated list (PR #30) and the Methods
-page. Step 6, the deploy workflow (PR #31), went live on 2026-10-14; a review of
-the live site follows. The
+(Phase 2) are done and run on a schedule. The site is live since 2026-10-14
+(PR #31), with its four sections, the most anticipated list (PR #30) and the
+Methods page. Since then: links off the site open in a new tab (PR #33), the
+week list says where each picked tag sits (PR #34), the site and Methods page
+come in Chinese too (PRs #35 and #36), and History moved after Competition ahead
+(PR #37). A "Demo available" mark in the week list is in review (PR #38). The
 recommendation agent (Phase 4) comes after. See [docs/roadmap.md](docs/roadmap.md).
 
 ## Why
@@ -45,7 +47,7 @@ commit the results to the `data` branch.
 
 | Script | Schedule | What it does |
 |---|---|---|
-| `pipeline.collect_upcoming` | daily | snapshot of all ~60,000 coming-soon games (about 2.5 min, 120 requests) |
+| `pipeline.collect_upcoming` | daily | snapshot of all ~60,000 coming-soon games and their demos' release dates (a few minutes, about 210 requests) |
 | `pipeline.collect_gp` | daily, after the snapshot | follower and player history from Games Popularity, within a daily budget (see below) |
 | `pipeline.collect_history` | weekly | lists games released since 2022, adds review counts for new ones |
 | `analysis.model` | weekly, after the history job | fits the launch model and commits `site/model.json` to the `data` branch, for the website |
@@ -55,7 +57,7 @@ The history backfill is a long one-off job (about a day at 1 request per
 second). It runs outside Actions, on an always-on server
 ([scripts/server](scripts/server/README.md)). Actions only do the small daily
 and weekly increments. The daily job has a second, later run that redoes the
-snapshot if the first one was missed or its wishlist crawl failed.
+snapshot if the first one was missed or its wishlist crawl or demo lookup failed.
 
 Scheduled jobs are off until switched on with repository variables
 (Settings > Secrets and variables > Actions > Variables), so a fresh fork
@@ -135,9 +137,11 @@ data goes to `_gp/`.
 ## Website
 
 A static site (Vite and plain JavaScript, in `site/`) at
-<https://wyc79.github.io/steam-launch-window/>. The `site` workflow
-(`.github/workflows/site.yml`) rebuilds and deploys it after each daily
-snapshot, after the weekly model run, and when the site changes on `main`.
+<https://wyc79.github.io/steam-launch-window/>, in English and Chinese. A switch
+in the masthead picks the language; a first visit follows the browser's. The
+`site` workflow (`.github/workflows/site.yml`) rebuilds and deploys it after
+each daily snapshot, after the weekly model run, and when the site changes on
+`main`.
 
 One-time setup (done on 2026-10-14):
 1. Settings > Pages > Build and deployment > Source: "GitHub Actions".
@@ -172,7 +176,7 @@ smaller), and the upload fails instead of overwriting a change made in between.
 `data` branch:
 
 ```
-tags.csv                              tag id, name
+tags.csv                              tag id, English and Simplified Chinese name
 upcoming/snapshots/YYYY-MM-DD.csv.gz  one row per coming-soon game per day:
                                       release date (raw, date, date_end, precision),
                                       Early Access flag, wishlist rank, price if set
@@ -180,7 +184,9 @@ upcoming/apps.csv                     name, developers, publishers, tags with we
                                       demo and its release time, supported and
                                       full-audio languages, first_seen,
                                       last_seen (last day coming soon)
-upcoming/runs.csv                     one line per day (a rerun replaces it)
+upcoming/runs.csv                     one line per day (a rerun replaces it);
+                                      ranking_ok and demos_ok say whether the
+                                      wishlist crawl and demo lookup worked
 followers/latest.csv                  newest community follower count per game
 followers/snapshots/YYYY-MM-DD.csv.gz community counts fetched that day
 history/games.csv                     one row per game released since 2022:
