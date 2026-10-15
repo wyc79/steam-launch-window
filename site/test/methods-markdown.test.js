@@ -65,11 +65,17 @@ Text.
     expect(html).not.toContain("<b>");
   });
 
-  test("renders HTTPS and local-fragment links", () => {
+  test("renders HTTPS links in a new tab, said out of sight, and local-fragment links in place", () => {
     const html = renderMarkdown("[Source](https://example.com/?a=1&b=2) [Trends](#trends)");
 
-    expect(html).toContain('<a href="https://example.com/?a=1&amp;b=2">Source</a>');
+    expect(html).toContain(
+      '<a href="https://example.com/?a=1&amp;b=2" target="_blank" rel="noopener">Source<span class="visually-hidden"> (opens in a new tab)</span></a>',
+    );
     expect(html).toContain('<a href="#trends">Trends</a>');
+  });
+
+  test("plain HTTP links open in a new tab too", () => {
+    expect(renderMarkdown("[Old](HTTP://example.com/)")).toContain('href="HTTP://example.com/" target="_blank" rel="noopener"');
   });
 
   test("escapes raw HTML and rejects executable links", () => {

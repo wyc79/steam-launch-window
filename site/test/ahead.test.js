@@ -92,6 +92,14 @@ describe("an opened week", () => {
     expect(body.querySelector(".ah-found").textContent).toBe("27 of 27 games");
   });
 
+  test("a game links to its store page in a new tab, and says so out of sight", () => {
+    const link = body.querySelector(".ah-list a.ah-game");
+    expect(link.getAttribute("href")).toBe("https://store.steampowered.com/app/1/");
+    expect([link.getAttribute("target"), link.getAttribute("rel")]).toEqual(["_blank", "noopener"]);
+    expect(link.querySelector(".visually-hidden").textContent).toBe(en.newTab);
+    expect(link.textContent).toBe("Game 1 (opens in a new tab)");
+  });
+
   test("a search filters the list as you type, with a live count, and resets for another week", () => {
     const search = body.querySelector(".ah-search");
     search.value = "GAME 1";

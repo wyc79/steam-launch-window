@@ -2,7 +2,7 @@
 // masthead), the site name, links, and the light / dark toggle.
 
 import { currentTheme, onThemeChange, setTheme } from "../theme.js";
-import { h } from "./dom.js";
+import { h, offsite } from "./dom.js";
 
 export const HOME = "https://wyc79.github.io/";
 export const REPO = "https://github.com/wyc79/steam-launch-window";
@@ -50,7 +50,7 @@ export function masthead(s, page = "tool") {
         "div",
         { class: "mast-links" },
         h("a", { href: `${base}methods.html`, "aria-current": page === "methods" && "page" }, s.mast.methods),
-        h("a", { href: REPO }, s.mast.source),
+        offsite({ href: REPO }, s.newTab, s.mast.source),
       ),
       h("div", { class: "mast-utils" }, toggle),
     ),

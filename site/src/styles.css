@@ -841,6 +841,7 @@ main { display: block; }
 .ah-search::placeholder { color: var(--ink-2); opacity: 1; }
 .ah-found { margin: 0; font-size: var(--fs-small); color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .ah-list {
+  position: relative; /* holds the hidden "(opens in a new tab)" text inside the scroll box */
   max-width: 56rem;
   max-height: 60vh;
   overflow: auto;

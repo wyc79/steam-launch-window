@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { strings } from "../src/strings.js";
 
 
 const VIRTUAL_ID = "virtual:methods-content";
@@ -9,6 +10,14 @@ const escapeHtml = (text) =>
 
 function safeHref(href) {
   return /^https?:\/\//i.test(href) || /^#[a-z0-9][\w:.-]*$/i.test(href);
+}
+
+// a link off this site opens in a new tab and says so, out of sight, as the
+// site's own off-site links do (src/ui/dom.js offsite)
+function link(href, label) {
+  if (!/^https?:\/\//i.test(href)) return `<a href="${escapeHtml(href)}">${label}</a>`;
+  const hidden = `<span class="visually-hidden">${escapeHtml(strings.newTab)}</span>`;
+  return `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">${label}${hidden}</a>`;
 }
 
 function inline(text) {
@@ -34,7 +43,7 @@ function inline(text) {
       const match = text.slice(i).match(/^\[([^\]]+)]\((\S+)\)/);
       if (match) {
         const label = inline(match[1]);
-        html += safeHref(match[2]) ? `<a href="${escapeHtml(match[2])}">${label}</a>` : label;
+        html += safeHref(match[2]) ? link(match[2], label) : label;
         i += match[0].length;
         continue;
       }

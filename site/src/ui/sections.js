@@ -3,7 +3,7 @@
 // section that draws itself marks its body `data-drawn`.
 
 import { REPO } from "./masthead.js";
-import { h } from "./dom.js";
+import { h, offsite } from "./dom.js";
 
 // page order; the numbers (01, 02, ...) follow it
 export const SECTIONS = ["trends", "history", "ahead", "season"];
@@ -74,7 +74,7 @@ const LINKS = {
 export function footer(s) {
   const f = s.footer;
   const asOf = h("span");
-  const link = (href, text) => h("a", { href }, text);
+  const link = (href, text) => offsite({ href }, s.newTab, text);
   const el = h(
     "footer",
     { class: "page-foot" },
@@ -95,7 +95,7 @@ export function footer(s) {
     h(
       "p",
       { class: "foot-links" },
-      link(`${import.meta.env.BASE_URL}methods.html`, f.methods),
+      h("a", { href: `${import.meta.env.BASE_URL}methods.html` }, f.methods),
       s.bar.sep,
       link(REPO, f.source),
       s.bar.sep,

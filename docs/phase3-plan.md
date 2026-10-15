@@ -29,7 +29,10 @@ the data cannot back.
   stuck async script can hold back.
 - **Heatmap rows:** each picked tag alone, then the combination.
 - **Link back:** the header carries the wyc79.github.io seal (`images/wyc.png`,
-  copied over) and links to it, like that site's masthead.
+  copied over) and links to it, like that site's masthead. Those links open in
+  the same tab, as do links within this site. Every other link off the site
+  (Steam store pages, the data sources, GitHub, outside links on the Methods
+  page) opens in a new tab, and says so to screen readers.
 
 ## Look
 
@@ -186,7 +189,7 @@ older quarters have lost, and the chart would show a rise that is not there.
   covers, so the cell's parts add up. The games sit in a scroll area (about 60% of the
   screen high) with a search box (case and accents aside, a live "12 of 60 games"),
   in parts, exact dates first, then month or quarter dates (and year only, with the
-  year layer). Each game has its store link, date, the "moved here from October 2026,
+  year layer). Each game has its store link (new tab), date, the "moved here from October 2026,
   3 days ago" marker and the follower count when known (marked when it is an estimate
   from wishlist rank). Order inside each part: games whose top 10 tags match first,
   then the most followers (unknown last), then name, then appid.
