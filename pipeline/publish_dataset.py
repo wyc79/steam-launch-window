@@ -10,14 +10,17 @@ Builds a folder like this from --data-dir, then uploads it:
   upcoming/runs.parquet                 one row per daily collection run
   followers/latest.parquet              newest follower count per game
   followers/snapshots/YYYY-MM.parquet   every follower count fetched that month
+  gp_parquet/followers/YYYY-MM.parquet  Games Popularity points fetched that month (from --gp-dir)
+  gp_parquet/players/YYYY-MM.parquet    the same for players
   tags.parquet, events.parquet
   manifest.json                         rows and columns of every file, checked before upload
   README.md                             dataset card
 
-The dataset also holds gp/ (Games Popularity follower and player histories),
-written there directly by the daily job. This script leaves gp/ alone; the card
-lists its configs when its files are found in the dataset (needs HF_TOKEN and
---repo-id, also in a dry run).
+The dataset also holds gp/ (Games Popularity follower and player histories as
+gzip CSV), written there directly by the daily job. This script leaves gp/ alone.
+--gp-dir is a local copy of it (the publish workflow downloads gp/*/*.csv.gz),
+copied into gp_parquet/ so the dataset viewer can show it: the viewer reads every
+config with the reader of the first config, which is Parquet.
 
 Needs the `publish` extra (pandas, pyarrow, huggingface_hub). Uploading needs
 HF_TOKEN in the environment and --repo-id; --dry-run only builds the folder.
@@ -53,7 +56,7 @@ INT_COLUMNS = {
     "demo_release_ts", "demo_before_launch", "reviews_total_now", "reviews_30d",
     "reviews_30d_positive", "reviews_before_launch", "steam_appid", "reviews_1d", "reviews_7d",
     "games", "dated", "ranked", "ranked_not_listed", "date_mismatch", "requests", "seconds", "ranking_ok",
-    "demos_ok",
+    "demos_ok", "players",
 }
 BOOL_COLUMNS = {"on_steam_at_launch", "free_to_play"}
 DATE_COLUMNS = {"date", "date_end", "launch_date", "first_seen", "last_seen", "snapshot_date",
@@ -86,8 +89,8 @@ def typed(df: pd.DataFrame, columns: list[str] | None = None) -> pd.DataFrame:
             df[col] = pd.to_datetime(df[col], errors="coerce").dt.date
         elif col in ("starts_at", "ends_at"):
             continue  # already UTC timestamps
-        elif col == "fetched_at":
-            df[col] = pd.to_datetime(df[col], errors="coerce", utc=True)
+        elif col in ("fetched_at", "observed_at"):  # ISO8601: with and without fractions of a second
+            df[col] = pd.to_datetime(df[col], errors="coerce", utc=True, format="ISO8601")
         else:
             df[col] = df[col].astype("string")
     return df
@@ -103,8 +106,9 @@ def write(df: pd.DataFrame, path: Path) -> int:
     return len(df)
 
 
-def monthly(src_dir: Path, out_dir: Path, columns: list[str]) -> dict[str, int]:
-    """Combine YYYY-MM-DD.csv.gz files into YYYY-MM.parquet with a snapshot_date column."""
+def monthly(src_dir: Path, out_dir: Path, columns: list[str], day_column: str | None = "snapshot_date") -> dict[str, int]:
+    """Combine YYYY-MM-DD.csv.gz files into YYYY-MM.parquet, with each file's day in
+    `day_column` (no such column when None)."""
     by_month: dict[str, list[Path]] = defaultdict(list)
     for f in sorted(src_dir.glob("*.csv.gz")):
         by_month[f.name[:7]].append(f)
@@ -113,7 +117,8 @@ def monthly(src_dir: Path, out_dir: Path, columns: list[str]) -> dict[str, int]:
         parts = []
         for f in files:
             df = read(f, columns)
-            df.insert(0, "snapshot_date", pd.to_datetime(f.name[:10]).date())
+            if day_column:
+                df.insert(0, day_column, pd.to_datetime(f.name[:10]).date())
             parts.append(df)
         counts[month] = write(pd.concat(parts, ignore_index=True), out_dir / f"{month}.parquet")
     return counts
@@ -182,19 +187,7 @@ def check_manifest(new: dict, old: dict | None) -> list[str]:
     return problems
 
 
-def remote_gp_kinds(repo_id: str, token: str, api=None) -> set[str]:
-    """Which Games Popularity series ("followers", "players") already have files in the dataset."""
-    from huggingface_hub import HfApi
-    from huggingface_hub.errors import RepositoryNotFoundError
-
-    try:
-        files = (api or HfApi(token=token)).list_repo_files(repo_id, repo_type="dataset")
-    except RepositoryNotFoundError:
-        raise SystemExit(f"dataset {repo_id} not found: create it on Hugging Face first") from None
-    return {kind for kind in GP_KINDS if any(f.startswith(f"gp/{kind}/") and f.endswith(".csv.gz") for f in files)}
-
-
-def build(data_dir: Path, events_path: Path, out: Path, license_id: str, gp_kinds: set[str] = frozenset()) -> dict:
+def build(data_dir: Path, events_path: Path, out: Path, license_id: str, gp_dir: Path | None = None) -> dict:
     if out.exists() and any(out.iterdir()):
         if not (out / MARKER).exists():
             raise SystemExit(f"{out} is not a dataset build (no {MARKER}); refusing to delete it")
@@ -217,13 +210,18 @@ def build(data_dir: Path, events_path: Path, out: Path, license_id: str, gp_kind
         months = monthly(data_dir / name / "snapshots", out / name / "snapshots", columns)
         if months:
             stats[f"{name}/snapshots"] = months
+    for kind in GP_KINDS if gp_dir else ():
+        months = monthly(gp_dir / kind, out / "gp_parquet" / kind, ["appid", kind, "observed_at", "fetched_at"],
+                         day_column=None)  # fetched_at already says when
+        if months:
+            stats[f"gp_parquet/{kind}"] = months
     snaps = data_dir / "upcoming" / "snapshots"
     if any(snaps.glob("*.csv.gz")):
         stats["upcoming/release_changes.parquet"] = write(release_changes(snaps),
                                                          out / "upcoming" / "release_changes.parquet")
     stats["events.parquet"] = write(events_table(events_path), out / "events.parquet")
     (out / "manifest.json").write_text(json.dumps(manifest(out), indent=1, sort_keys=True), encoding="utf-8")
-    (out / "README.md").write_text(card(stats, license_id, data_date(data_dir), gp_kinds), encoding="utf-8")
+    (out / "README.md").write_text(card(stats, license_id, data_date(data_dir)), encoding="utf-8")
     return stats
 
 
@@ -249,17 +247,16 @@ def events_table(path: Path) -> pd.DataFrame:
     return typed(df)
 
 
-def card(stats: dict, license_id: str, updated: str, gp_kinds: set[str] = frozenset()) -> str:
+def card(stats: dict, license_id: str, updated: str) -> str:
     # (config name, files, key in stats); configs with no data yet are left out
-    stats = {**stats, **{f"gp/{k}": 0 for k in gp_kinds}}  # in the dataset already, not built here
     configs = [
         ("history", "history/games.parquet", "history/games.parquet"),
         ("upcoming_snapshots", "upcoming/snapshots/*.parquet", "upcoming/snapshots"),
         ("upcoming_apps", "upcoming/apps.parquet", "upcoming/apps.parquet"),
         ("release_changes", "upcoming/release_changes.parquet", "upcoming/release_changes.parquet"),
         ("followers", "followers/snapshots/*.parquet", "followers/snapshots"),
-        ("gp_followers", "gp/followers/*.csv.gz", "gp/followers"),
-        ("gp_players", "gp/players/*.csv.gz", "gp/players"),
+        ("gp_followers", "gp_parquet/followers/*.parquet", "gp_parquet/followers"),
+        ("gp_players", "gp_parquet/players/*.parquet", "gp_parquet/players"),
         ("events", "events.parquet", "events.parquet"),
         ("tags", "tags.parquet", "tags.parquet"),
         ("runs", "upcoming/runs.parquet", "upcoming/runs.parquet"),
@@ -278,13 +275,13 @@ def card(stats: dict, license_id: str, updated: str, gp_kinds: set[str] = frozen
 
     snap_months = sorted(stats.get("upcoming/snapshots", {}))
     gp_rows = "".join([
-        "| `gp_followers` | raw, daily | grows daily | Steam follower history from [Games Popularity]"
+        f"| `gp_followers` | raw | {rows('gp_parquet/followers'):,} | Steam follower history from [Games Popularity]"
         "(https://games-popularity.com), about one point a day since 2024-03-15: `appid`, `followers`, "
-        "`observed_at` (their time, UTC), `fetched_at` (ours); one file per fetch day |\n"
-        if "followers" in gp_kinds else "",
-        "| `gp_players` | raw, daily | grows daily | concurrent players, hourly, for the first month after "
-        "launch, from Games Popularity; same columns with `players` |\n"
-        if "players" in gp_kinds else "",
+        "`observed_at` (their time, UTC), `fetched_at` (ours); one file per fetch month |\n"
+        if "gp_parquet/followers" in stats else "",
+        f"| `gp_players` | raw | {rows('gp_parquet/players'):,} | concurrent players, hourly, for the first month "
+        "after launch, from Games Popularity; same columns with `players` |\n"
+        if "gp_parquet/players" in stats else "",
     ])
     return f"""---
 {yaml.safe_dump(meta, sort_keys=False).strip()}
@@ -294,7 +291,7 @@ def card(stats: dict, license_id: str, updated: str, gp_kinds: set[str] = frozen
 
 Data behind [steam-launch-window](https://github.com/wyc79/steam-launch-window),
 a tool that helps indie developers pick a Steam launch week. Updated weekly
-(the `gp_` configs daily). Last update: {updated}.
+(the raw `gp/` files daily). Last update: {updated}.
 
 Not affiliated with or endorsed by Valve. The data comes from Steam's public
 store pages and endpoints, collected politely (rate-limited, no logins), and the
@@ -326,7 +323,7 @@ history = load_dataset("<this repo>", "history")
   The `gp_` configs were recorded at the time by Games Popularity (`observed_at`)
   but fetched by us later, often long after (`fetched_at`). Each fetch only asks
   for points newer than the ones already fetched, so a game's series is spread
-  over several fetch-day files.
+  over several fetch days, and so over several fetch-month files.
 - **Frozen before launch:** a launched game's `upcoming_apps` row stops updating
   when it leaves the coming-soon list, so its tags, publisher, demo and languages
   are pre-launch values when `last_seen` is before the launch date.
@@ -367,9 +364,11 @@ trademarks of their owners. Whether you may reuse the data depends on Valve's
 terms for Steam data and on your local law. The `gp_` follower and player
 histories come from [Games Popularity](https://games-popularity.com) and are
 republished with its owner's permission (2026-10-12); credit them if you use them.
-The `gp/` folder also holds `latest_followers.csv`, the newest follower count
-per game (appid, followers, observed_at), and `state.csv` and `runs.csv`, the
-collector's working files (what was fetched when, and with what result).
+The `gp/` folder holds the same points as gzip CSV, one file per fetch day,
+updated daily; the `gp_` configs are a weekly Parquet copy of them. It also holds
+`latest_followers.csv`, the newest follower count per game (appid, followers,
+observed_at), and `state.csv` and `runs.csv`, the collector's working files
+(what was fetched when, and with what result).
 
 Full methods: [README](https://github.com/wyc79/steam-launch-window#readme) and
 [endpoint notes](https://github.com/wyc79/steam-launch-window/blob/main/docs/endpoints.md).
@@ -408,16 +407,17 @@ def main(argv=None) -> int:
                    help="Hugging Face dataset, e.g. user/steam-launch-data")
     p.add_argument("--license", default="other",
                    help="Hugging Face license id for the card. 'other': the data is Steam's, not ours to license")
+    p.add_argument("--gp-dir", type=Path, default=None,
+                   help="local copy of the dataset's gp/ (followers/ and players/ *.csv.gz), for gp_parquet/")
     p.add_argument("--dry-run", action="store_true", help="build the folder but do not upload")
     args = p.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
-    token = os.environ.get("HF_TOKEN")
-    gp_kinds = remote_gp_kinds(args.repo_id, token) if token and args.repo_id else set()
-    stats = build(args.data_dir, args.events, args.out, args.license, gp_kinds)
-    log.info("built %s: %s; Games Popularity configs: %s", args.out, stats, sorted(gp_kinds) or "none")
+    stats = build(args.data_dir, args.events, args.out, args.license, args.gp_dir)
+    log.info("built %s: %s", args.out, stats)
     if args.dry_run:
         return 0
+    token = os.environ.get("HF_TOKEN")
     if not token or not args.repo_id:
         raise SystemExit("set HF_TOKEN and --repo-id (or HF_DATASET_REPO) to upload, or use --dry-run")
     upload(args.out, args.repo_id, token)

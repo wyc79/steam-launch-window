@@ -170,6 +170,8 @@ the caveats below and says when each value was observed. Daily snapshots are
 grouped into one file per month. Before each upload the new files are checked
 against the published ones (no missing file, no dropped column, no table 5%
 smaller), and the upload fails instead of overwriting a change made in between.
+The job also copies the Games Popularity CSV files in `gp/` to monthly Parquet
+in `gp_parquet/`, since the dataset viewer reads every config as Parquet.
 
 ## Data layout
 
@@ -208,6 +210,9 @@ state.csv                             per game: last pull and try, status, newes
                                       unfinished pull goes on
 runs.csv                              one line per run: requests, results, why it stopped
 ```
+
+The weekly publish adds `gp_parquet/followers|players/YYYY-MM.parquet`: the same points,
+one file per fetch month (the `gp_followers` and `gp_players` configs).
 
 Release dates: Steam gives a timestamp plus a precision (day, month, quarter,
 year, or none). For "November 2026" the range is Nov 1 to Nov 30. All dates

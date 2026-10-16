@@ -79,7 +79,8 @@ the limits on their page, and said free limits will be cut and a paid plan added
 The first two manual runs (2026-10-12) used about 1,630 requests with no 429.
 
 **Hugging Face:** `strikeoo/steam-launch-data` (public). The weekly publish writes the
-Parquet files and the card; the daily job writes Games Popularity data under `gp/`. The
+Parquet files (with a monthly Parquet copy of `gp/` in `gp_parquet/`, for the dataset
+viewer) and the card; the daily job writes Games Popularity data under `gp/`. The
 private `steam-launch-gp` dataset was copied over and deleted on 2026-10-12.
 
 **Events:** `data/events.yaml` has 308 audited entries. The 2027 China holidays are
