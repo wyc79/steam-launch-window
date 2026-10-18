@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<!-- The credits card after the closing card. record.mjs fills {{rows}} from
+     CREDITS in config.mjs. -->
+<style>
+  @font-face { font-family: "Inter"; font-weight: 400; src: url("{{site}}fonts/inter-latin-400-normal.woff2") format("woff2"); }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #F2F0E9;
+    color: #111111;
+    font-family: "Inter", "PingFang SC", "Noto Sans SC", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card { width: 1040px; }
+  .row { display: flex; gap: 40px; align-items: baseline; padding: 22px 0; border-top: 1px solid #C9C5BA; }
+  .row:last-child { border-bottom: 1px solid #C9C5BA; }
+  .what { width: 340px; font-size: 26px; color: #55524B; }
+  .who { font-size: 34px; }
+</style>
+</head>
+<body>
+  <div class="card">{{rows}}</div>
+</body>
+</html>

@@ -233,3 +233,4 @@ site/coverage/
 
 # agent worktrees
 .claude/worktrees/
+.DS_Store

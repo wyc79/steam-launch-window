@@ -1,0 +1,15 @@
+{
+  "name": "steam-launch-window-video",
+  "private": true,
+  "type": "module",
+  "description": "Records the short demo video of the live site and the Hugging Face dataset",
+  "scripts": {
+    "setup": "playwright install chromium",
+    "record": "node record.mjs",
+    "compose": "node compose.mjs",
+    "video": "node record.mjs && node compose.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.64.1"
+  }
+}

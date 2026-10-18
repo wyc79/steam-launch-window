@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<!-- The closing card. record.mjs fills the {{...}} fields from config.mjs and
+     loads the site's own Inter files, so it looks like the site. -->
+<style>
+  @font-face { font-family: "Inter"; font-weight: 400; src: url("{{site}}fonts/inter-latin-400-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Inter"; font-weight: 700; src: url("{{site}}fonts/inter-latin-700-normal.woff2") format("woff2"); }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #F2F0E9;
+    color: #111111;
+    font-family: "Inter", "PingFang SC", "Noto Sans SC", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .card { width: 1040px; border-top: 2px solid #111111; padding-top: 44px; }
+  h1 { font-size: 76px; font-weight: 700; letter-spacing: 0.01em; margin: 0; line-height: 1.1; }
+  .url { font-size: 34px; color: #A51C30; margin: 40px 0 0; }
+  .data { margin: 54px 0 0; padding-top: 26px; border-top: 1px solid #C9C5BA; }
+  .data p { margin: 0; }
+  .data .what { font-size: 30px; }
+  .data .where { font-size: 24px; color: #55524B; margin-top: 12px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>{{title}}</h1>
+    <p class="url">{{url}}</p>
+    <div class="data">
+      <p class="what">{{dataset}}</p>
+      <p class="where">{{datasetUrl}}</p>
+    </div>
+  </div>
+</body>
+</html>
