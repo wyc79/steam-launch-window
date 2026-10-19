@@ -48,3 +48,14 @@ export const CREDITS = [
 
 // how each clip gives way to the next, in seconds of cross-fade (0 = a plain cut)
 export const TRANSITIONS = { "site→dataset": 0, "dataset→end": 0.5, "end→credits": 0.5 };
+
+// background music (compose.mjs --music): its loudness in the video, and the ceiling
+// for its peaks. -20 LUFS is quiet; platforms play speech-led videos near -14.
+export const MUSIC = { loudness: -20, peak: -1.5 };
+
+// the cover (cover.mjs): text above a live screenshot of the competition table
+export const COVER = {
+  kicker: "Steam 发售窗口",
+  title: ["Steam 游戏", "什么时候发售比较合适？"],
+  line: "按标签查看未来 13 周的同类竞争 · 数据集已公开",
+};

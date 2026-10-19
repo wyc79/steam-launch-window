@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<!-- The video cover. cover.mjs fills the {{...}} fields from COVER in config.mjs and
+     {{table}} with a screenshot of the site's competition table. Everything sits in
+     a 1320px column, so the same page works at 16:9 (1920x1080) and 4:3 (1440x1080). -->
+<style>
+  @font-face { font-family: "Inter"; font-weight: 400; src: url("{{site}}fonts/inter-latin-400-normal.woff2") format("woff2"); }
+  @font-face { font-family: "Inter"; font-weight: 700; src: url("{{site}}fonts/inter-latin-700-normal.woff2") format("woff2"); }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #F2F0E9;
+    color: #111111;
+    font-family: "Inter", "PingFang SC", "Noto Sans SC", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cover { width: 1320px; }
+  .kicker {
+    display: flex; align-items: baseline; gap: 18px;
+    font-size: 34px; font-weight: 700; color: #A51C30; margin: 0;
+    border-top: 3px solid #111111; padding-top: 22px;
+  }
+  h1 { font-size: 104px; font-weight: 700; line-height: 1.16; letter-spacing: 0.01em; margin: 26px 0 0; }
+  .line { font-size: 34px; color: #55524B; margin: 26px 0 0; }
+  .table { display: block; width: 100%; margin-top: 54px; }
+</style>
+</head>
+<body>
+  <div class="cover">
+    <p class="kicker">{{kicker}}</p>
+    <h1>{{title}}</h1>
+    <p class="line">{{line}}</p>
+    <img class="table" src="{{table}}" alt="">
+  </div>
+</body>
+</html>

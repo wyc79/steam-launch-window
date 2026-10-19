@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 import { CREDITS, DATASET_URL, END_CARD, FPS, SCALE, SITE_URL, TAGS, VIEWPORT, WEEK } from "./config.mjs";
 import { Clip } from "./lib/clip.mjs";
+import { checkOffer, siteContext, waitSettled } from "./lib/site.mjs";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const BUILD = here("build/");
@@ -21,20 +22,6 @@ const top = (page, selector) =>
     if (!el) throw new Error(`no element ${sel}`);
     return el.getBoundingClientRect().top + window.scrollY;
   }, selector);
-
-// every section has drawn (none is aria-busy), the competition table has cells,
-// and, after a tag is picked, its row is in the table
-async function waitSettled(page, expect = null) {
-  await page.waitForFunction(
-    (expect) =>
-      !document.querySelector("main [aria-busy]") &&
-      document.querySelectorAll("#ahead .hm-cell").length > 0 &&
-      (!expect || document.querySelector("#ahead").innerText.includes(expect)),
-    expect,
-    { timeout: 60_000 },
-  );
-  await page.evaluate(() => document.fonts.ready);
-}
 
 async function recordSite(page) {
   await page.goto(SITE_URL, { waitUntil: "networkidle" });
@@ -67,8 +54,7 @@ async function recordSite(page) {
       await page.keyboard.insertText(tag.type);
       await clip.hold(0.2);
     }
-    const first = await page.locator("li.tag-option").first().innerText();
-    if (!first.startsWith(tag.pick)) throw new Error(`typing "${tag.type}" offers "${first}" first, not "${tag.pick}"`);
+    await checkOffer(page, tag);
     await clip.hold(0.8);
     await page.keyboard.press("Enter");
     await waitSettled(page, tag.pick);
@@ -160,19 +146,7 @@ try {
 
 const browser = await chromium.launch();
 try {
-  const context = await browser.newContext({
-    viewport: VIEWPORT,
-    deviceScaleFactor: SCALE,
-    locale: "zh-CN",
-    colorScheme: "light",
-    reducedMotion: "reduce",
-  });
-  // the site in Chinese (its language switch keeps the choice here)
-  await context.addInitScript(() => {
-    if (location.hostname.endsWith("github.io")) localStorage.setItem("yc-lang", "zh");
-  });
-  // keep recording runs out of the site's visitor statistics
-  await context.route(/googletagmanager\.com|google-analytics\.com|\/analytics\.js(\?|$)/, (route) => route.abort());
+  const context = await siteContext(browser, SCALE);
 
   for (const [name, record] of Object.entries(RECORDERS)) {
     if (only && name !== only) continue;

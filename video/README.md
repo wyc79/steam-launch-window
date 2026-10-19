@@ -6,8 +6,9 @@ deployed site at <https://wyc79.github.io/steam-launch-window/>.
 
 Output, in `out/`:
 
-- `steam-launch-window-demo.mp4`: 3840×2160 (4K), H.264 High@5.2, 60 fps, BT.709, with a silent AAC track
+- `steam-launch-window-demo.mp4`: 3840×2160 (4K), H.264 High@5.2, 60 fps, BT.709, with the background music (AAC, 192 kb/s)
 - `subtitles.srt`: the same subtitles as a file, for players and upload pages that take one
+- `cover.png` (1920×1080) and `cover-4x3.png` (1440×1080): the video cover, from `npm run cover`
 
 ## Make it again
 
@@ -17,8 +18,12 @@ Needs Node 18+ and `ffmpeg` on the `PATH` (any build with `libx264`; `libass` is
 cd video
 npm ci
 npm run setup      # Playwright's Chromium, once
-npm run video      # record (about 2 minutes), then compose (about 3.5 minutes)
+npm run record     # about 2 minutes
+node compose.mjs --music music/ElevenLabs_steam-launch-window-video.wav   # about 3.5 minutes
 ```
+
+The music (ElevenLabs Music v2.5, made to the video's length) is kept in `music/`, which
+git ignores. Without `--music` the video gets a silent track.
 
 The video shows whatever the site and the dataset page show on the day it is recorded.
 The subtitles name no numbers, so they stay true when the data changes.
@@ -29,7 +34,7 @@ The two steps can run on their own:
 node record.mjs            # all three clips into build/clips/, timings into build/timeline.json
 node record.mjs site       # one clip again: site, dataset, end or credits
 node compose.mjs           # out/ from what is in build/
-node compose.mjs --music track.mp3   # with the background music (quiet, faded in and out)
+node compose.mjs --music track.wav   # with background music
 ```
 
 ## What it shows
@@ -45,12 +50,22 @@ node compose.mjs --music track.mp3   # with the background music (quiet, faded i
 | 37–41 s | end card: Steam 发售窗口, site address, dataset (in Chinese) | — |
 | 41–44 s | credits: Claude Opus 5.5 for the project and video script, ElevenLabs Music v2.5 for the music | — |
 
+## Cover
+
+`npm run cover` (about 20 seconds) opens the site, picks the same tags as the video, takes a
+screenshot of the competition table and puts it under the title in `cover.html`. The text
+is `COVER` in `config.mjs`. Everything sits in one 1320px column, so the same page is drawn
+at 16:9 and at 4:3, for upload pages (such as Bilibili's) that ask for both.
+
 ## Changing it
 
 - Wording, tags, which week opens, the end card, the credits and the transitions: `config.mjs`.
 - Order, pauses and scroll speed: `record.mjs`. `clip.start("name")` and `clip.end()` mark
   when a subtitle shows, so its timing follows the footage when pauses change.
 - Subtitle look and position: `compose.mjs`. Card looks: `endcard.html`, `credits.html`.
+- Music level: `MUSIC` in `config.mjs`. The track is measured and raised or lowered by one
+  fixed gain to that loudness (−20 LUFS), with no compression; it plays once, with a 1.5 s
+  fade at the end.
 
 `record.mjs` stops with an error rather than recording something wrong: when typing a tag
 no longer offers the expected tag first, when the week column or the dataset card's

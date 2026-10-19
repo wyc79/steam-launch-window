@@ -3,13 +3,13 @@
 // the same subtitles as an .srt file.
 //
 //   node compose.mjs                      out/steam-launch-window-demo.mp4 + out/subtitles.srt
-//   node compose.mjs --music track.mp3    with quiet background music
+//   node compose.mjs --music track.wav    with background music (see MUSIC in config.mjs)
 
 import { spawn } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
-import { SUBTITLES, TRANSITIONS } from "./config.mjs";
+import { MUSIC, SUBTITLES, TRANSITIONS } from "./config.mjs";
 
 const here = (p) => fileURLToPath(new URL(p, import.meta.url));
 const BUILD = here("build/");
@@ -18,6 +18,22 @@ const ORDER = ["site", "dataset", "end", "credits"];
 const FADE = 0.25; // subtitle fade in and out
 const GAP = 0.2; // between two subtitles that would otherwise touch
 const BOTTOM = 64; // subtitle box's distance from the bottom edge, in 1080p pixels
+
+// integrated loudness (LUFS) and true peak (dBTP) of an audio file, from ffmpeg's loudnorm
+function loudness(file) {
+  return new Promise((resolve, reject) => {
+    const p = spawn("ffmpeg", ["-hide_banner", "-nostats", "-i", file, "-af", "loudnorm=print_format=json", "-f", "null", "-"]);
+    let log = "";
+    p.stderr.on("data", (d) => (log += d));
+    p.on("error", reject);
+    p.on("close", (code) => {
+      const json = log.slice(log.lastIndexOf("{"), log.lastIndexOf("}") + 1);
+      if (code !== 0 || !json) return reject(new Error(`could not measure ${file}`));
+      const m = JSON.parse(json);
+      resolve({ i: Number(m.input_i), tp: Number(m.input_tp) });
+    });
+  });
+}
 
 const args = process.argv.slice(2);
 const music = args.includes("--music") ? args[args.indexOf("--music") + 1] : null;
@@ -122,9 +138,18 @@ for (const [i, cue] of cues.entries()) {
 }
 graph.push(`[${video}]scale=out_color_matrix=bt709:out_range=tv,format=yuv420p[v]`);
 
+// The music is brought to MUSIC.loudness with one fixed gain (no compression, so it
+// sounds as made), kept under MUSIC.peak. It plays once: a shorter track ends in
+// silence, a longer one fades out with the video.
 if (music) {
-  inputs.push("-stream_loop", "-1", "-i", music);
-  graph.push(`[${clips.length + cues.length}:a]volume=0.18,afade=t=in:d=1.5,afade=t=out:st=${(total - 2.5).toFixed(3)}:d=2.5,atrim=0:${total.toFixed(3)}[a]`);
+  const level = await loudness(music);
+  const gain = Math.min(MUSIC.loudness - level.i, MUSIC.peak - level.tp);
+  console.log(`music: ${level.i} LUFS, peak ${level.tp} dBTP; ${gain >= 0 ? "+" : ""}${gain.toFixed(1)} dB`);
+  inputs.push("-i", music);
+  graph.push(
+    `[${clips.length + cues.length}:a]aresample=48000,volume=${gain.toFixed(2)}dB,` +
+      `afade=t=in:d=0.05,afade=t=out:st=${(total - 1.5).toFixed(3)}:d=1.5,apad,atrim=0:${total.toFixed(3)}[a]`,
+  );
 } else {
   inputs.push("-f", "lavfi", "-t", total.toFixed(3), "-i", "anullsrc=channel_layout=stereo:sample_rate=48000");
 }
@@ -137,7 +162,7 @@ const ffmpeg = [
   "-map", "[v]", "-map", music ? "[a]" : `${clips.length + cues.length}:a`,
   "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-profile:v", "high", "-pix_fmt", "yuv420p",
   "-r", String(timeline.fps), "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
-  "-c:a", "aac", "-b:a", "128k", "-t", total.toFixed(3), "-movflags", "+faststart",
+  "-c:a", "aac", "-b:a", "192k", "-t", total.toFixed(3), "-movflags", "+faststart",
   file,
 ];
 await writeFile(`${BUILD}ffmpeg-args.json`, JSON.stringify(ffmpeg, null, 1));
