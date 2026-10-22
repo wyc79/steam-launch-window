@@ -274,6 +274,9 @@ def card(stats: dict, license_id: str, updated: str) -> str:
         return sum(v.values()) if isinstance(v, dict) else (v or 0)
 
     snap_months = sorted(stats.get("upcoming/snapshots", {}))
+    has_followers = "followers/snapshots" in stats  # the community scraper was retired on 2026-10-11
+    followers_row = (f"| `followers` | raw | {rows('followers/snapshots'):,} | Steam community hub follower "
+                     "counts, with fetch time |\n" if has_followers else "")
     gp_rows = "".join([
         f"| `gp_followers` | raw | {rows('gp_parquet/followers'):,} | Steam follower history from [Games Popularity]"
         "(https://games-popularity.com), about one point a day since 2024-03-15: `appid`, `followers`, "
@@ -306,8 +309,7 @@ No personal data: no Steam IDs, usernames or review texts, only counts.
 | `upcoming_snapshots` | raw, daily | {rows("upcoming/snapshots"):,} | one row per coming-soon game per day ({snap_months[0] if snap_months else "-"} to {snap_months[-1] if snap_months else "-"}): release date and its precision, Early Access, wishlist rank, price if set |
 | `upcoming_apps` | latest | {rows("upcoming/apps.parquet"):,} | name, developers, publishers, tags with vote weights, languages, demo and its release time; `last_seen` is the last day the game was coming soon |
 | `release_changes` | derived | {rows("upcoming/release_changes.parquet"):,} | each game's first day in the snapshots, every change of its release date text or range, each day it left the coming-soon list, and each day it came back (`returned`) |
-| `followers` | raw | {rows("followers/snapshots"):,} | Steam community hub follower counts, with fetch time |
-{gp_rows}| `events` | curated | {rows("events.parquet"):,} | Steam sales, Next Fests, themed fests, major releases, regional holidays, each with a source; `starts_at`/`ends_at` (UTC) give the exact window: Steam events run from 10:00 Pacific on `start` to 10:00 Pacific on `end` |
+{followers_row}{gp_rows}| `events` | curated | {rows("events.parquet"):,} | Steam sales, Next Fests, themed fests, major releases, regional holidays, each with a source; `starts_at`/`ends_at` (UTC) give the exact window: Steam events run from 10:00 Pacific on `start` to 10:00 Pacific on `end` |
 | `tags` | latest | {rows("tags.parquet"):,} | Steam tag id to name, in English and in Steam's Simplified Chinese (`name_schinese`) |
 | `runs` | log | {rows("upcoming/runs.parquet"):,} | one row per daily collection: games, requests, whether the wishlist crawl worked |
 
@@ -319,7 +321,7 @@ history = load_dataset("<this repo>", "history")
 ## When each value was observed
 
 - **Observed at the time:** `upcoming_snapshots` (one row per day, `snapshot_date` in UTC),
-  `followers` (`fetched_at`), `runs`. Use these for "what was known before launch".
+  {"`followers` (`fetched_at`), " if has_followers else ""}`runs`. Use these for "what was known before launch".
   The `gp_` configs were recorded at the time by Games Popularity (`observed_at`)
   but fetched by us later, often long after (`fetched_at`). Each fetch only asks
   for points newer than the ones already fetched, so a game's series is spread

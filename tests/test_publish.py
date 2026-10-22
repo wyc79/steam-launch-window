@@ -79,6 +79,7 @@ def test_card_lists_only_configs_with_data(data, tmp_path):
     card = (out / "README.md").read_text(encoding="utf-8")
     assert "config_name: upcoming_snapshots" in card and "config_name: events" in card
     assert "config_name: history" not in card  # no history file in this fixture
+    assert "| `followers` |" not in card and "`followers` (`fetched_at`)" not in card  # nor community followers
     assert "license: cc-by-4.0" in card
 
 
